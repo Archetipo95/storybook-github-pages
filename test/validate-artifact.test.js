@@ -75,3 +75,19 @@ test('validateArtifactDirectory - fails when no static content is present', () =
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
+
+test('validateArtifactDirectory - fails when artifact root is a symlink pointing outside workspace root', () => {
+  const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-ws-test-'));
+  const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-outside-test-'));
+  fs.writeFileSync(path.join(outsideDir, 'index.html'), '<html><body>Outside</body></html>');
+
+  const symlinkPath = path.join(workspaceDir, 'symlink-artifact');
+  fs.symlinkSync(outsideDir, symlinkPath, 'dir');
+
+  assert.throws(() => {
+    validateArtifactDirectory('symlink-artifact', workspaceDir);
+  }, /escapes workspace root/);
+
+  fs.rmSync(workspaceDir, { recursive: true, force: true });
+  fs.rmSync(outsideDir, { recursive: true, force: true });
+});

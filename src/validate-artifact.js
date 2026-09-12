@@ -3,11 +3,16 @@ import path from 'node:path';
 
 export function validateArtifactDirectory(targetPath, workspaceRoot = process.cwd()) {
   const rootAbs = path.resolve(workspaceRoot);
+  if (!fs.existsSync(rootAbs)) {
+    throw new Error(`Artifact validation failed: Workspace root "${rootAbs}" does not exist.`);
+  }
+  const rootReal = fs.realpathSync(rootAbs);
+
   const targetAbs = path.resolve(rootAbs, targetPath);
 
-  // 1. Path Containment check: target must be inside workspace root
-  const relative = path.relative(rootAbs, targetAbs);
-  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+  // 1. Lexical Path Containment check: target must not lexically escape un-realpathed workspace root
+  const relativeLexical = path.relative(rootAbs, targetAbs);
+  if (relativeLexical.startsWith('..') || path.isAbsolute(relativeLexical)) {
     throw new Error(`Artifact validation failed: Path "${targetPath}" escapes workspace root "${rootAbs}".`);
   }
 
@@ -16,19 +21,27 @@ export function validateArtifactDirectory(targetPath, workspaceRoot = process.cw
     throw new Error(`Artifact validation failed: Directory "${targetPath}" does not exist at resolved path "${targetAbs}".`);
   }
 
-  const stat = fs.statSync(targetAbs);
+  const targetReal = fs.realpathSync(targetAbs);
+
+  // 3. Realpath Containment check: target realpath must not escape workspace realpath (protects against symlinks pointing outside workspace)
+  const relativeReal = path.relative(rootReal, targetReal);
+  if (relativeReal.startsWith('..') || path.isAbsolute(relativeReal)) {
+    throw new Error(`Artifact validation failed: Path "${targetPath}" resolves to "${targetReal}" which escapes workspace root "${rootReal}".`);
+  }
+
+  const stat = fs.statSync(targetReal);
   if (!stat.isDirectory()) {
     throw new Error(`Artifact validation failed: Path "${targetPath}" is not a directory.`);
   }
 
   // 3. Nested .git check
-  const gitDir = path.join(targetAbs, '.git');
+  const gitDir = path.join(targetReal, '.git');
   if (fs.existsSync(gitDir)) {
     throw new Error(`Artifact validation failed: Directory "${targetPath}" contains a nested .git directory.`);
   }
 
   // 4. Non-empty check and file scan
-  const files = readdirRecursive(targetAbs, targetAbs);
+  const files = readdirRecursive(targetReal, targetReal);
   if (files.length === 0) {
     throw new Error(`Artifact validation failed: Directory "${targetPath}" is empty.`);
   }
@@ -44,13 +57,13 @@ export function validateArtifactDirectory(targetPath, workspaceRoot = process.cw
     throw new Error(`Artifact validation failed: Directory "${targetPath}" does not appear to contain valid static web content.`);
   }
 
-  // 6. Symlink safety check (no symlinks pointing outside targetAbs)
+  // 6. Symlink safety check (no symlinks pointing outside targetReal)
   for (const relFile of files) {
-    const fullPath = path.join(targetAbs, relFile);
+    const fullPath = path.join(targetReal, relFile);
     const lstat = fs.lstatSync(fullPath);
     if (lstat.isSymbolicLink()) {
       const realPath = fs.realpathSync(fullPath);
-      const relToTarget = path.relative(targetAbs, realPath);
+      const relToTarget = path.relative(targetReal, realPath);
       if (relToTarget.startsWith('..') || path.isAbsolute(relToTarget)) {
         throw new Error(`Artifact validation failed: Symlink "${relFile}" points outside target directory ("${realPath}").`);
       }
@@ -59,7 +72,7 @@ export function validateArtifactDirectory(targetPath, workspaceRoot = process.cw
 
   return {
     valid: true,
-    resolvedPath: targetAbs,
+    resolvedPath: targetReal,
     fileCount: files.length,
     files
   };
