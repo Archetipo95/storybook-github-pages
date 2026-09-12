@@ -122,7 +122,7 @@ jobs:
 
       - name: Remove preview directory for closed pull request
         if: steps.branch_check.outputs.exists == 'true'
-        uses: Archetipo95/storybook-github-pages/preview-cleanup@9be19be83cb05f2f648b4c78dac27befdb93d740
+        uses: Archetipo95/storybook-github-pages/preview-cleanup@81658c93c696c9d69f86c2731a1daecff1678111
         with:
           pages_repo: ${{ github.workspace }}/pages-repo
           pages_branch: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}

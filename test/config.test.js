@@ -167,7 +167,7 @@ test('resolveConfiguration - preserves preview_retention_days 0 from input or co
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-test('resolveConfiguration - supports repository-root layout preview_root: ""', () => {
+test('resolveConfiguration - supports repository-root layout preview_root: "" and "."', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-root-layout-'));
   const configPath = path.join(tmpDir, '.storybook-pages.yml');
 
@@ -176,9 +176,19 @@ test('resolveConfiguration - supports repository-root layout preview_root: ""', 
   const fromFile = resolveConfiguration({ inputs: {}, configFilePath: configPath });
   assert.equal(fromFile.preview_root, '', 'preview_root "" in config file must resolve to empty string');
 
+  // Test preview_root: "." in config file
+  fs.writeFileSync(configPath, 'preview_root: "."\n');
+  const fromFileDot = resolveConfiguration({ inputs: {}, configFilePath: configPath });
+  assert.equal(fromFileDot.preview_root, '', 'preview_root "." in config file must resolve to empty string');
+
   // Test preview_root: "custom" in input
   const fromInput = resolveConfiguration({ inputs: { preview_root: 'previews' }, configFilePath: configPath });
   assert.equal(fromInput.preview_root, 'previews', 'explicit preview_root input overrides config file');
+
+  // Test preview_root: "." in input overriding non-empty config file
+  fs.writeFileSync(configPath, 'preview_root: "custom-previews"\n');
+  const fromInputDot = resolveConfiguration({ inputs: { preview_root: '.' }, configFilePath: configPath });
+  assert.equal(fromInputDot.preview_root, '', 'explicit preview_root "." input overrides config file to root layout');
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });

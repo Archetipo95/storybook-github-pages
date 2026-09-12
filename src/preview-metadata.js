@@ -64,7 +64,8 @@ export function digestDirectory(directory) {
 export function resolvePreviewTarget({ previewRoot = 'pr-preview', prNumber }) {
   const number = assertPositiveInteger(prNumber, 'prNumber');
   validateRelativeDirectory(previewRoot, 'preview_root', { allowEmpty: true });
-  const target = previewRoot ? path.posix.join(previewRoot, `pr-${number}`) : `pr-${number}`;
+  const normalizedRoot = (previewRoot === '.' || previewRoot === './') ? '' : previewRoot;
+  const target = normalizedRoot ? path.posix.join(normalizedRoot, `pr-${number}`) : `pr-${number}`;
   validateRelativeDirectory(target, 'preview_target');
   return target;
 }

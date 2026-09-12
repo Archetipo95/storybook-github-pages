@@ -100,16 +100,17 @@ async function fetchOpenPullRequestNumbers({ token, repository }) {
  * directories and any manually managed content).
  */
 export async function runJanitor({ repo, branch = 'gh-pages', previewRoot = 'pr-preview', retentionDays = 30, token, repository }) {
-  validateRelativeDirectory(previewRoot, 'preview_root', { allowEmpty: true });
+  const normalizedRoot = (previewRoot === '.' || previewRoot === './') ? '' : previewRoot;
+  validateRelativeDirectory(normalizedRoot, 'preview_root', { allowEmpty: true });
   const retentionMs = Number(retentionDays) > 0 ? Number(retentionDays) * 24 * 60 * 60 * 1000 : 0;
   const openPrNumbers = await fetchOpenPullRequestNumbers({ token, repository });
-  const entries = await listPreviewEntries(repo, previewRoot);
+  const entries = await listPreviewEntries(repo, normalizedRoot);
 
   // Resolve last-modified timestamps up front (async git log lookups) so the
   // pure classification function below stays synchronous and test-friendly.
   const lastModifiedByEntry = new Map();
   for (const entry of entries) {
-    const relative = previewRoot ? path.posix.join(previewRoot, entry) : entry;
+    const relative = normalizedRoot ? path.posix.join(normalizedRoot, entry) : entry;
     lastModifiedByEntry.set(entry, await lastModifiedMsForPath(repo, relative));
   }
 
@@ -132,7 +133,7 @@ export async function runJanitor({ repo, branch = 'gh-pages', previewRoot = 'pr-
     mutate: async repoPath => {
       let mutated = false;
       for (const { entry } of remove) {
-        const full = previewRoot ? path.join(repoPath, previewRoot, entry) : path.join(repoPath, entry);
+        const full = normalizedRoot ? path.join(repoPath, normalizedRoot, entry) : path.join(repoPath, entry);
         await fs.rm(full, { recursive: true, force: true });
         mutated = true;
       }

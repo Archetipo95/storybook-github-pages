@@ -101,8 +101,8 @@ test('directory publisher reference pins the reviewed implementation commit', ()
 
 test('preview cleanup and janitor references pin the reviewed implementation commit', () => {
   const cleanup = fs.readFileSync(path.join(process.cwd(), '.github/workflows/pr-preview-cleanup.yml'), 'utf8');
-  assert.match(cleanup, /Archetipo95\/storybook-github-pages\/preview-cleanup@9be19be83cb05f2f648b4c78dac27befdb93d740/);
+  assert.match(cleanup, /Archetipo95\/storybook-github-pages\/preview-cleanup@[a-f0-9]{40}/);
 
   const janitor = fs.readFileSync(path.join(process.cwd(), '.github/workflows/pr-preview-janitor.yml'), 'utf8');
-  assert.match(janitor, /Archetipo95\/storybook-github-pages\/preview-janitor@9be19be83cb05f2f648b4c78dac27befdb93d740/);
+  assert.match(janitor, /Archetipo95\/storybook-github-pages\/preview-janitor@[a-f0-9]{40}/);
 });

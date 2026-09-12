@@ -259,7 +259,7 @@ on:
     types: [closed]
 
 permissions:
-  contents: read
+  contents: write
   pages: write
 
 jobs:
@@ -302,8 +302,9 @@ on:
     - cron: '17 4 * * *'
 
 permissions:
-  contents: read
+  contents: write
   pages: write
+  pull-requests: read
 
 jobs:
   janitor:
