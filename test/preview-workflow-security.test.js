@@ -53,6 +53,8 @@ test('pr-preview-cleanup workflow never checks out the pull request head and sta
   const cleanupJob = extractJobBlock(content, 'cleanup');
   assert.match(cleanupJob, /contents:\s*write/);
   assert.match(cleanupJob, /pages:\s*write/);
+  assert.match(cleanupJob, /git ls-remote --exit-code --heads origin/, 'cleanup must check if Pages branch exists remotely before attempting checkout');
+  assert.match(cleanupJob, /steps\.branch_check\.outputs\.exists == 'true'/, 'checkout and removal steps must be guarded by Pages branch existence');
 });
 
 test('pr-preview-janitor workflow supports manual dispatch and schedule, never checks out a pull request head', () => {

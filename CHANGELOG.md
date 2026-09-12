@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **PR Preview Artifact Download Without Git Checkout**: Clarified and documented artifact download requirements for trusted `workflow_run` preview publishers. When downloading untrusted build artifacts without a local Git checkout (to preserve security invariants), `actions/download-artifact@v4` with `run-id` and `github-token` or `gh run download` with `GH_REPO` / `--repo` prevents `fatal: not a git repository` errors.
+- **PR Preview Cleanup Missing Branch Graceful Skip**: When a repository has not initialized or configured a Pages branch, PR preview close cleanup (`pr-preview-cleanup.yml`) safely and noiselessly skips without failing the workflow.
 
 ### Added
 - **External Consumer Lifecycle Regression Suite (`test/preview-consumer-lifecycle.test.js`)**: End-to-end regression tests verifying untrusted build artifact creation, trusted artifact transfer in non-git environments, provenance validation, idempotent bot comments, stale-run skipping, and PR close cleanup.
