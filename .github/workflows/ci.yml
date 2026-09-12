@@ -1,0 +1,40 @@
+name: CI & Action Validation
+
+on:
+  push:
+    branches: [ main, 'archetipo95-*', 'bootstrap-*' ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-validate:
+    name: Run Tests & Action Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@39370e3970a6d050c38000445ffc8f609d702a20 # v4.1.0
+        with:
+          node-version: '20'
+
+      - name: Run unit test suite
+        run: npm test
+
+      - name: Validate fixture artifact directory
+        run: node src/validate-artifact.js "test/fixtures/sample-storybook" "${{ github.workspace }}"
+
+      - name: Validate configuration parsing
+        run: npm run validate-config
+
+      - name: Test composite action artifact validation step
+        uses: ./
+        with:
+          checkout: 'false'
+          path: 'test/fixtures/sample-storybook'
+          publish: 'false'
