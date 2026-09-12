@@ -16,6 +16,22 @@ name: PR Preview Cleanup
 on:
   pull_request_target:
     types: [closed]
+  workflow_call:
+    inputs:
+      preview_root:
+        description: 'Root directory for previews on the Pages branch'
+        required: false
+        type: string
+        default: ''
+      pages_branch:
+        description: 'Pages branch used for previews'
+        required: false
+        type: string
+        default: ''
+      pr_number:
+        description: 'Pull request number to clean up'
+        required: false
+        type: number
 
 concurrency:
   group: storybook-pages-${{ github.repository }}
@@ -43,17 +59,47 @@ jobs:
 
       - name: Resolve trusted base configuration
         id: config
+        env:
+          INPUT_PREVIEW_ROOT: ${{ inputs.preview_root }}
+          INPUT_PAGES_BRANCH: ${{ inputs.pages_branch }}
         run: |
-          node -e 'import("./src/config.js").then(({resolveConfiguration}) => {
-            const c = resolveConfiguration({inputs: {}});
-            console.log(`preview_root=${c.preview_root}`);
-            console.log(`pages_branch=${c.pages_branch}`);
-          })' >> "$GITHUB_OUTPUT"
+          node -e '
+            import("node:fs").then(async ({existsSync}) => {
+              if (existsSync("./src/config.js")) {
+                const {resolveConfiguration} = await import("./src/config.js");
+                const c = resolveConfiguration({inputs: { preview_root: process.env.INPUT_PREVIEW_ROOT, pages_branch: process.env.INPUT_PAGES_BRANCH }});
+                console.log(`preview_root=${c.preview_root}`);
+                console.log(`pages_branch=${c.pages_branch}`);
+              } else {
+                let preview_root = process.env.INPUT_PREVIEW_ROOT || "";
+                let pages_branch = process.env.INPUT_PAGES_BRANCH || "";
+                if (existsSync(".storybook-pages.yml")) {
+                  const {readFileSync} = await import("node:fs");
+                  const content = readFileSync(".storybook-pages.yml", "utf8");
+                  for (const line of content.split("\n")) {
+                    const trimmed = line.trim();
+                    if (!preview_root && trimmed.startsWith("preview_root:")) {
+                      preview_root = trimmed.slice("preview_root:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                    if (!pages_branch && trimmed.startsWith("pages_branch:")) {
+                      pages_branch = trimmed.slice("pages_branch:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                  }
+                }
+                if (preview_root === "" && process.env.INPUT_PREVIEW_ROOT === undefined) {
+                  preview_root = "pr-preview";
+                }
+                if (!pages_branch) pages_branch = "gh-pages";
+                console.log(`preview_root=${preview_root}`);
+                console.log(`pages_branch=${pages_branch}`);
+              }
+            });
+          ' >> "$GITHUB_OUTPUT"
 
       - name: Check Pages branch existence
         id: branch_check
         env:
-          PAGES_BRANCH: ${{ steps.config.outputs.pages_branch || 'gh-pages' }}
+          PAGES_BRANCH: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
         run: |
           if git ls-remote --exit-code --heads origin "$PAGES_BRANCH" > /dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
@@ -69,18 +115,16 @@ jobs:
         if: steps.branch_check.outputs.exists == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: ${{ steps.config.outputs.pages_branch || 'gh-pages' }}
+          ref: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
           path: pages-repo
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Remove preview directory for closed pull request
         if: steps.branch_check.outputs.exists == 'true'
-        env:
-          PAGES_REPO: ${{ github.workspace }}/pages-repo
-          PAGES_BRANCH: ${{ steps.config.outputs.pages_branch || 'gh-pages' }}
-          PREVIEW_ROOT: ${{ steps.config.outputs.preview_root }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: node src/preview-cleanup.js
+        uses: Archetipo95/storybook-github-pages/preview-cleanup@9be19be83cb05f2f648b4c78dac27befdb93d740
+        with:
+          pages_repo: ${{ github.workspace }}/pages-repo
+          pages_branch: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
+          preview_root: ${{ steps.config.outputs.preview_root }}
+          pr_number: ${{ inputs.pr_number || github.event.pull_request.number }}

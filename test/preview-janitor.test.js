@@ -145,3 +145,55 @@ test('runJanitor is a no-op (and requests no rebuild) when nothing qualifies for
     global.fetch = originalFetch;
   }
 });
+
+test('runJanitor supports repository-root layout: removes only closed-PR pr-<number> directories and preserves root content', async () => {
+  const bareDir = makeTempDir('storybook-janitor-root-bare-');
+  git(bareDir, 'init', '--bare', '-q', '.');
+
+  const seedDir = makeTempDir('storybook-janitor-root-seed-');
+  git(seedDir, 'init', '-q', '.');
+  git(seedDir, 'config', 'user.email', 'seed@example.com');
+  git(seedDir, 'config', 'user.name', 'seed');
+  fs.writeFileSync(path.join(seedDir, 'index.html'), '<html>root</html>');
+  fs.mkdirSync(path.join(seedDir, 'pr-1'), { recursive: true });
+  fs.writeFileSync(path.join(seedDir, 'pr-1', 'index.html'), 'open pr, keep');
+  fs.mkdirSync(path.join(seedDir, 'pr-2'), { recursive: true });
+  fs.writeFileSync(path.join(seedDir, 'pr-2', 'index.html'), 'closed pr, remove');
+  fs.mkdirSync(path.join(seedDir, 'staging'), { recursive: true });
+  fs.writeFileSync(path.join(seedDir, 'staging', 'index.html'), 'named environment, never touched');
+  fs.mkdirSync(path.join(seedDir, 'assets'), { recursive: true });
+  fs.writeFileSync(path.join(seedDir, 'assets', 'style.css'), 'css');
+  git(seedDir, 'add', '-A');
+  git(seedDir, 'commit', '-q', '-m', 'seed root layout');
+  git(seedDir, 'branch', '-M', 'gh-pages');
+  git(seedDir, 'remote', 'add', 'origin', bareDir);
+  git(seedDir, 'push', '-q', 'origin', 'gh-pages');
+
+  const cloneDir = makeTempDir('storybook-janitor-root-clone-');
+  git(cloneDir, 'clone', '-q', bareDir, '.');
+  git(cloneDir, 'config', 'user.email', 'clone@example.com');
+  git(cloneDir, 'config', 'user.name', 'clone');
+  git(cloneDir, 'checkout', '-q', 'gh-pages');
+
+  const originalFetch = global.fetch;
+  global.fetch = async url => {
+    assert.match(url, /\/pulls\?state=open/);
+    return { ok: true, status: 200, json: async () => [{ number: 1 }] };
+  };
+
+  try {
+    const result = await runJanitor({ repo: cloneDir, branch: 'gh-pages', previewRoot: '', retentionDays: 0, token: 't', repository: 'octo/widgets' });
+    assert.equal(result.changed, true);
+    assert.deepEqual(result.removed.map(r => r.entry), ['pr-2']);
+    assert.deepEqual(result.keep, ['pr-1']);
+    assert.ok(result.ignored.includes('staging'));
+    assert.ok(result.ignored.includes('assets'));
+    assert.ok(!fs.existsSync(path.join(cloneDir, 'pr-2')), 'closed PR preview pr-2 must be removed');
+    assert.ok(fs.existsSync(path.join(cloneDir, 'pr-1', 'index.html')), 'open PR preview pr-1 must be kept');
+    assert.ok(fs.existsSync(path.join(cloneDir, 'staging', 'index.html')), 'named environment staging must be preserved');
+    assert.ok(fs.existsSync(path.join(cloneDir, 'assets', 'style.css')), 'assets directory must be preserved');
+    assert.ok(fs.existsSync(path.join(cloneDir, 'index.html')), 'production root index.html must be preserved');
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

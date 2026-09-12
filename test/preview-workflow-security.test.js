@@ -48,6 +48,10 @@ test('pr-preview-cleanup workflow never checks out the pull request head and sta
   const content = read('.github/workflows/pr-preview-cleanup.yml');
 
   assert.match(content, /pull_request_target:\s*\n\s*types: \[closed\]/);
+  assert.match(content, /workflow_call:/, 'cleanup must support reusable workflow_call trigger');
+  assert.match(content, /preview_root:/, 'cleanup must support preview_root input');
+  assert.match(content, /pages_branch:/, 'cleanup must support pages_branch input');
+  assert.match(content, /pr_number:/, 'cleanup must support pr_number input');
   assert.doesNotMatch(content, /ref: \$\{\{ github\.event\.pull_request\.head/, 'cleanup must never check out the PR head ref/sha');
   assert.doesNotMatch(content, /pull-requests:\s*write/, 'cleanup does not need PR write access; it only touches the Pages branch');
   const cleanupJob = extractJobBlock(content, 'cleanup');
@@ -62,7 +66,16 @@ test('pr-preview-janitor workflow supports manual dispatch and schedule, never c
 
   assert.match(content, /workflow_dispatch:/);
   assert.match(content, /schedule:/);
+  assert.match(content, /workflow_call:/, 'janitor must support reusable workflow_call trigger');
+  assert.match(content, /preview_root:/, 'janitor must support preview_root input');
+  assert.match(content, /pages_branch:/, 'janitor must support pages_branch input');
+  assert.match(content, /retention_days:/, 'janitor must support retention_days input');
   assert.doesNotMatch(content, /pull_request/);
+  const janitorJob = extractJobBlock(content, 'janitor');
+  assert.match(janitorJob, /contents:\s*write/);
+  assert.match(janitorJob, /pages:\s*write/);
+  assert.match(janitorJob, /git ls-remote --exit-code --heads origin/, 'janitor must check if Pages branch exists remotely before attempting checkout');
+  assert.match(janitorJob, /steps\.branch_check\.outputs\.exists == 'true'/, 'checkout and prune steps must be guarded by Pages branch existence');
 });
 
 test('all trusted write workflows share the same Pages-branch concurrency group to serialize writers', () => {
@@ -78,14 +91,18 @@ test('all trusted write workflows share the same Pages-branch concurrency group 
   assert.ok(deploy.includes('group: storybook-pages-${{ github.repository }}'));
 });
 
-test('preview target resolution and metadata modules are wired into the workflows', () => {
+test('preview target resolution and metadata modules are wired into the workflows and composite actions', () => {
   const build = read('.github/workflows/pr-preview-build.yml');
   const publish = read('.github/workflows/pr-preview-publish.yml');
-  const cleanup = read('.github/workflows/pr-preview-cleanup.yml');
-  const janitor = read('.github/workflows/pr-preview-janitor.yml');
+  const cleanupWorkflow = read('.github/workflows/pr-preview-cleanup.yml');
+  const janitorWorkflow = read('.github/workflows/pr-preview-janitor.yml');
+  const cleanupAction = read('preview-cleanup/action.yml');
+  const janitorAction = read('preview-janitor/action.yml');
 
   assert.match(build, /node src\/preview-metadata\.js/);
   assert.match(publish, /node src\/preview-publish\.js/);
-  assert.match(cleanup, /node src\/preview-cleanup\.js/);
-  assert.match(janitor, /node src\/preview-janitor\.js/);
+  assert.match(cleanupWorkflow, /preview-cleanup@/);
+  assert.match(janitorWorkflow, /preview-janitor@/);
+  assert.match(cleanupAction, /preview-cleanup\.js/);
+  assert.match(janitorAction, /preview-janitor\.js/);
 });

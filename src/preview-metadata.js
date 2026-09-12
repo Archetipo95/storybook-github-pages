@@ -63,8 +63,8 @@ export function digestDirectory(directory) {
  */
 export function resolvePreviewTarget({ previewRoot = 'pr-preview', prNumber }) {
   const number = assertPositiveInteger(prNumber, 'prNumber');
-  validateRelativeDirectory(previewRoot, 'preview_root');
-  const target = path.posix.join(previewRoot, `pr-${number}`);
+  validateRelativeDirectory(previewRoot, 'preview_root', { allowEmpty: true });
+  const target = previewRoot ? path.posix.join(previewRoot, `pr-${number}`) : `pr-${number}`;
   validateRelativeDirectory(target, 'preview_target');
   return target;
 }
@@ -244,7 +244,7 @@ if (process.argv[1] && process.argv[1].endsWith('preview-metadata.js')) {
       headSha: process.env.HEAD_SHA,
       artifactName: process.env.ARTIFACT_NAME,
       contentDigest: digestDirectory(process.env.SOURCE_PATH),
-      previewRoot: process.env.PREVIEW_ROOT || 'pr-preview',
+      previewRoot: process.env.PREVIEW_ROOT !== undefined ? process.env.PREVIEW_ROOT : 'pr-preview',
       eventName: process.env.EVENT_NAME || 'pull_request'
     });
 

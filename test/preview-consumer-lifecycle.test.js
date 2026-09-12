@@ -186,3 +186,92 @@ test('external consumer full lifecycle: untrusted build, artifact transfer witho
     global.fetch = originalFetch;
   }
 });
+
+test('external consumer full lifecycle with repository-root layout (preview_root: ""): publish, janitor pruning, and close cleanup', async () => {
+  const consumerRepoName = 'consumer-org/consumer-root-layout-app';
+  const prNumber = 201;
+  const runId = 112233;
+
+  // Untrusted PR Build
+  const prWorkspace = makeTempDir('consumer-root-workspace-');
+  const storybookStaticDir = path.join(prWorkspace, 'storybook-static');
+  fs.mkdirSync(storybookStaticDir, { recursive: true });
+  fs.writeFileSync(path.join(storybookStaticDir, 'index.html'), '<!DOCTYPE html><html><body>Root Layout Storybook PR 201</body></html>');
+  fs.writeFileSync(path.join(storybookStaticDir, 'iframe.html'), '<!DOCTYPE html><html><body>Stories Iframe</body></html>');
+
+  const bundleDir = makeTempDir('consumer-root-bundle-');
+  const metadata = buildPreviewMetadata({
+    repository: consumerRepoName,
+    runId,
+    runAttempt: 1,
+    prNumber,
+    baseRef: 'main',
+    headRepository: consumerRepoName,
+    headSha: SHA_INITIAL,
+    artifactName: `storybook-preview-pr-${prNumber}-run-${runId}`,
+    contentDigest: digestDirectory(storybookStaticDir),
+    previewRoot: ''
+  });
+
+  assert.equal(metadata.target, `pr-${prNumber}`);
+  fs.writeFileSync(path.join(bundleDir, 'preview-metadata.json'), `${JSON.stringify(metadata, null, 2)}\n`);
+  fs.cpSync(storybookStaticDir, path.join(bundleDir, 'storybook'), { recursive: true });
+
+  const { cloneDir: pagesRepo } = initConsumerPagesRepo();
+
+  const originalFetch = global.fetch;
+  global.fetch = async (url, options = {}) => {
+    if (url.includes('/comments')) return { ok: true, status: 201, json: async () => ({ id: 6001 }) };
+    if (url.includes('/pages/builds')) return { ok: true, status: 201, json: async () => ({ status: 'queued' }) };
+    if (url.includes('/pulls?state=open')) return { ok: true, status: 200, json: async () => [{ number: 999 }] }; // PR 201 is closed
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  try {
+    const trustedContext = {
+      repository: consumerRepoName,
+      runId,
+      prNumber,
+      headSha: SHA_INITIAL,
+      headRepository: consumerRepoName,
+      baseRef: 'main',
+      artifactName: `storybook-preview-pr-${prNumber}-run-${runId}`,
+      previewRoot: ''
+    };
+
+    // Publish to root layout
+    const publishResult = await publishPreview({
+      bundleDir,
+      pagesRepo,
+      trustedContext,
+      currentHeadSha: SHA_INITIAL,
+      pagesBranch: 'gh-pages',
+      siteUrl: 'https://consumer-org.github.io/consumer-root-layout-app',
+      token: 'fake-token-trusted',
+      repository: consumerRepoName
+    });
+
+    assert.equal(publishResult.action, 'published');
+    const publishedPath = path.join(pagesRepo, `pr-${prNumber}`, 'index.html');
+    assert.ok(fs.existsSync(publishedPath), 'preview must be published at root pr-201/index.html');
+    assert.ok(fs.existsSync(path.join(pagesRepo, 'index.html')), 'root index.html must be preserved');
+
+    // Run janitor to prune closed PR 201
+    const { runJanitor } = await import('../src/preview-janitor.js');
+    const janitorResult = await runJanitor({
+      repo: pagesRepo,
+      branch: 'gh-pages',
+      previewRoot: '',
+      retentionDays: 0,
+      token: 'fake-token-trusted',
+      repository: consumerRepoName
+    });
+
+    assert.equal(janitorResult.changed, true);
+    assert.deepEqual(janitorResult.removed.map(r => r.entry), [`pr-${prNumber}`]);
+    assert.ok(!fs.existsSync(path.join(pagesRepo, `pr-${prNumber}`)), 'janitor must prune root pr-201 directory');
+    assert.ok(fs.existsSync(path.join(pagesRepo, 'index.html')), 'production root index.html must remain intact');
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { validateRelativeDirectory } from './config.js';
+import { validateRelativeDirectory, resolveConfiguration } from './config.js';
 import { run, withSerializedBranchWrite, requestPagesRebuild } from './git-branch-writer.js';
 
 const PREVIEW_DIR_PATTERN = /^pr-(\d+)$/;
@@ -51,7 +51,7 @@ export function classifyPreviewEntries({ entries, openPrNumbers, retentionMs, no
 }
 
 async function listPreviewEntries(repo, previewRoot) {
-  const root = path.join(repo, previewRoot);
+  const root = previewRoot ? path.join(repo, previewRoot) : repo;
   try {
     const dirents = await fs.readdir(root, { withFileTypes: true });
     return dirents.filter(entry => entry.isDirectory()).map(entry => entry.name);
@@ -100,7 +100,7 @@ async function fetchOpenPullRequestNumbers({ token, repository }) {
  * directories and any manually managed content).
  */
 export async function runJanitor({ repo, branch = 'gh-pages', previewRoot = 'pr-preview', retentionDays = 30, token, repository }) {
-  validateRelativeDirectory(previewRoot, 'preview_root');
+  validateRelativeDirectory(previewRoot, 'preview_root', { allowEmpty: true });
   const retentionMs = Number(retentionDays) > 0 ? Number(retentionDays) * 24 * 60 * 60 * 1000 : 0;
   const openPrNumbers = await fetchOpenPullRequestNumbers({ token, repository });
   const entries = await listPreviewEntries(repo, previewRoot);
@@ -109,7 +109,7 @@ export async function runJanitor({ repo, branch = 'gh-pages', previewRoot = 'pr-
   // pure classification function below stays synchronous and test-friendly.
   const lastModifiedByEntry = new Map();
   for (const entry of entries) {
-    const relative = path.posix.join(previewRoot, entry);
+    const relative = previewRoot ? path.posix.join(previewRoot, entry) : entry;
     lastModifiedByEntry.set(entry, await lastModifiedMsForPath(repo, relative));
   }
 
@@ -132,7 +132,7 @@ export async function runJanitor({ repo, branch = 'gh-pages', previewRoot = 'pr-
     mutate: async repoPath => {
       let mutated = false;
       for (const { entry } of remove) {
-        const full = path.join(repoPath, previewRoot, entry);
+        const full = previewRoot ? path.join(repoPath, previewRoot, entry) : path.join(repoPath, entry);
         await fs.rm(full, { recursive: true, force: true });
         mutated = true;
       }
@@ -144,11 +144,19 @@ export async function runJanitor({ repo, branch = 'gh-pages', previewRoot = 'pr-
 }
 
 if (process.argv[1] && process.argv[1].endsWith('preview-janitor.js')) {
+  const config = resolveConfiguration({
+    inputs: {
+      preview_root: process.env.PREVIEW_ROOT,
+      pages_branch: process.env.PAGES_BRANCH,
+      preview_retention_days: process.env.PREVIEW_RETENTION_DAYS
+    }
+  });
+
   runJanitor({
     repo: process.env.PAGES_REPO || process.cwd(),
-    branch: process.env.PAGES_BRANCH || 'gh-pages',
-    previewRoot: process.env.PREVIEW_ROOT || 'pr-preview',
-    retentionDays: process.env.PREVIEW_RETENTION_DAYS || 30,
+    branch: config.pages_branch || process.env.PAGES_BRANCH || 'gh-pages',
+    previewRoot: config.preview_root,
+    retentionDays: config.preview_retention_days,
     token: process.env.GITHUB_TOKEN,
     repository: process.env.GITHUB_REPOSITORY
   }).then(async result => {
