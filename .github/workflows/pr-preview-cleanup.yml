@@ -53,7 +53,7 @@ jobs:
       # trusted cleanup script itself is available. This is never the pull
       # request's head - no PR-controlled code is checked out in this job.
       - name: Checkout repository (default branch, trusted)
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -113,7 +113,7 @@ jobs:
 
       - name: Checkout Pages branch
         if: steps.branch_check.outputs.exists == 'true'
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
           path: pages-repo
