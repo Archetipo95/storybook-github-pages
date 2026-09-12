@@ -291,6 +291,12 @@ This repository ships the four workflows above as a working reference implementa
   git checkout main
   ```
 
+### 7. Preview Artifact Download in Trusted Workflows (`fatal: not a git repository`)
+* **Symptom**: In a trusted `workflow_run` preview publisher workflow that does not check out PR-controlled code, artifact download fails with `fatal: not a git repository`.
+* **Causes & Solutions**:
+  * **CLI Git Discovery**: When running `gh run download <run-id> --name <artifact>` in a runner environment without a Git checkout, `gh` defaults to querying local Git remotes in the working directory. Provide repository context via environment `env: GH_REPO: ${{ github.repository }}` (or `--repo ${{ github.repository }}`) and `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` so `gh` operates without requiring a local Git checkout.
+  * **Actions download-artifact (Recommended)**: Use `actions/download-artifact@v4` with explicit `run-id: ${{ github.event.workflow_run.id }}` and `github-token: ${{ secrets.GITHUB_TOKEN }}`. This downloads the artifact directly via GitHub Actions APIs without executing untrusted code or requiring a local checkout.
+
 ---
 
 ## License & Attribution
