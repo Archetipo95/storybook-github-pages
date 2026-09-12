@@ -74,6 +74,7 @@ test('pr-preview-janitor workflow supports manual dispatch and schedule, never c
   const janitorJob = extractJobBlock(content, 'janitor');
   assert.match(janitorJob, /contents:\s*write/);
   assert.match(janitorJob, /pages:\s*write/);
+  assert.match(janitorJob, /pull-requests:\s*read/);
   assert.match(janitorJob, /git ls-remote --exit-code --heads origin/, 'janitor must check if Pages branch exists remotely before attempting checkout');
   assert.match(janitorJob, /steps\.branch_check\.outputs\.exists == 'true'/, 'checkout and prune steps must be guarded by Pages branch existence');
 });

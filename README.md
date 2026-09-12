@@ -171,7 +171,7 @@ permissions:
 
 GitHub Actions cannot elevate permissions granted by the caller; grant the mode-specific block in the calling workflow.
 
-The PR preview lifecycle workflows declare their own job-scoped permissions and need no caller configuration: the untrusted build job uses `contents: read` only; the trusted publish job uses `contents: write`, `pages: write`, `pull-requests: write` (for the bot comment), and `actions: read` (to download the build artifact by run id); cleanup uses `contents: write` and `pages: write`; the janitor uses `contents: write` and `pages: write`.
+The PR preview lifecycle workflows declare their own job-scoped permissions and need no caller configuration: the untrusted build job uses `contents: read` only; the trusted publish job uses `contents: write`, `pages: write`, `pull-requests: write` (for the bot comment), and `actions: read` (to download the build artifact by run id); cleanup uses `contents: write` and `pages: write`; the janitor uses `contents: write`, `pages: write`, and `pull-requests: read`.
 
 ---
 
