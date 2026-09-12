@@ -121,8 +121,8 @@ test('release validation - directory mode integration documents dedicated publis
   // Directory mode requires publisher action
   assert.match(
     readme,
-    /uses:\s*Archetipo95\/storybook-github-pages\/publisher@v1\.0\.0/,
-    'README Option 3 directory mode pipeline must use publisher@v1.0.0'
+    /uses:\s*Archetipo95\/storybook-github-pages\/publisher@v1\.0\.1/,
+    'README Option 3 directory mode pipeline must use publisher@v1.0.1'
   );
   assert.match(
     readme,
