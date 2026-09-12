@@ -13,6 +13,8 @@ export const DEFAULT_CONFIG = {
   artifact_name: 'github-pages',
   managed_directories: [],
   package_manager: 'npm',
+  preview_root: 'pr-preview',
+  preview_retention_days: 30,
   build: {
     install_command: null,
     build_command: null
@@ -88,6 +90,17 @@ export function validateConfig(config) {
   if (config.managed_directories !== undefined) {
     const values = Array.isArray(config.managed_directories) ? config.managed_directories : String(config.managed_directories).split(',').map(value => value.trim()).filter(Boolean);
     values.forEach(value => validateRelativeDirectory(value, 'managed_directories'));
+  }
+
+  if (config.preview_root !== undefined) {
+    validateRelativeDirectory(config.preview_root, 'preview_root');
+  }
+
+  if (config.preview_retention_days !== undefined) {
+    const days = Number(config.preview_retention_days);
+    if (!Number.isInteger(days) || days <= 0) {
+      throw new Error(`Config preview_retention_days must be a positive integer, got "${config.preview_retention_days}"`);
+    }
   }
 
   if (config.build !== undefined && config.build !== null) {
@@ -188,6 +201,8 @@ export function resolveConfiguration({ inputs = {}, configFilePath = '.storybook
     artifact_name: inputs.artifact_name || fileConfig?.artifact_name || DEFAULT_CONFIG.artifact_name,
     managed_directories: inputs.managed_directories || fileConfig?.managed_directories || DEFAULT_CONFIG.managed_directories,
     package_manager: inputs.package_manager || fileConfig?.package_manager || DEFAULT_CONFIG.package_manager,
+    preview_root: inputs.preview_root || fileConfig?.preview_root || DEFAULT_CONFIG.preview_root,
+    preview_retention_days: Number(inputs.preview_retention_days || fileConfig?.preview_retention_days || DEFAULT_CONFIG.preview_retention_days),
     build: {
       install_command: inputs.install_command || inputs.custom_install_command || fileConfig?.build?.install_command || DEFAULT_CONFIG.build.install_command,
       build_command: inputs.build_command || inputs.custom_build_command || fileConfig?.build?.build_command || DEFAULT_CONFIG.build.build_command

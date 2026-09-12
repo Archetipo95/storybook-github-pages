@@ -1,0 +1,60 @@
+name: PR Preview Cleanup
+
+# Trusted, metadata-only close cleanup. Uses `pull_request_target` so a
+# write-capable token is available even for closing a forked pull request,
+# but this workflow NEVER checks out the pull request's head ref or runs
+# any code from it - it only reads structured event metadata (PR number,
+# head/base refs, head repository) to compute the preview directory name,
+# then checks out the trusted Pages branch to remove it. This is the
+# documented-safe usage of `pull_request_target`: no PR-controlled code is
+# ever executed in this privileged context.
+#
+# Removal is idempotent: if the directory does not exist (e.g. the PR's
+# preview was never published, such as for a fork PR), this is a no-op and
+# no rebuild is requested.
+
+on:
+  pull_request_target:
+    types: [closed]
+
+concurrency:
+  group: storybook-pages-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Remove closed PR preview (trusted, metadata-only)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      # Checks out the default branch only (no `ref:` on a pull_request_target
+      # checkout resolves to the base repository's default branch) so the
+      # trusted cleanup script itself is available. This is never the pull
+      # request's head - no PR-controlled code is checked out in this job.
+      - name: Checkout repository (default branch, trusted)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Checkout Pages branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: gh-pages
+          path: pages-repo
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remove preview directory for closed pull request
+        env:
+          PAGES_REPO: ${{ github.workspace }}/pages-repo
+          PAGES_BRANCH: gh-pages
+          PREVIEW_ROOT: pr-preview
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node src/preview-cleanup.js

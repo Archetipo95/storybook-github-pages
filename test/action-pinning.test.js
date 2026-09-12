@@ -8,7 +8,11 @@ test('verify all action uses are pinned to full commit SHAs', () => {
   const filesToCheck = [
     path.join(root, 'action.yml'),
     path.join(root, '.github/workflows/deploy-storybook.yml'),
-    path.join(root, '.github/workflows/ci.yml')
+    path.join(root, '.github/workflows/ci.yml'),
+    path.join(root, '.github/workflows/pr-preview-build.yml'),
+    path.join(root, '.github/workflows/pr-preview-publish.yml'),
+    path.join(root, '.github/workflows/pr-preview-cleanup.yml'),
+    path.join(root, '.github/workflows/pr-preview-janitor.yml')
   ];
 
   const shaUsesRegex = /uses:\s*([a-zA-Z0-9-_\/]+)@([a-f0-9]{40})/g;
