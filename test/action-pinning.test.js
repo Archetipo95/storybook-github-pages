@@ -33,3 +33,18 @@ test('verify all action uses are pinned to full commit SHAs', () => {
     }
   }
 });
+
+test('verify deploy-storybook workflow build-and-upload job has minimal permissions', () => {
+  const root = process.cwd();
+  const workflowPath = path.join(root, '.github/workflows/deploy-storybook.yml');
+  const content = fs.readFileSync(workflowPath, 'utf8');
+
+  // Extract build-and-upload job block
+  const buildJobMatch = content.match(/build-and-upload:[\s\S]*?(?=deploy:|$)/);
+  assert.ok(buildJobMatch, 'build-and-upload job not found in deploy-storybook.yml');
+
+  const buildJobContent = buildJobMatch[0];
+  assert.match(buildJobContent, /contents:\s*read/);
+  assert.doesNotMatch(buildJobContent, /pages:\s*write/, 'build-and-upload job must not have pages: write permission');
+  assert.doesNotMatch(buildJobContent, /id-token:\s*write/, 'build-and-upload job must not have id-token: write permission');
+});
