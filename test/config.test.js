@@ -50,6 +50,7 @@ test('validateConfig - accepts directory mode and rejects protected targets', ()
 
 test('validateConfig - accepts a safe preview_root and rejects an unsafe one', () => {
   assert.equal(validateConfig({ preview_root: 'pr-preview' }), true);
+  assert.equal(validateConfig({ preview_root: '' }), true, 'empty preview_root must be accepted for repository-root layout');
   assert.throws(() => validateConfig({ preview_root: '../outside' }), /preview_root/);
   assert.throws(() => validateConfig({ preview_root: '.git' }), /preview_root/);
 });
@@ -162,6 +163,32 @@ test('resolveConfiguration - preserves preview_retention_days 0 from input or co
   // Test numeric 0 in workflow input
   const fromInputNumber = resolveConfiguration({ inputs: { preview_retention_days: 0 }, configFilePath: configPath });
   assert.equal(fromInputNumber.preview_retention_days, 0, 'preview_retention_days 0 from input must be preserved');
+
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test('resolveConfiguration - supports repository-root layout preview_root: "" and "."', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-root-layout-'));
+  const configPath = path.join(tmpDir, '.storybook-pages.yml');
+
+  // Test preview_root: "" in config file
+  fs.writeFileSync(configPath, 'preview_root: ""\n');
+  const fromFile = resolveConfiguration({ inputs: {}, configFilePath: configPath });
+  assert.equal(fromFile.preview_root, '', 'preview_root "" in config file must resolve to empty string');
+
+  // Test preview_root: "." in config file
+  fs.writeFileSync(configPath, 'preview_root: "."\n');
+  const fromFileDot = resolveConfiguration({ inputs: {}, configFilePath: configPath });
+  assert.equal(fromFileDot.preview_root, '', 'preview_root "." in config file must resolve to empty string');
+
+  // Test preview_root: "custom" in input
+  const fromInput = resolveConfiguration({ inputs: { preview_root: 'previews' }, configFilePath: configPath });
+  assert.equal(fromInput.preview_root, 'previews', 'explicit preview_root input overrides config file');
+
+  // Test preview_root: "." in input overriding non-empty config file
+  fs.writeFileSync(configPath, 'preview_root: "custom-previews"\n');
+  const fromInputDot = resolveConfiguration({ inputs: { preview_root: '.' }, configFilePath: configPath });
+  assert.equal(fromInputDot.preview_root, '', 'explicit preview_root "." input overrides config file to root layout');
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });

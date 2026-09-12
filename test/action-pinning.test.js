@@ -7,6 +7,9 @@ test('verify all action uses are pinned to full commit SHAs', () => {
   const root = process.cwd();
   const filesToCheck = [
     path.join(root, 'action.yml'),
+    path.join(root, 'publisher/action.yml'),
+    path.join(root, 'preview-cleanup/action.yml'),
+    path.join(root, 'preview-janitor/action.yml'),
     path.join(root, '.github/workflows/deploy-storybook.yml'),
     path.join(root, '.github/workflows/ci.yml'),
     path.join(root, '.github/workflows/pr-preview-build.yml'),
@@ -94,4 +97,12 @@ test('directory publisher reference pins the reviewed implementation commit', ()
   const workflow = fs.readFileSync(path.join(process.cwd(), '.github/workflows/deploy-storybook.yml'), 'utf8');
   assert.match(workflow, /Archetipo95\/storybook-github-pages\/publisher@9be19be83cb05f2f648b4c78dac27befdb93d740/);
   assert.doesNotMatch(workflow, /publisher@f9dc8f9f0cc19f8df966a2a74b871c36322a789c/);
+});
+
+test('preview cleanup and janitor references pin the reviewed implementation commit', () => {
+  const cleanup = fs.readFileSync(path.join(process.cwd(), '.github/workflows/pr-preview-cleanup.yml'), 'utf8');
+  assert.match(cleanup, /Archetipo95\/storybook-github-pages\/preview-cleanup@[a-f0-9]{40}/);
+
+  const janitor = fs.readFileSync(path.join(process.cwd(), '.github/workflows/pr-preview-janitor.yml'), 'utf8');
+  assert.match(janitor, /Archetipo95\/storybook-github-pages\/preview-janitor@[a-f0-9]{40}/);
 });

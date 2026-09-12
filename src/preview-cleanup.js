@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { resolvePreviewTarget } from './preview-metadata.js';
+import { resolveConfiguration } from './config.js';
 import { withSerializedBranchWrite, requestPagesRebuild } from './git-branch-writer.js';
 
 async function pathExists(target) {
@@ -21,6 +22,9 @@ async function pathExists(target) {
  */
 export async function removePreviewDirectory({ repo, branch = 'gh-pages', previewRoot = 'pr-preview', prNumber }) {
   const target = resolvePreviewTarget({ previewRoot, prNumber });
+  if (!(await pathExists(repo))) {
+    return { target, changed: false, skipped: true, reason: 'Pages repository directory does not exist' };
+  }
   const result = await withSerializedBranchWrite({
     repo,
     branch,
@@ -36,10 +40,17 @@ export async function removePreviewDirectory({ repo, branch = 'gh-pages', previe
 }
 
 if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
+  const config = resolveConfiguration({
+    inputs: {
+      preview_root: process.env.PREVIEW_ROOT,
+      pages_branch: process.env.PAGES_BRANCH
+    }
+  });
+
   removePreviewDirectory({
     repo: process.env.PAGES_REPO || process.cwd(),
-    branch: process.env.PAGES_BRANCH || 'gh-pages',
-    previewRoot: process.env.PREVIEW_ROOT || 'pr-preview',
+    branch: config.pages_branch || process.env.PAGES_BRANCH || 'gh-pages',
+    previewRoot: config.preview_root,
     prNumber: process.env.PR_NUMBER
   }).then(async result => {
     console.log(JSON.stringify(result));
@@ -49,7 +60,9 @@ if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
     if (process.env.GITHUB_STEP_SUMMARY) {
       const message = result.changed
         ? `### Storybook preview cleanup\n\nRemoved \`${result.target}\` for the closed pull request.\n`
-        : `### Storybook preview cleanup\n\nNo preview directory existed at \`${result.target}\`; nothing to remove.\n`;
+        : (result.skipped
+          ? `### Storybook preview cleanup\n\nPages repository does not exist; skipped preview cleanup.\n`
+          : `### Storybook preview cleanup\n\nNo preview directory existed at \`${result.target}\`; nothing to remove.\n`);
       await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, message);
     }
   }).catch(error => {

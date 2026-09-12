@@ -27,7 +27,7 @@ export const ALLOWED_MODES = new Set(['artifact', 'directory']);
 const PROTECTED_DIRECTORIES = new Set(['.git', '.github']);
 
 export function validateRelativeDirectory(value, field = 'target_directory', { allowEmpty = false } = {}) {
-  if (allowEmpty && (value === undefined || value === '')) return true;
+  if (allowEmpty && (value === undefined || value === '' || value === '.' || value === './')) return true;
   if (typeof value !== 'string' || value.trim() === '') {
     throw new Error(`${field} must be a non-empty relative directory`);
   }
@@ -93,7 +93,7 @@ export function validateConfig(config) {
   }
 
   if (config.preview_root !== undefined) {
-    validateRelativeDirectory(config.preview_root, 'preview_root');
+    validateRelativeDirectory(config.preview_root, 'preview_root', { allowEmpty: true });
   }
 
   if (config.preview_retention_days !== undefined) {
@@ -166,10 +166,10 @@ export function parseSimpleYaml(content) {
 function parseValue(val) {
   if (val === 'true') return true;
   if (val === 'false') return false;
-  if (!isNaN(Number(val))) return Number(val);
   if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
     return val.slice(1, -1);
   }
+  if (val !== '' && !isNaN(Number(val))) return Number(val);
   return val;
 }
 
@@ -201,7 +201,11 @@ export function resolveConfiguration({ inputs = {}, configFilePath = '.storybook
     artifact_name: inputs.artifact_name || fileConfig?.artifact_name || DEFAULT_CONFIG.artifact_name,
     managed_directories: inputs.managed_directories || fileConfig?.managed_directories || DEFAULT_CONFIG.managed_directories,
     package_manager: inputs.package_manager || fileConfig?.package_manager || DEFAULT_CONFIG.package_manager,
-    preview_root: inputs.preview_root || fileConfig?.preview_root || DEFAULT_CONFIG.preview_root,
+    preview_root: (inputs.preview_root !== undefined && inputs.preview_root !== '')
+      ? (inputs.preview_root === '.' || inputs.preview_root === './' ? '' : inputs.preview_root)
+      : (fileConfig?.preview_root !== undefined
+        ? (fileConfig.preview_root === '.' || fileConfig.preview_root === './' ? '' : fileConfig.preview_root)
+        : DEFAULT_CONFIG.preview_root),
     preview_retention_days: Number(
       (inputs.preview_retention_days !== undefined && inputs.preview_retention_days !== '')
         ? inputs.preview_retention_days

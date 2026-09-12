@@ -18,6 +18,23 @@ on:
         default: ''
   schedule:
     - cron: '17 4 * * *'
+  workflow_call:
+    inputs:
+      preview_root:
+        description: 'Root directory for previews on the Pages branch'
+        required: false
+        type: string
+        default: ''
+      pages_branch:
+        description: 'Pages branch containing previews'
+        required: false
+        type: string
+        default: ''
+      retention_days:
+        description: 'Remove previews for still-open PRs after this many days (0 disables age-based pruning; closed-PR previews are always removed)'
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: storybook-pages-${{ github.repository }}
@@ -33,6 +50,7 @@ jobs:
     permissions:
       contents: write
       pages: write
+      pull-requests: read
     steps:
       - name: Checkout repository (default branch, trusted)
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -41,27 +59,84 @@ jobs:
 
       - name: Resolve preview configuration
         id: config
+        env:
+          INPUT_PREVIEW_ROOT: ${{ inputs.preview_root }}
+          INPUT_PAGES_BRANCH: ${{ inputs.pages_branch }}
+          INPUT_RETENTION_DAYS: ${{ inputs.retention_days || github.event.inputs.retention_days }}
         run: |
-          node -e 'import("./src/config.js").then(({resolveConfiguration}) => {
-            const c = resolveConfiguration({inputs: {}});
-            console.log(`preview_root=${c.preview_root}`);
-            console.log(`retention_days=${c.preview_retention_days}`);
-          })' >> "$GITHUB_OUTPUT"
+          node -e '
+            import("node:fs").then(async ({existsSync}) => {
+              if (existsSync("./src/config.js")) {
+                const {resolveConfiguration} = await import("./src/config.js");
+                const c = resolveConfiguration({inputs: {
+                  preview_root: process.env.INPUT_PREVIEW_ROOT,
+                  pages_branch: process.env.INPUT_PAGES_BRANCH,
+                  preview_retention_days: process.env.INPUT_RETENTION_DAYS
+                }});
+                console.log(`preview_root=${c.preview_root}`);
+                console.log(`pages_branch=${c.pages_branch}`);
+                console.log(`retention_days=${c.preview_retention_days}`);
+              } else {
+                let preview_root = process.env.INPUT_PREVIEW_ROOT || "";
+                let pages_branch = process.env.INPUT_PAGES_BRANCH || "";
+                let retention_days = process.env.INPUT_RETENTION_DAYS || "";
+                if (existsSync(".storybook-pages.yml")) {
+                  const {readFileSync} = await import("node:fs");
+                  const content = readFileSync(".storybook-pages.yml", "utf8");
+                  for (const line of content.split("\n")) {
+                    const trimmed = line.trim();
+                    if (!preview_root && trimmed.startsWith("preview_root:")) {
+                      preview_root = trimmed.slice("preview_root:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                    if (!pages_branch && trimmed.startsWith("pages_branch:")) {
+                      pages_branch = trimmed.slice("pages_branch:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                    if (retention_days === "" && trimmed.startsWith("preview_retention_days:")) {
+                      retention_days = trimmed.slice("preview_retention_days:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                  }
+                }
+                if (preview_root === "" && process.env.INPUT_PREVIEW_ROOT === undefined) {
+                  preview_root = "pr-preview";
+                }
+                if (!pages_branch) pages_branch = "gh-pages";
+                if (retention_days === "") retention_days = "30";
+                console.log(`preview_root=${preview_root}`);
+                console.log(`pages_branch=${pages_branch}`);
+                console.log(`retention_days=${retention_days}`);
+              }
+            });
+          ' >> "$GITHUB_OUTPUT"
+
+      - name: Check Pages branch existence
+        id: branch_check
+        env:
+          PAGES_BRANCH: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
+        run: |
+          if git ls-remote --exit-code --heads origin "$PAGES_BRANCH" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Pages branch '$PAGES_BRANCH' does not exist; skipping preview janitor."
+            if [ -n "$GITHUB_STEP_SUMMARY" ]; then
+              echo -e "### Storybook preview janitor\n\nPages branch \`$PAGES_BRANCH\` does not exist; no preview directory to prune.\n" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
 
       - name: Checkout Pages branch
+        if: steps.branch_check.outputs.exists == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: gh-pages
+          ref: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
           path: pages-repo
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Prune stale preview directories
-        env:
-          PAGES_REPO: ${{ github.workspace }}/pages-repo
-          PAGES_BRANCH: gh-pages
-          PREVIEW_ROOT: ${{ steps.config.outputs.preview_root }}
-          PREVIEW_RETENTION_DAYS: ${{ github.event.inputs.retention_days || steps.config.outputs.retention_days }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: node src/preview-janitor.js
+        if: steps.branch_check.outputs.exists == 'true'
+        uses: Archetipo95/storybook-github-pages/preview-janitor@81658c93c696c9d69f86c2731a1daecff1678111
+        with:
+          pages_repo: ${{ github.workspace }}/pages-repo
+          pages_branch: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
+          preview_root: ${{ steps.config.outputs.preview_root }}
+          retention_days: ${{ steps.config.outputs.retention_days }}

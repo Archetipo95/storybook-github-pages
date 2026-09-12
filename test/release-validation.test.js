@@ -35,6 +35,16 @@ test('release validation - version metadata consistency across files', () => {
   const publisherYml = fs.readFileSync(path.join(root, 'publisher/action.yml'), 'utf8');
   assert.match(publisherYml, /name:\s*['"]?Trusted Storybook Pages publisher['"]?/);
   assert.match(publisherYml, /using:\s*['"]?composite['"]?/);
+
+  // Check preview-cleanup/action.yml
+  const cleanupYml = fs.readFileSync(path.join(root, 'preview-cleanup/action.yml'), 'utf8');
+  assert.match(cleanupYml, /name:\s*['"]?Trusted Storybook preview cleanup['"]?/);
+  assert.match(cleanupYml, /using:\s*['"]?composite['"]?/);
+
+  // Check preview-janitor/action.yml
+  const janitorYml = fs.readFileSync(path.join(root, 'preview-janitor/action.yml'), 'utf8');
+  assert.match(janitorYml, /name:\s*['"]?Trusted Storybook preview janitor['"]?/);
+  assert.match(janitorYml, /using:\s*['"]?composite['"]?/);
 });
 
 test('release validation - documentation and governance files presence', () => {

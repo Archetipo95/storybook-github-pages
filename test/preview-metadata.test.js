@@ -30,6 +30,7 @@ function sameRepoMetadata(overrides = {}) {
 test('resolvePreviewTarget builds a safe, configurable preview path', () => {
   assert.equal(resolvePreviewTarget({ previewRoot: 'pr-preview', prNumber: 7 }), 'pr-preview/pr-7');
   assert.equal(resolvePreviewTarget({ previewRoot: 'previews', prNumber: '12' }), 'previews/pr-12');
+  assert.equal(resolvePreviewTarget({ previewRoot: '', prNumber: 42 }), 'pr-42', 'repository-root layout produces pr-<number>');
 });
 
 test('resolvePreviewTarget rejects unsafe roots and PR numbers', () => {

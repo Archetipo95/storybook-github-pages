@@ -171,7 +171,7 @@ permissions:
 
 GitHub Actions cannot elevate permissions granted by the caller; grant the mode-specific block in the calling workflow.
 
-The PR preview lifecycle workflows declare their own job-scoped permissions and need no caller configuration: the untrusted build job uses `contents: read` only; the trusted publish job uses `contents: write`, `pages: write`, `pull-requests: write` (for the bot comment), and `actions: read` (to download the build artifact by run id); cleanup uses `contents: write` and `pages: write`; the janitor uses `contents: write` and `pages: write`.
+The PR preview lifecycle workflows declare their own job-scoped permissions and need no caller configuration: the untrusted build job uses `contents: read` only; the trusted publish job uses `contents: write`, `pages: write`, `pull-requests: write` (for the bot comment), and `actions: read` (to download the build artifact by run id); cleanup uses `contents: write` and `pages: write`; the janitor uses `contents: write`, `pages: write`, and `pull-requests: read`.
 
 ---
 
@@ -233,8 +233,105 @@ The comment is idempotent: it is identified by a stable hidden marker (`<!-- sto
 Both are ordinary `.storybook-pages.yml` / workflow-input settings, validated the same way as `target_directory`:
 
 ```yaml
-preview_root: pr-preview          # default; must be relative and cannot be .git/.github
+preview_root: pr-preview          # default; set to '' in .storybook-pages.yml for repository-root layout (pr-<number>)
 preview_retention_days: 30        # default; 0 disables age-based pruning (closed-PR previews are still removed)
+```
+
+#### Repository-Root Preview Layout (`preview_root: ''`)
+
+When `preview_root` is set to `''` (empty string), previews are placed directly at the Pages branch root as `pr-<number>` (e.g. `pr-42`). The trusted publisher, cleanup, and janitor strictly target `pr-<number>` directories:
+- **Cleanup**: Removes only the exact `pr-<closed-pr-number>` directory on PR close.
+- **Janitor**: Scans the root and removes only entries matching `^pr-(\d+)$` whose PR is closed or exceeds retention; production root files (`index.html`, assets) and named environment directories (such as `staging/`) are never touched.
+
+### Reusable Preview Lifecycle APIs
+
+Consumers can invoke the preview cleanup and janitor workflows and actions directly without checking out platform source or duplicating internal scripts:
+
+#### 1. Reusable Closed-PR Preview Cleanup
+
+Call the reusable workflow on PR closure (`pull_request_target: types: [closed]`):
+
+```yaml
+name: PR Preview Cleanup
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  cleanup:
+    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-cleanup.yml@v1.0.0
+    with:
+      preview_root: ''       # optional: override preview root; defaults to .storybook-pages.yml or 'pr-preview'
+      pages_branch: 'gh-pages'
+```
+
+Or call the composite action in a custom job:
+
+```yaml
+    steps:
+      - name: Checkout Pages branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: gh-pages
+          path: pages-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Remove preview directory
+        uses: Archetipo95/storybook-github-pages/preview-cleanup@v1.0.0
+        with:
+          pages_repo: pages-repo
+          pages_branch: gh-pages
+          preview_root: ''
+          pr_number: ${{ github.event.pull_request.number }}
+```
+
+#### 2. Reusable Stale-Preview Janitor
+
+Call the reusable janitor workflow on schedule or dispatch:
+
+```yaml
+name: PR Preview Janitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * *'
+
+permissions:
+  contents: write
+  pages: write
+  pull-requests: read
+
+jobs:
+  janitor:
+    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-janitor.yml@v1.0.0
+    with:
+      preview_root: ''
+      pages_branch: 'gh-pages'
+      retention_days: '30'
+```
+
+Or use the composite action directly:
+
+```yaml
+    steps:
+      - name: Checkout Pages branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: gh-pages
+          path: pages-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prune stale previews
+        uses: Archetipo95/storybook-github-pages/preview-janitor@v1.0.0
+        with:
+          pages_repo: pages-repo
+          pages_branch: gh-pages
+          preview_root: ''
+          retention_days: '30'
 ```
 
 ### Adapting the templates to another repository
