@@ -202,7 +202,13 @@ export function resolveConfiguration({ inputs = {}, configFilePath = '.storybook
     managed_directories: inputs.managed_directories || fileConfig?.managed_directories || DEFAULT_CONFIG.managed_directories,
     package_manager: inputs.package_manager || fileConfig?.package_manager || DEFAULT_CONFIG.package_manager,
     preview_root: inputs.preview_root || fileConfig?.preview_root || DEFAULT_CONFIG.preview_root,
-    preview_retention_days: Number(inputs.preview_retention_days || fileConfig?.preview_retention_days || DEFAULT_CONFIG.preview_retention_days),
+    preview_retention_days: Number(
+      (inputs.preview_retention_days !== undefined && inputs.preview_retention_days !== '')
+        ? inputs.preview_retention_days
+        : (fileConfig?.preview_retention_days !== undefined && fileConfig?.preview_retention_days !== '')
+          ? fileConfig.preview_retention_days
+          : DEFAULT_CONFIG.preview_retention_days
+    ),
     build: {
       install_command: inputs.install_command || inputs.custom_install_command || fileConfig?.build?.install_command || DEFAULT_CONFIG.build.install_command,
       build_command: inputs.build_command || inputs.custom_build_command || fileConfig?.build?.build_command || DEFAULT_CONFIG.build.build_command
