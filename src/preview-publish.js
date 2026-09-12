@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { decidePreviewAction, validatePreviewMetadata, PREVIEW_METADATA_FILENAME, PREVIEW_CONTENT_DIRNAME } from './preview-metadata.js';
+import { decidePreviewAction, digestDirectory, PREVIEW_METADATA_FILENAME, PREVIEW_CONTENT_DIRNAME } from './preview-metadata.js';
 import { validateArtifactDirectory } from './validate-artifact.js';
 import { publishDirectory } from './publish-directory.js';
 import { buildCommentBody, upsertPreviewComment } from './preview-comment.js';
@@ -54,6 +54,10 @@ export async function publishPreview({
 
   const contentDir = path.join(bundleDir, PREVIEW_CONTENT_DIRNAME);
   validateArtifactDirectory(PREVIEW_CONTENT_DIRNAME, bundleDir);
+  const contentDigest = digestDirectory(contentDir);
+  if (contentDigest !== metadata.contentDigest) {
+    throw new Error(`Preview content digest mismatch: expected ${metadata.contentDigest}, got ${contentDigest}`);
+  }
 
   const publishResult = await publishDirectory({
     repo: pagesRepo,

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { validateRelativeDirectory } from './config.js';
 
 export const PREVIEW_METADATA_SCHEMA_VERSION = 1;
@@ -14,6 +15,7 @@ const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const REPO_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?\/[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/;
 const REF_PATTERN = /^[A-Za-z0-9._/-]+$/;
 const ARTIFACT_NAME_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/;
+const DIGEST_PATTERN = /^[0-9a-f]{64}$/;
 
 function assertPositiveInteger(value, field) {
   const number = Number(value);
@@ -28,6 +30,30 @@ function assertPattern(value, pattern, field) {
     throw new Error(`${field} "${value}" is invalid or unsafe`);
   }
   return value;
+}
+
+export function digestDirectory(directory) {
+  const hash = crypto.createHash('sha256');
+  const files = [];
+  function visit(current, relative = '') {
+    for (const entry of fs.readdirSync(current).sort()) {
+      const full = path.join(current, entry);
+      const rel = path.posix.join(relative, entry);
+      const stat = fs.lstatSync(full);
+      if (stat.isSymbolicLink()) throw new Error(`Preview content must not contain symlinks: "${rel}"`);
+      if (stat.isDirectory()) visit(full, rel);
+      else if (stat.isFile()) files.push([rel, fs.readFileSync(full)]);
+      else throw new Error(`Preview content contains unsupported entry: "${rel}"`);
+    }
+  }
+  visit(directory);
+  for (const [relative, content] of files) {
+    hash.update(relative);
+    hash.update('\0');
+    hash.update(content);
+    hash.update('\0');
+  }
+  return hash.digest('hex');
 }
 
 /**
@@ -58,6 +84,7 @@ export function buildPreviewMetadata({
   headRepository,
   headSha,
   artifactName,
+  contentDigest,
   previewRoot = 'pr-preview',
   eventName = 'pull_request'
 }) {
@@ -66,6 +93,7 @@ export function buildPreviewMetadata({
   assertPattern(headSha, SHA_PATTERN, 'headSha');
   assertPattern(baseRef, REF_PATTERN, 'baseRef');
   assertPattern(artifactName, ARTIFACT_NAME_PATTERN, 'artifactName');
+  assertPattern(contentDigest, DIGEST_PATTERN, 'contentDigest');
   const number = assertPositiveInteger(prNumber, 'prNumber');
   const runIdNumber = assertPositiveInteger(runId, 'runId');
   const runAttemptNumber = assertPositiveInteger(runAttempt, 'runAttempt');
@@ -86,6 +114,7 @@ export function buildPreviewMetadata({
     headRepository,
     headSha,
     artifactName,
+    contentDigest,
     isFork,
     target,
     eventName,
@@ -112,6 +141,7 @@ export function validatePreviewMetadata(metadata, trustedContext) {
   assertPattern(metadata.headSha, SHA_PATTERN, 'metadata.headSha');
   assertPattern(metadata.baseRef, REF_PATTERN, 'metadata.baseRef');
   assertPattern(metadata.artifactName, ARTIFACT_NAME_PATTERN, 'metadata.artifactName');
+  assertPattern(metadata.contentDigest, DIGEST_PATTERN, 'metadata.contentDigest');
   assertPositiveInteger(metadata.prNumber, 'metadata.prNumber');
   assertPositiveInteger(metadata.runId, 'metadata.runId');
   assertPositiveInteger(metadata.runAttempt, 'metadata.runAttempt');
@@ -144,6 +174,7 @@ export function validatePreviewMetadata(metadata, trustedContext) {
       ['headRepository', trustedContext.headRepository, metadata.headRepository],
       ['baseRef', trustedContext.baseRef, metadata.baseRef],
       ['artifactName', trustedContext.artifactName, metadata.artifactName]
+      , ['contentDigest', trustedContext.contentDigest, metadata.contentDigest]
     ];
     const mismatches = checks
       .filter(([, expected]) => expected !== undefined)
@@ -206,6 +237,7 @@ if (process.argv[1] && process.argv[1].endsWith('preview-metadata.js')) {
       headRepository: process.env.HEAD_REPOSITORY,
       headSha: process.env.HEAD_SHA,
       artifactName: process.env.ARTIFACT_NAME,
+      contentDigest: digestDirectory(process.env.SOURCE_PATH),
       previewRoot: process.env.PREVIEW_ROOT || 'pr-preview',
       eventName: process.env.EVENT_NAME || 'pull_request'
     });

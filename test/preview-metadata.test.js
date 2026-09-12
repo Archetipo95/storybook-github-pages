@@ -21,6 +21,7 @@ function sameRepoMetadata(overrides = {}) {
     headRepository: 'octo/widgets',
     headSha: SHA_A,
     artifactName: 'storybook-preview-pr-42-run-123',
+    contentDigest: '0'.repeat(64),
     previewRoot: 'pr-preview',
     ...overrides
   });

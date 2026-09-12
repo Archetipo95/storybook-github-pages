@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readBundleMetadata, publishPreview } from '../src/preview-publish.js';
-import { buildPreviewMetadata } from '../src/preview-metadata.js';
+import { buildPreviewMetadata, digestDirectory } from '../src/preview-metadata.js';
 import { buildMarker } from '../src/preview-comment.js';
 
 const SHA_A = 'a'.repeat(40);
@@ -53,13 +53,15 @@ function makeBundle({ isForkOverride, headSha = SHA_A, target } = {}) {
     headRepository: isForkOverride ? 'fork/widgets' : 'octo/widgets',
     headSha,
     artifactName: 'storybook-preview-pr-42-run-55',
+    contentDigest: '0'.repeat(64),
     previewRoot: 'pr-preview'
   });
   if (target !== undefined) metadata.target = target;
-  fs.writeFileSync(path.join(bundleDir, 'preview-metadata.json'), JSON.stringify(metadata, null, 2));
   const contentDir = path.join(bundleDir, 'storybook');
   fs.mkdirSync(contentDir, { recursive: true });
   fs.writeFileSync(path.join(contentDir, 'index.html'), '<html>preview</html>');
+  metadata.contentDigest = digestDirectory(contentDir);
+  fs.writeFileSync(path.join(bundleDir, 'preview-metadata.json'), JSON.stringify(metadata, null, 2));
   return { bundleDir, metadata };
 }
 
