@@ -61,3 +61,18 @@ test('verify deploy-storybook workflow build-and-upload job has minimal permissi
   assert.match(deployJobContent, /pages:\s*write/, 'deploy job must have pages: write permission at job scope');
   assert.match(deployJobContent, /id-token:\s*write/, 'deploy job must have id-token: write permission at job scope');
 });
+
+test('workflow resolves configuration before setup and uses resolved deployment values', () => {
+  const content = fs.readFileSync(path.join(process.cwd(), '.github/workflows/deploy-storybook.yml'), 'utf8');
+  assert.ok(content.indexOf('id: config') < content.indexOf('actions/setup-node@'));
+  assert.match(content, /path: \$\{\{ steps\.config\.outputs\.path \}\}/);
+  assert.match(content, /target_directory: \$\{\{ needs\.build-and-upload\.outputs\.target_directory \}\}/);
+  assert.doesNotMatch(content, /TARGET_DIRECTORY: \$\{\{ inputs\.target_directory \}\}/);
+});
+
+test('composite action passes dynamic paths and publish flags through runtime environment', () => {
+  const content = fs.readFileSync(path.join(process.cwd(), 'action.yml'), 'utf8');
+  assert.match(content, /validate-artifact\.js" "\$SB_PATH"/);
+  assert.doesNotMatch(content, /node .*validate-artifact\.js.*\$\{\{ env\.SB_PATH \}\}/);
+  assert.doesNotMatch(content, /"\$\{\{ inputs\.publish \}\}"/);
+});

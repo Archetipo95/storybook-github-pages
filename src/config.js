@@ -83,10 +83,10 @@ export function validateConfig(config) {
     if (config[field] !== undefined && typeof config[field] !== 'string') {
       throw new Error(`Config ${field} must be a string`);
     }
-    if (config.managed_directories !== undefined) {
-      const values = Array.isArray(config.managed_directories) ? config.managed_directories : String(config.managed_directories).split(',').map(value => value.trim()).filter(Boolean);
-      values.forEach(value => validateRelativeDirectory(value, 'managed_directories'));
-    }
+  }
+  if (config.managed_directories !== undefined) {
+    const values = Array.isArray(config.managed_directories) ? config.managed_directories : String(config.managed_directories).split(',').map(value => value.trim()).filter(Boolean);
+    values.forEach(value => validateRelativeDirectory(value, 'managed_directories'));
   }
 
   if (config.build !== undefined && config.build !== null) {

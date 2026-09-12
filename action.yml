@@ -38,19 +38,19 @@ inputs:
   publish:
     description: 'Whether to upload and deploy the Pages artifact'
     required: false
-    default: 'true'
+    default: ''
   artifact_name:
     description: 'Name of the GitHub Pages artifact'
     required: false
-    default: 'github-pages'
+    default: ''
   mode:
     description: 'Deployment mode: artifact or trusted branch-backed directory'
     required: false
-    default: 'artifact'
+    default: ''
   pages_branch:
     description: 'Branch used by directory mode'
     required: false
-    default: 'gh-pages'
+    default: ''
   target_directory:
     description: 'Directory replaced by directory mode; empty publishes the root'
     required: false
@@ -90,12 +90,15 @@ runs:
       shell: bash
       env:
         CONFIG_INPUTS: ${{ toJSON(inputs) }}
+        PUBLISH_INPUT: ${{ inputs.publish }}
+        ARTIFACT_NAME_INPUT: ${{ inputs.artifact_name }}
       run: |
         node -e 'import("${{ github.action_path }}/src/config.js").then(async ({resolveConfiguration}) => {
           const c = resolveConfiguration({inputs: JSON.parse(process.env.CONFIG_INPUTS)});
           const lines = [
             `SB_MODE=${c.mode}`, `SB_PATH=${c.path}`, `SB_PACKAGE_MANAGER=${c.package_manager}`,
-            `SB_INSTALL_COMMAND=${c.build.install_command || ""}`, `SB_BUILD_COMMAND=${c.build.build_command || ""}`
+            `SB_INSTALL_COMMAND=${c.build.install_command || ""}`, `SB_BUILD_COMMAND=${c.build.build_command || ""}`,
+            `SB_PUBLISH=${process.env.PUBLISH_INPUT || "true"}`, `SB_ARTIFACT_NAME=${process.env.ARTIFACT_NAME_INPUT || "github-pages"}`
           ];
           const {appendFileSync} = await import("node:fs");
           appendFileSync(process.env.GITHUB_ENV, `${lines.join("\n")}\n`);
@@ -125,22 +128,24 @@ runs:
 
     - name: Validate static artifact
       shell: bash
-      run: |
-        node "${{ github.action_path }}/src/validate-artifact.js" "${{ env.SB_PATH }}" "${{ github.workspace }}"
+      env:
+        SB_PATH: ${{ env.SB_PATH }}
+        WORKSPACE_ROOT: ${{ github.workspace }}
+      run: node "${{ github.action_path }}/src/validate-artifact.js" "$SB_PATH" "$WORKSPACE_ROOT"
 
     - name: Upload Pages artifact
-      if: ${{ inputs.publish == 'true' && env.SB_MODE == 'artifact' }}
+      if: ${{ env.SB_PUBLISH == 'true' && env.SB_MODE == 'artifact' }}
       uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
       with:
-        path: ${{ inputs.path }}
-        name: ${{ inputs.artifact_name }}
+        path: ${{ env.SB_PATH }}
+        name: ${{ env.SB_ARTIFACT_NAME }}
 
     - name: Deploy to GitHub Pages
       id: deploy
-      if: ${{ inputs.publish == 'true' && env.SB_MODE == 'artifact' }}
+      if: ${{ env.SB_PUBLISH == 'true' && env.SB_MODE == 'artifact' }}
       uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
       with:
-        artifact_name: ${{ inputs.artifact_name }}
+        artifact_name: ${{ env.SB_ARTIFACT_NAME }}
 
     - name: Reject directory mode in composite action
       if: ${{ env.SB_MODE == 'directory' }}
@@ -151,9 +156,9 @@ runs:
       id: set-status
       shell: bash
       run: |
-        if [ "${{ inputs.publish }}" != "true" ]; then
+        if [ "$SB_PUBLISH" != "true" ]; then
           echo "status=skipped" >> $GITHUB_OUTPUT
-        elif [ "${{ env.SB_MODE }}" = "directory" ]; then
+        elif [ "$SB_MODE" = "directory" ]; then
           echo "status=success" >> $GITHUB_OUTPUT
         else
           echo "status=success" >> $GITHUB_OUTPUT

@@ -97,6 +97,18 @@ package_manager: yarn
     configFilePath: configPath
   });
 
+  test('resolveConfiguration - empty workflow inputs do not mask file settings', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-precedence-'));
+    const configPath = path.join(tmpDir, '.storybook-pages.yml');
+    fs.writeFileSync(configPath, 'mode: directory\npath: docs\npages_branch: pages\ntarget_directory: staging\n');
+    const resolved = resolveConfiguration({ inputs: { mode: '', path: '', pages_branch: '', target_directory: '' }, configFilePath: configPath });
+    assert.equal(resolved.mode, 'directory');
+    assert.equal(resolved.path, 'docs');
+    assert.equal(resolved.pages_branch, 'pages');
+    assert.equal(resolved.target_directory, 'staging');
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
   assert.equal(resolved.path, 'override-static');
   assert.equal(resolved.package_manager, 'yarn');
   assert.equal(resolved.version, 1);

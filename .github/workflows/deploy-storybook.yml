@@ -7,12 +7,12 @@ on:
         description: 'Path to the built static Storybook directory'
         required: false
         type: string
-        default: 'storybook-static'
+        default: ''
       package_manager:
         description: 'Package manager to use (npm, yarn, pnpm, bun)'
         required: false
         type: string
-        default: 'npm'
+        default: ''
       install_command:
         description: 'Custom command to install dependencies'
         required: false
@@ -37,12 +37,12 @@ on:
         description: 'Deployment mode: artifact or trusted branch-backed directory'
         required: false
         type: string
-        default: 'artifact'
+        default: ''
       pages_branch:
         description: 'Branch used by directory mode'
         required: false
         type: string
-        default: 'gh-pages'
+        default: ''
       target_directory:
         description: 'Directory replaced by directory mode; empty publishes the root'
         required: false
@@ -66,16 +66,16 @@ on:
     outputs:
       page_url:
         description: 'The URL of the deployed GitHub Pages site'
-        value: ${{ inputs.mode == 'directory' && jobs.directory-publish.outputs.page_url || jobs.deploy.outputs.page_url }}
+        value: ${{ jobs.directory-publish.outputs.page_url || jobs.deploy.outputs.page_url }}
       status:
         description: 'Status of the deployment'
-        value: ${{ inputs.mode == 'directory' && jobs.directory-publish.outputs.status || jobs.deploy.outputs.status }}
+        value: ${{ jobs.directory-publish.outputs.status || jobs.deploy.outputs.status }}
       deployment_id:
         description: 'The deployment ID'
         value: ${{ jobs.deploy.outputs.deployment_id }}
 
 concurrency:
-  group: storybook-pages-${{ github.repository }}-${{ inputs.pages_branch }}
+  group: storybook-pages-${{ github.repository }}
   cancel-in-progress: false
 
 permissions:
@@ -87,16 +87,19 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      mode: ${{ steps.config.outputs.mode }}
+      environment: ${{ steps.config.outputs.environment }}
+      pages_branch: ${{ steps.config.outputs.pages_branch }}
+      target_directory: ${{ steps.config.outputs.target_directory }}
+      site_url: ${{ steps.config.outputs.site_url }}
+      base_path: ${{ steps.config.outputs.base_path }}
+      managed_directories: ${{ steps.config.outputs.managed_directories }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Set up Node.js
-        if: ${{ steps.config.outputs.package_manager == 'npm' || steps.config.outputs.package_manager == 'yarn' || steps.config.outputs.package_manager == 'pnpm' }}
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: '20'
       - name: Resolve and validate configuration
         id: config
         env:
@@ -107,17 +110,28 @@ jobs:
             for (const [key, value] of Object.entries(c)) {
               if (typeof value !== "object") console.log(`${key}=${value ?? ""}`);
             }
+            console.log(`managed_directories=${Array.isArray(c.managed_directories) ? c.managed_directories.join(",") : c.managed_directories || ""}`);
             console.log(`install_command=${c.build.install_command ?? ""}`);
             console.log(`build_command=${c.build.build_command ?? ""}`);
           })' >> "$GITHUB_OUTPUT"
 
+      - name: Set up Node.js
+        if: ${{ steps.config.outputs.package_manager == 'npm' || steps.config.outputs.package_manager == 'yarn' || steps.config.outputs.package_manager == 'pnpm' }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+
       - name: Run custom install command
         if: ${{ steps.config.outputs.install_command != '' }}
-        run: ${{ steps.config.outputs.install_command }}
+        env:
+          INSTALL_COMMAND: ${{ steps.config.outputs.install_command }}
+        run: eval "$INSTALL_COMMAND"
 
       - name: Run custom build command
         if: ${{ steps.config.outputs.build_command != '' }}
-        run: ${{ steps.config.outputs.build_command }}
+        env:
+          BUILD_COMMAND: ${{ steps.config.outputs.build_command }}
+        run: eval "$BUILD_COMMAND"
 
       - name: Validate static artifact
         run: |
@@ -135,24 +149,24 @@ jobs:
         if: ${{ steps.config.outputs.mode == 'artifact' }}
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
-          path: ${{ inputs.path }}
+          path: ${{ steps.config.outputs.path }}
           name: ${{ inputs.artifact_name }}
 
       - name: Upload trusted directory input
         if: ${{ steps.config.outputs.mode == 'directory' }}
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
-          path: ${{ inputs.path }}
+          path: ${{ steps.config.outputs.path }}
           name: ${{ inputs.artifact_name }}
           if-no-files-found: error
 
   deploy:
     name: Deploy to GitHub Pages
     needs: build-and-upload
-    if: ${{ needs.build-and-upload.result == 'success' && inputs.mode == 'artifact' }}
+    if: ${{ needs.build-and-upload.result == 'success' && needs.build-and-upload.outputs.mode == 'artifact' }}
     runs-on: ubuntu-latest
     environment:
-      name: ${{ inputs.environment }}
+      name: ${{ needs.build-and-upload.outputs.environment }}
       url: ${{ steps.deploy-pages.outputs.page_url }}
     permissions:
       contents: read
@@ -174,7 +188,7 @@ jobs:
   directory-publish:
     name: Publish Storybook directory
     needs: build-and-upload
-    if: ${{ needs.build-and-upload.result == 'success' && inputs.mode == 'directory' }}
+    if: ${{ needs.build-and-upload.result == 'success' && needs.build-and-upload.outputs.mode == 'directory' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -190,7 +204,7 @@ jobs:
       - name: Checkout Pages branch
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: ${{ inputs.pages_branch }}
+          ref: ${{ needs.build-and-upload.outputs.pages_branch }}
           path: pages-repo
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -199,18 +213,18 @@ jobs:
         env:
           PAGES_REPO: ${{ github.workspace }}/pages-repo
           SOURCE_DIRECTORY: ${{ github.workspace }}/storybook-static
-          PAGES_BRANCH: ${{ inputs.pages_branch }}
-          TARGET_DIRECTORY: ${{ inputs.target_directory }}
-          SITE_URL: ${{ inputs.site_url }}
-          BASE_PATH: ${{ inputs.base_path }}
+          PAGES_BRANCH: ${{ needs.build-and-upload.outputs.pages_branch }}
+          TARGET_DIRECTORY: ${{ needs.build-and-upload.outputs.target_directory }}
+          SITE_URL: ${{ needs.build-and-upload.outputs.site_url }}
+          BASE_PATH: ${{ needs.build-and-upload.outputs.base_path }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         uses: Archetipo95/storybook-github-pages/publisher@f9dc8f9f0cc19f8df966a2a74b871c36322a789c
         with:
           pages_repo: ${{ github.workspace }}/pages-repo
           source_directory: ${{ github.workspace }}/storybook-static
-          pages_branch: ${{ inputs.pages_branch }}
-          target_directory: ${{ inputs.target_directory }}
-          managed_directories: ${{ inputs.managed_directories }}
-          site_url: ${{ inputs.site_url }}
-          base_path: ${{ inputs.base_path }}
+          pages_branch: ${{ needs.build-and-upload.outputs.pages_branch }}
+          target_directory: ${{ needs.build-and-upload.outputs.target_directory }}
+          managed_directories: ${{ needs.build-and-upload.outputs.managed_directories }}
+          site_url: ${{ needs.build-and-upload.outputs.site_url }}
+          base_path: ${{ needs.build-and-upload.outputs.base_path }}
