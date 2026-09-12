@@ -78,6 +78,78 @@ jobs:
           build_command: 'npm run build-storybook'
 ```
 
+### Option 3: Trusted Directory Mode Pipeline (Branch-backed)
+
+For branch-backed directory deployments (e.g., publishing to subdirectories on `gh-pages`), use a two-job pipeline separating unprivileged building from trusted publishing with the dedicated `publisher` action:
+
+```yaml
+name: Deploy Storybook Directory
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: storybook-pages-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Storybook
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build-storybook
+
+      - name: Upload static build
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: storybook-static
+          path: storybook-static
+
+  publish:
+    name: Publish to Pages Branch
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - name: Download build output
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: storybook-static
+          path: storybook-static
+
+      - name: Checkout Pages branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: gh-pages
+          path: pages-repo
+          fetch-depth: 0
+
+      - name: Publish directory
+        uses: Archetipo95/storybook-github-pages/publisher@v1.0.0
+        with:
+          pages_repo: ${{ github.workspace }}/pages-repo
+          source_directory: ${{ github.workspace }}/storybook-static
+          pages_branch: gh-pages
+          target_directory: preprod
+```
+
 ---
 
 ## Support Matrix & Execution Environment
@@ -161,7 +233,9 @@ permissions:
 - `pages: write`: Upload and deploy to GitHub Pages.
 - `id-token: write`: Mint OpenID Connect (OIDC) JWT tokens for authenticated Pages deployment.
 
-For reusable workflow callers, artifact mode requires `contents: read`, `pages: write`, and `id-token: write`. Directory mode requires `contents: write` and `pages: write` because the trusted publisher pushes the Pages branch and explicitly requests a Pages rebuild:
+For artifact mode deployments, workflows require `contents: read`, `pages: write`, and `id-token: write`.
+
+For branch-backed directory mode deployments, publication requires `contents: write` (to update the Pages branch) and `pages: write` (to request Pages rebuilds), but does **not** require `id-token: write`:
 
 ```yaml
 permissions:
@@ -169,7 +243,8 @@ permissions:
   pages: write
 ```
 
-GitHub Actions cannot elevate permissions granted by the caller; grant the mode-specific block in the calling workflow.
+> **Platform Note on Reusable Workflows vs Directory Mode:**
+> GitHub Actions compiles all jobs in a reusable workflow (`workflow_call`) before execution. Because the reusable workflow contains both artifact deployment (`id-token: write`) and directory deployment (`contents: write`) jobs, invoking it with only directory-level permissions triggers a GitHub Actions `startup_failure` (zero materialized jobs) due to caller permission validation. For branch-backed directory deployments in external repositories, always use the supported **Option 3** pipeline invoking `Archetipo95/storybook-github-pages/publisher@v1.0.0` directly in a dedicated publish job.
 
 The PR preview lifecycle workflows declare their own job-scoped permissions and need no caller configuration: the untrusted build job uses `contents: read` only; the trusted publish job uses `contents: write`, `pages: write`, `pull-requests: write` (for the bot comment), and `actions: read` (to download the build artifact by run id); cleanup uses `contents: write` and `pages: write`; the janitor uses `contents: write`, `pages: write`, and `pull-requests: read`.
 
