@@ -41,6 +41,14 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Resolve trusted base configuration
+        id: config
+        run: |
+          node -e 'import("./src/config.js").then(({resolveConfiguration}) => {
+            const c = resolveConfiguration({inputs: {}});
+            console.log(`preview_root=${c.preview_root}`);
+          })' >> "$GITHUB_OUTPUT"
+
       - name: Checkout Pages branch
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -53,7 +61,7 @@ jobs:
         env:
           PAGES_REPO: ${{ github.workspace }}/pages-repo
           PAGES_BRANCH: gh-pages
-          PREVIEW_ROOT: pr-preview
+          PREVIEW_ROOT: ${{ steps.config.outputs.preview_root }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}

@@ -100,7 +100,8 @@ if (process.argv[1] && process.argv[1].endsWith('preview-publish.js')) {
     headSha: process.env.TRUSTED_HEAD_SHA,
     headRepository: process.env.TRUSTED_HEAD_REPOSITORY,
     baseRef: process.env.TRUSTED_BASE_REF,
-    artifactName: process.env.EXPECTED_ARTIFACT_NAME
+    artifactName: process.env.EXPECTED_ARTIFACT_NAME,
+    previewRoot: process.env.PREVIEW_ROOT || 'pr-preview'
   };
 
   publishPreview({

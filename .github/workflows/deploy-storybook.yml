@@ -9,7 +9,7 @@ on:
         type: string
         default: ''
       package_manager:
-        description: 'Package manager to use (npm, yarn, pnpm, bun)'
+        description: 'Package manager to use (npm, yarn, pnpm)'
         required: false
         type: string
         default: ''

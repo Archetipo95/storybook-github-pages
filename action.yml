@@ -16,7 +16,7 @@ inputs:
     required: false
     default: ''
   package_manager:
-    description: 'Package manager to use: npm, yarn, pnpm, or bun'
+    description: 'Package manager to use: npm, yarn, or pnpm'
     required: false
     default: ''
   install_command:

@@ -166,6 +166,11 @@ export function validatePreviewMetadata(metadata, trustedContext) {
   }
 
   if (trustedContext) {
+    let expectedTarget = trustedContext.expectedTarget;
+    if (expectedTarget === undefined && !metadata.isFork && trustedContext.previewRoot !== undefined && trustedContext.prNumber !== undefined) {
+      expectedTarget = resolvePreviewTarget({ previewRoot: trustedContext.previewRoot, prNumber: trustedContext.prNumber });
+    }
+
     const checks = [
       ['repository', trustedContext.repository, metadata.repository],
       ['runId', trustedContext.runId, metadata.runId],
@@ -173,8 +178,9 @@ export function validatePreviewMetadata(metadata, trustedContext) {
       ['headSha', trustedContext.headSha, metadata.headSha],
       ['headRepository', trustedContext.headRepository, metadata.headRepository],
       ['baseRef', trustedContext.baseRef, metadata.baseRef],
-      ['artifactName', trustedContext.artifactName, metadata.artifactName]
-      , ['contentDigest', trustedContext.contentDigest, metadata.contentDigest]
+      ['artifactName', trustedContext.artifactName, metadata.artifactName],
+      ['contentDigest', trustedContext.contentDigest, metadata.contentDigest],
+      ['target', expectedTarget, metadata.target]
     ];
     const mismatches = checks
       .filter(([, expected]) => expected !== undefined)
