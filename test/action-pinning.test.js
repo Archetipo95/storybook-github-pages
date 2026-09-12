@@ -39,6 +39,10 @@ test('verify deploy-storybook workflow build-and-upload job has minimal permissi
   const workflowPath = path.join(root, '.github/workflows/deploy-storybook.yml');
   const content = fs.readFileSync(workflowPath, 'utf8');
 
+  // Verify top-level permissions are contents: read only
+  const topLevelPermissionsMatch = content.match(/permissions:\s*\n\s*contents:\s*read\s*\n\s*jobs:/);
+  assert.ok(topLevelPermissionsMatch, 'Workflow-level permissions must be set to contents: read only');
+
   // Extract build-and-upload job block
   const buildJobMatch = content.match(/build-and-upload:[\s\S]*?(?=deploy:|$)/);
   assert.ok(buildJobMatch, 'build-and-upload job not found in deploy-storybook.yml');
@@ -47,4 +51,13 @@ test('verify deploy-storybook workflow build-and-upload job has minimal permissi
   assert.match(buildJobContent, /contents:\s*read/);
   assert.doesNotMatch(buildJobContent, /pages:\s*write/, 'build-and-upload job must not have pages: write permission');
   assert.doesNotMatch(buildJobContent, /id-token:\s*write/, 'build-and-upload job must not have id-token: write permission');
+
+  // Extract deploy job block
+  const deployJobMatch = content.match(/deploy:[\s\S]*$/);
+  assert.ok(deployJobMatch, 'deploy job not found in deploy-storybook.yml');
+
+  const deployJobContent = deployJobMatch[0];
+  assert.match(deployJobContent, /contents:\s*read/, 'deploy job must have contents: read');
+  assert.match(deployJobContent, /pages:\s*write/, 'deploy job must have pages: write permission at job scope');
+  assert.match(deployJobContent, /id-token:\s*write/, 'deploy job must have id-token: write permission at job scope');
 });
