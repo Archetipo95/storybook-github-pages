@@ -45,6 +45,19 @@ test('validateConfig - accepts directory mode and rejects protected targets', ()
   assert.throws(() => validateConfig({ mode: 'directory', target_directory: '.git/hooks' }), /target_directory/);
 });
 
+test('validateConfig - accepts a safe preview_root and rejects an unsafe one', () => {
+  assert.equal(validateConfig({ preview_root: 'pr-preview' }), true);
+  assert.throws(() => validateConfig({ preview_root: '../outside' }), /preview_root/);
+  assert.throws(() => validateConfig({ preview_root: '.git' }), /preview_root/);
+});
+
+test('validateConfig - accepts a positive preview_retention_days and rejects invalid values', () => {
+  assert.equal(validateConfig({ preview_retention_days: 14 }), true);
+  assert.throws(() => validateConfig({ preview_retention_days: 0 }), /preview_retention_days/);
+  assert.throws(() => validateConfig({ preview_retention_days: -1 }), /preview_retention_days/);
+  assert.throws(() => validateConfig({ preview_retention_days: 'many' }), /preview_retention_days/);
+});
+
 test('resolveDeploymentTarget - derives URL metadata for named environments', () => {
   assert.deepEqual(resolveDeploymentTarget({
     mode: 'directory',
@@ -113,5 +126,19 @@ package_manager: yarn
   assert.equal(resolved.package_manager, 'yarn');
   assert.equal(resolved.version, 1);
 
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test('resolveConfiguration - defaults preview_root and preview_retention_days, and honors file overrides', () => {
+  const defaults = resolveConfiguration({ inputs: {}, configFilePath: path.join(os.tmpdir(), 'sb-config-nonexistent.yml') });
+  assert.equal(defaults.preview_root, 'pr-preview');
+  assert.equal(defaults.preview_retention_days, 30);
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-preview-'));
+  const configPath = path.join(tmpDir, '.storybook-pages.yml');
+  fs.writeFileSync(configPath, 'preview_root: previews\npreview_retention_days: 10\n');
+  const resolved = resolveConfiguration({ inputs: {}, configFilePath: configPath });
+  assert.equal(resolved.preview_root, 'previews');
+  assert.equal(resolved.preview_retention_days, 10);
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });

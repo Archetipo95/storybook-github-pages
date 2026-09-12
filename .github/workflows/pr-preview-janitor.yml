@@ -1,0 +1,67 @@
+name: PR Preview Janitor
+
+# Manual or scheduled sweep for stale/orphaned PR preview directories. This
+# is a safety net for cleanup runs that never fired (workflow failures,
+# force-pushes, manual branch deletion, etc.) and for long-lived open PRs
+# whose previews have exceeded the configured retention window. It only
+# ever touches directories under `preview_root` that match the strict
+# `pr-<number>` naming scheme; production and named-environment directories
+# (and anything else at the Pages branch root) are never inspected or
+# removed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      retention_days:
+        description: 'Remove previews for still-open PRs after this many days (0 disables age-based pruning; closed-PR previews are always removed)'
+        required: false
+        default: ''
+  schedule:
+    - cron: '17 4 * * *'
+
+concurrency:
+  group: storybook-pages-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  janitor:
+    name: Prune stale preview directories (trusted)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - name: Checkout repository (default branch, trusted)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Resolve preview configuration
+        id: config
+        run: |
+          node -e 'import("./src/config.js").then(({resolveConfiguration}) => {
+            const c = resolveConfiguration({inputs: {}});
+            console.log(`preview_root=${c.preview_root}`);
+            console.log(`retention_days=${c.preview_retention_days}`);
+          })' >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Pages branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: gh-pages
+          path: pages-repo
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prune stale preview directories
+        env:
+          PAGES_REPO: ${{ github.workspace }}/pages-repo
+          PAGES_BRANCH: gh-pages
+          PREVIEW_ROOT: ${{ steps.config.outputs.preview_root }}
+          PREVIEW_RETENTION_DAYS: ${{ github.event.inputs.retention_days || steps.config.outputs.retention_days }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node src/preview-janitor.js
