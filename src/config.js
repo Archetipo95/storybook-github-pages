@@ -10,6 +10,7 @@ export const DEFAULT_CONFIG = {
   environment: '',
   site_url: '',
   base_path: '',
+  managed_directories: [],
   package_manager: 'npm',
   build: {
     install_command: null,
@@ -81,6 +82,10 @@ export function validateConfig(config) {
   for (const field of ['site_url', 'base_path']) {
     if (config[field] !== undefined && typeof config[field] !== 'string') {
       throw new Error(`Config ${field} must be a string`);
+    }
+    if (config.managed_directories !== undefined) {
+      const values = Array.isArray(config.managed_directories) ? config.managed_directories : String(config.managed_directories).split(',').map(value => value.trim()).filter(Boolean);
+      values.forEach(value => validateRelativeDirectory(value, 'managed_directories'));
     }
   }
 
@@ -179,6 +184,7 @@ export function resolveConfiguration({ inputs = {}, configFilePath = '.storybook
     environment: inputs.environment || fileConfig?.environment || DEFAULT_CONFIG.environment,
     site_url: inputs.site_url || fileConfig?.site_url || DEFAULT_CONFIG.site_url,
     base_path: inputs.base_path || fileConfig?.base_path || DEFAULT_CONFIG.base_path,
+    managed_directories: inputs.managed_directories || fileConfig?.managed_directories || DEFAULT_CONFIG.managed_directories,
     package_manager: inputs.package_manager || fileConfig?.package_manager || DEFAULT_CONFIG.package_manager,
     build: {
       install_command: inputs.install_command || inputs.custom_install_command || fileConfig?.build?.install_command || DEFAULT_CONFIG.build.install_command,

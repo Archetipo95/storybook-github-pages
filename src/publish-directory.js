@@ -34,14 +34,14 @@ async function acquireLock(repo, timeoutMs = 120000) {
   }
 }
 
-export async function replaceDirectory(repo, targetDirectory, sourceDirectory) {
+export async function replaceDirectory(repo, targetDirectory, sourceDirectory, managedDirectories = []) {
   validateRelativeDirectory(targetDirectory, 'target_directory', { allowEmpty: true });
   if (!targetDirectory) {
     const staging = `${repo}.staging-${process.pid}`;
     await fs.rm(staging, { recursive: true, force: true });
     await fs.cp(sourceDirectory, staging, { recursive: true, preserveTimestamps: true });
     for (const entry of await fs.readdir(repo)) {
-      if (entry !== '.git' && entry !== LOCK_NAME) await fs.rm(path.join(repo, entry), { recursive: true, force: true });
+      if (entry !== '.git' && entry !== LOCK_NAME && !managedDirectories.includes(entry)) await fs.rm(path.join(repo, entry), { recursive: true, force: true });
     }
     for (const entry of await fs.readdir(staging)) {
       await fs.rename(path.join(staging, entry), path.join(repo, entry));
@@ -69,8 +69,8 @@ export async function replaceDirectory(repo, targetDirectory, sourceDirectory) {
   }
 }
 
-export async function publishDirectory({ repo, source, branch = 'gh-pages', targetDirectory = '', siteUrl = '', basePath = '', token, repository }) {
-  validateConfig({ mode: 'directory', pages_branch: branch, target_directory: targetDirectory, site_url: siteUrl, base_path: basePath });
+export async function publishDirectory({ repo, source, branch = 'gh-pages', targetDirectory = '', managedDirectories = [], siteUrl = '', basePath = '', token, repository }) {
+  validateConfig({ mode: 'directory', pages_branch: branch, target_directory: targetDirectory, managed_directories: managedDirectories, site_url: siteUrl, base_path: basePath });
   const release = await acquireLock(repo);
   try {
     let lastError;
@@ -78,7 +78,7 @@ export async function publishDirectory({ repo, source, branch = 'gh-pages', targ
       try {
         await run('git', ['fetch', 'origin', branch], repo);
         await run('git', ['checkout', '-B', branch, `origin/${branch}`], repo);
-        await replaceDirectory(repo, targetDirectory, source);
+        await replaceDirectory(repo, targetDirectory, source, managedDirectories);
         await run('git', ['add', '-A', '--', targetDirectory || '.'], repo);
         await run('git', ['-c', 'user.name=storybook-pages', '-c', 'user.email=storybook-pages@users.noreply.github.com', 'commit', '-m', `Deploy Storybook${targetDirectory ? ` to ${targetDirectory}` : ''}`], repo).catch(error => {
           if (!error.message.includes('nothing to commit')) throw error;
@@ -111,6 +111,7 @@ if (process.argv[1]?.endsWith('publish-directory.js')) {
     targetDirectory: process.env.TARGET_DIRECTORY || '',
     siteUrl: process.env.SITE_URL || '',
     basePath: process.env.BASE_PATH || '',
+    managedDirectories: process.env.MANAGED_DIRECTORIES ? process.env.MANAGED_DIRECTORIES.split(',').map(value => value.trim()).filter(Boolean) : [],
     token: process.env.GITHUB_TOKEN,
     repository: process.env.GITHUB_REPOSITORY
   }).then(result => {

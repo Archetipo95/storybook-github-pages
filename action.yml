@@ -63,6 +63,10 @@ inputs:
     description: 'Optional URL base path'
     required: false
     default: ''
+  managed_directories:
+    description: 'Comma-separated managed directories preserved during root publication'
+    required: false
+    default: ''
 
 outputs:
   page_url:
@@ -123,28 +127,10 @@ runs:
       with:
         artifact_name: ${{ inputs.artifact_name }}
 
-    - name: Checkout Pages branch
-      if: ${{ inputs.publish == 'true' && inputs.mode == 'directory' }}
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      with:
-        ref: ${{ inputs.pages_branch }}
-        path: pages-repo
-        fetch-depth: 0
-        token: ${{ github.token }}
-
-    - name: Publish directory atomically
-      if: ${{ inputs.publish == 'true' && inputs.mode == 'directory' }}
+    - name: Reject directory mode in composite action
+      if: ${{ inputs.mode == 'directory' }}
       shell: bash
-      env:
-        PAGES_REPO: ${{ github.workspace }}/pages-repo
-        SOURCE_DIRECTORY: ${{ github.workspace }}/${{ inputs.path }}
-        PAGES_BRANCH: ${{ inputs.pages_branch }}
-        TARGET_DIRECTORY: ${{ inputs.target_directory }}
-        SITE_URL: ${{ inputs.site_url }}
-        BASE_PATH: ${{ inputs.base_path }}
-        GITHUB_TOKEN: ${{ github.token }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
-      run: node "${{ github.action_path }}/src/publish-directory.js"
+      run: echo 'Directory mode requires the reusable workflow for repository-wide serialization.' >&2; exit 1
 
     - name: Set deployment status output
       id: set-status
