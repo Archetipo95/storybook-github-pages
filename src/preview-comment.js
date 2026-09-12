@@ -4,6 +4,7 @@
 
 const MARKER_PREFIX = '<!-- storybook-pages-preview:pr-';
 const MARKER_SUFFIX = ' -->';
+export const PREVIEW_COMMENT_AUTHOR = 'github-actions[bot]';
 
 export function buildMarker(prNumber) {
   const number = Number(prNumber);
@@ -63,8 +64,14 @@ export async function findExistingComment({ token, repository, prNumber, marker 
       `https://api.github.com/repos/${repository}/issues/${number}/comments?per_page=100&page=${page}`,
       { token }
     );
-    const match = comments.find(comment => typeof comment.body === 'string' && comment.body.includes(marker));
-    if (match) return match;
+    const marked = comments.filter(comment => typeof comment.body === 'string' && comment.body.includes(marker));
+    const conflicting = marked.find(comment =>
+      comment.user?.login !== PREVIEW_COMMENT_AUTHOR || comment.user?.type !== 'Bot'
+    );
+    if (conflicting) {
+      throw new Error(`Refusing to update comment ${conflicting.id}: preview marker is owned by a non-${PREVIEW_COMMENT_AUTHOR} account`);
+    }
+    if (marked.length > 0) return marked[0];
     if (comments.length < 100) return null;
     page += 1;
   }

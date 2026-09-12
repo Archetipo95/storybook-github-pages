@@ -61,7 +61,7 @@ test('upsertPreviewComment creates a new comment when none exists yet', async ()
 test('upsertPreviewComment updates the existing bot comment instead of creating a duplicate (idempotency)', async () => {
   const marker = buildMarker(7);
   const mock = mockFetchSequence([
-    () => jsonResponse(200, [{ id: 1, body: 'unrelated comment' }, { id: 42, body: `${marker}\nold body` }]),
+    () => jsonResponse(200, [{ id: 1, body: 'unrelated comment' }, { id: 42, body: `${marker}\nold body`, user: { login: 'github-actions[bot]', type: 'Bot' } }]),
     (url, options) => {
       assert.match(url, /\/issues\/comments\/42$/);
       assert.equal(options.method, 'PATCH');
@@ -82,13 +82,29 @@ test('upsertPreviewComment paginates through comment listings to find the marker
   const fullPage = Array.from({ length: 100 }, (_, i) => ({ id: i, body: `comment ${i}` }));
   const mock = mockFetchSequence([
     (url) => { assert.match(url, /page=1$/); return jsonResponse(200, fullPage); },
-    (url) => { assert.match(url, /page=2$/); return jsonResponse(200, [{ id: 900, body: `${marker}\nfound` }]); },
+    (url) => { assert.match(url, /page=2$/); return jsonResponse(200, [{ id: 900, body: `${marker}\nfound`, user: { login: 'github-actions[bot]', type: 'Bot' } }]); },
     (url, options) => { assert.equal(options.method, 'PATCH'); return jsonResponse(200, { id: 900 }); }
   ]);
   try {
     const result = await upsertPreviewComment({ token: 't', repository: 'octo/widgets', prNumber: 9, body: `${marker}\nnew` });
     assert.equal(result.action, 'updated');
     assert.equal(result.commentId, 900);
+  } finally {
+    mock.restore();
+  }
+});
+
+test('upsertPreviewComment fails closed when a user claims the preview marker', async () => {
+  const marker = buildMarker(10);
+  const mock = mockFetchSequence([
+    () => jsonResponse(200, [{ id: 901, body: `${marker}\nmalicious`, user: { login: 'octocat', type: 'User' } }])
+  ]);
+  try {
+    await assert.rejects(
+      upsertPreviewComment({ token: 't', repository: 'octo/widgets', prNumber: 10, body: `${marker}\nnew` }),
+      /Refusing to update comment 901: preview marker is owned by a non-github-actions\[bot\] account/
+    );
+    assert.equal(mock.calls.length, 1, 'must not patch or create after a marker conflict');
   } finally {
     mock.restore();
   }
