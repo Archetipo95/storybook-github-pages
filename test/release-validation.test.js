@@ -60,6 +60,50 @@ test('release validation - documentation and governance files presence', () => {
   }
 });
 
+test('release validation - immutable release tag recommended in README and issue templates', () => {
+  const root = process.cwd();
+  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  const bugReport = fs.readFileSync(path.join(root, '.github/ISSUE_TEMPLATE/bug_report.yml'), 'utf8');
+
+  assert.match(
+    readme,
+    /uses:\s*Archetipo95\/storybook-github-pages\/\.github\/workflows\/deploy-storybook\.yml@v1\.0\.0/,
+    'README reusable workflow example must use immutable release tag @v1.0.0'
+  );
+  assert.match(
+    readme,
+    /uses:\s*Archetipo95\/storybook-github-pages@v1\.0\.0/,
+    'README composite action example must use immutable release tag @v1.0.0'
+  );
+  assert.match(
+    readme,
+    /replace `bitovi\/github-actions-storybook-to-github-pages@v1\.0\.3` with `Archetipo95\/storybook-github-pages@v1\.0\.0`/,
+    'README migration guide must specify immutable release tag @v1.0.0'
+  );
+  assert.match(
+    readme,
+    /`@v1\.0\.0` \(immutable release tag\)/,
+    'README support matrix must recommend immutable release tag @v1.0.0'
+  );
+  assert.match(
+    bugReport,
+    /uses:\s*Archetipo95\/storybook-github-pages@v1\.0\.0/,
+    'Bug report template must use immutable release tag @v1.0.0'
+  );
+});
+
+test('release validation - package manager validation strictly excludes bun', () => {
+  const root = process.cwd();
+  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  const actionYml = fs.readFileSync(path.join(root, 'action.yml'), 'utf8');
+  const deployYml = fs.readFileSync(path.join(root, '.github/workflows/deploy-storybook.yml'), 'utf8');
+
+  // Verify bun is not advertised in docs or workflow inputs
+  assert.doesNotMatch(readme, /\bpackage_manager\b.*bun/, 'README must not advertise bun as a package manager');
+  assert.doesNotMatch(actionYml, /\bpackage_manager\b.*bun/, 'action.yml must not list bun as a package manager');
+  assert.doesNotMatch(deployYml, /\bpackage_manager\b.*bun/, 'deploy-storybook.yml must not list bun as a package manager');
+});
+
 test('release validation - zero telemetry and strict GitHub API endpoints in src/', () => {
   const srcDir = path.join(process.cwd(), 'src');
   const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.js'));

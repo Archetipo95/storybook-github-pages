@@ -21,7 +21,7 @@ export const DEFAULT_CONFIG = {
   }
 };
 
-export const ALLOWED_PACKAGE_MANAGERS = new Set(['npm', 'yarn', 'pnpm', 'bun']);
+export const ALLOWED_PACKAGE_MANAGERS = new Set(['npm', 'yarn', 'pnpm']);
 export const ALLOWED_MODES = new Set(['artifact', 'directory']);
 
 const PROTECTED_DIRECTORIES = new Set(['.git', '.github']);
@@ -58,7 +58,7 @@ export function validateConfig(config) {
 
   if (config.package_manager !== undefined) {
     if (!ALLOWED_PACKAGE_MANAGERS.has(config.package_manager)) {
-      throw new Error(`Unsupported package_manager: "${config.package_manager}". Allowed options: npm, yarn, pnpm, bun.`);
+      throw new Error(`Unsupported package_manager: "${config.package_manager}". Allowed options: npm, yarn, pnpm.`);
     }
   }
 

@@ -31,6 +31,9 @@ test('validateConfig - rejects invalid package_manager', () => {
   assert.throws(() => {
     validateConfig({ package_manager: 'pip' });
   }, /Unsupported package_manager: "pip"/);
+  assert.throws(() => {
+    validateConfig({ package_manager: 'bun' });
+  }, /Unsupported package_manager: "bun"\. Allowed options: npm, yarn, pnpm\./);
 });
 
 test('validateConfig - rejects path traversal', () => {

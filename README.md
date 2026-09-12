@@ -40,7 +40,7 @@ permissions:
 
 jobs:
   deploy-storybook:
-    uses: Archetipo95/storybook-github-pages/.github/workflows/deploy-storybook.yml@v1
+    uses: Archetipo95/storybook-github-pages/.github/workflows/deploy-storybook.yml@v1.0.0
     with:
       path: 'storybook-static'
       package_manager: 'npm'
@@ -72,7 +72,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Build and Deploy Storybook
-        uses: Archetipo95/storybook-github-pages@v1
+        uses: Archetipo95/storybook-github-pages@v1.0.0
         with:
           path: 'storybook-static'
           build_command: 'npm run build-storybook'
@@ -89,8 +89,8 @@ jobs:
 | **Platform** | GitHub.com (Public & Private Repositories) | Uses native GitHub Pages API & OIDC JWTs |
 | **Runner OS** | GitHub-hosted Linux (`ubuntu-latest`) | Tested on `ubuntu-latest` with Node.js 20+ |
 | **Node.js Runtime** | Node.js 20+ | Zero external npm dependencies (uses native Node.js ES modules) |
-| **Package Managers** | `npm`, `yarn`, `pnpm`, `bun` | Configurable via `package_manager` input |
-| **Tagging Strategy** | `@v1` (major floating tag), `@v1.0.0` (immutable release) | Recommend `@v1` for automatic non-breaking updates |
+| **Package Managers** | `npm`, `yarn`, `pnpm` | Configurable via `package_manager` input |
+| **Tagging Strategy** | `@v1.0.0` (immutable release tag) | **Recommended for stable, reproducible use.** Floating major tags (e.g. `@v1`) are optional and non-reproducible. |
 
 ---
 
@@ -101,7 +101,7 @@ jobs:
 | Input | Type | Default | Description |
 |-------|------|---------|-------------|
 | `path` | `string` | `storybook-static` | Path to the directory containing built static Storybook files |
-| `package_manager` | `string` | `npm` | Package manager to use (`npm`, `yarn`, `pnpm`, `bun`) |
+| `package_manager` | `string` | `npm` | Package manager to use (`npm`, `yarn`, `pnpm`) |
 | `checkout` | `string` | `'true'` | Whether to check out the repository automatically (Action only) |
 | `install_command` | `string` | `''` | Bitovi compatibility / custom dependency installation command |
 | `build_command` | `string` | `''` | Bitovi compatibility / custom Storybook build command |
@@ -140,7 +140,7 @@ jobs:
 | `build_command` | `build_command` / `custom_build_command` | Fully supported |
 
 **Migrating to `storybook-github-pages`:**
-Simply replace `bitovi/github-actions-storybook-to-github-pages@v1.0.3` with `Archetipo95/storybook-github-pages@v1` in your workflow.
+Simply replace `bitovi/github-actions-storybook-to-github-pages@v1.0.3` with `Archetipo95/storybook-github-pages@v1.0.0` in your workflow.
 
 ---
 
