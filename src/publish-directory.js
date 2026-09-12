@@ -74,6 +74,7 @@ export async function publishDirectory({ repo, source, branch = 'gh-pages', targ
   const release = await acquireLock(repo);
   try {
     let lastError;
+    let pushed = false;
     for (let attempt = 0; attempt < RETRIES; attempt += 1) {
       try {
         await run('git', ['fetch', 'origin', branch], repo);
@@ -84,20 +85,22 @@ export async function publishDirectory({ repo, source, branch = 'gh-pages', targ
           if (!error.message.includes('nothing to commit')) throw error;
         });
         await run('git', ['push', 'origin', `HEAD:${branch}`], repo);
-        if (token && repository) {
-          const response = await fetch(`https://api.github.com/repos/${repository}/pages/builds`, {
-            method: 'POST',
-            headers: { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'content-type': 'application/json' }
-          });
-          if (!response.ok) throw new Error(`Pages rebuild request failed (${response.status})`);
-        }
-        return { branch, directory: targetDirectory, ...resolveDeploymentTarget({ mode: 'directory', target_directory: targetDirectory, site_url: siteUrl, base_path: basePath }) };
+        pushed = true;
+        break;
       } catch (error) {
         lastError = error;
         if (attempt + 1 < RETRIES) await run('git', ['rebase', `origin/${branch}`], repo).catch(() => {});
       }
     }
-    throw new Error(`Pages directory publish failed after ${RETRIES} attempts: ${lastError.message}`);
+    if (!pushed) throw new Error(`Pages directory publish failed after ${RETRIES} attempts: ${lastError.message}`);
+    if (token && repository) {
+      const response = await fetch(`https://api.github.com/repos/${repository}/pages/builds`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'content-type': 'application/json' }
+      });
+      if (!response.ok) throw new Error(`Pages rebuild request failed (${response.status}) after successful push`);
+    }
+    return { branch, directory: targetDirectory, ...resolveDeploymentTarget({ mode: 'directory', target_directory: targetDirectory, site_url: siteUrl, base_path: basePath }) };
   } finally {
     await release();
   }

@@ -144,6 +144,16 @@ permissions:
 - `pages: write`: Upload and deploy to GitHub Pages.
 - `id-token: write`: Mint OpenID Connect (OIDC) JWT tokens for authenticated Pages deployment.
 
+For reusable workflow callers, artifact mode requires `contents: read`, `pages: write`, and `id-token: write`. Directory mode requires `contents: write` and `pages: write` because the trusted publisher pushes the Pages branch and explicitly requests a Pages rebuild:
+
+```yaml
+permissions:
+  contents: write
+  pages: write
+```
+
+GitHub Actions cannot elevate permissions granted by the caller; grant the mode-specific block in the calling workflow.
+
 ---
 
 ## Configuration File (`.storybook-pages.yml`)

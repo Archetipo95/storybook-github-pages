@@ -10,6 +10,7 @@ export const DEFAULT_CONFIG = {
   environment: '',
   site_url: '',
   base_path: '',
+  artifact_name: 'github-pages',
   managed_directories: [],
   package_manager: 'npm',
   build: {
@@ -184,6 +185,7 @@ export function resolveConfiguration({ inputs = {}, configFilePath = '.storybook
     environment: inputs.environment || fileConfig?.environment || DEFAULT_CONFIG.environment,
     site_url: inputs.site_url || fileConfig?.site_url || DEFAULT_CONFIG.site_url,
     base_path: inputs.base_path || fileConfig?.base_path || DEFAULT_CONFIG.base_path,
+    artifact_name: inputs.artifact_name || fileConfig?.artifact_name || DEFAULT_CONFIG.artifact_name,
     managed_directories: inputs.managed_directories || fileConfig?.managed_directories || DEFAULT_CONFIG.managed_directories,
     package_manager: inputs.package_manager || fileConfig?.package_manager || DEFAULT_CONFIG.package_manager,
     build: {

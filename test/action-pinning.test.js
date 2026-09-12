@@ -76,3 +76,12 @@ test('composite action passes dynamic paths and publish flags through runtime en
   assert.doesNotMatch(content, /node .*validate-artifact\.js.*\$\{\{ env\.SB_PATH \}\}/);
   assert.doesNotMatch(content, /"\$\{\{ inputs\.publish \}\}"/);
 });
+
+test('directory publisher has Pages permission and rebuild is outside push retries', () => {
+  const workflow = fs.readFileSync(path.join(process.cwd(), '.github/workflows/deploy-storybook.yml'), 'utf8');
+  const job = workflow.match(/directory-publish:[\s\S]*$/)[0];
+  assert.match(job, /contents:\s*write[\s\S]*pages:\s*write/);
+  const publisher = fs.readFileSync(path.join(process.cwd(), 'src/publish-directory.js'), 'utf8');
+  assert.ok(publisher.indexOf("['push'") < publisher.indexOf("fetch(`https://api.github.com"));
+  assert.ok(publisher.indexOf("fetch(`https://api.github.com") > publisher.indexOf('for (let attempt'));
+});
