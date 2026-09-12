@@ -1,0 +1,25 @@
+{
+  "name": "storybook-github-pages",
+  "version": "1.0.0",
+  "description": "Deploy Storybook to GitHub Pages with secure reusable workflows and Bitovi compatibility",
+  "main": "src/config.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "validate-artifact": "node src/validate-artifact.js",
+    "validate-config": "node src/config.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Archetipo95/storybook-github-pages.git"
+  },
+  "keywords": [
+    "storybook",
+    "github-pages",
+    "github-actions",
+    "deployment",
+    "reusable-workflow"
+  ],
+  "author": "Archetipo95",
+  "license": "MIT"
+}
