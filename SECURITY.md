@@ -51,11 +51,11 @@ All user-supplied paths, directory inputs, and built artifacts undergo rigorous 
 - Rejects target directories containing nested `.git` or `.github` folders.
 - Requires static content (`index.html` or valid HTML/JS/CSS assets) to prevent publishing empty or invalid builds.
 
-### 5. Dependency Pinning & Zero Telemetry
+### 5. Dependency Pinning & No Telemetry
 
 - All third-party GitHub Actions are pinned to full **40-character commit SHAs**.
 - Zero runtime npm dependencies (uses Node.js standard modules only).
-- Zero external network calls, tracking, telemetry, or analytics.
+- No external tracking, telemetry, or third-party analytics. Only authenticated GitHub API HTTP requests required for the deployment lifecycle (such as Pages deployments, PR head SHA verification, and bot comment updates) are executed.
 
 ---
 

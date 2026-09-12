@@ -104,7 +104,7 @@ test('release validation - package manager validation strictly excludes bun', ()
   assert.doesNotMatch(deployYml, /\bpackage_manager\b.*bun/, 'deploy-storybook.yml must not list bun as a package manager');
 });
 
-test('release validation - zero telemetry and strict GitHub API endpoints in src/', () => {
+test('release validation - no telemetry and strict GitHub API endpoints in src/', () => {
   const srcDir = path.join(process.cwd(), 'src');
   const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.js'));
 
@@ -139,4 +139,9 @@ test('release validation - zero telemetry and strict GitHub API endpoints in src
       );
     }
   }
+
+  // Verify SECURITY.md accurately describes network behavior (no false 'zero external network calls' claim)
+  const securityDoc = fs.readFileSync(path.join(process.cwd(), 'SECURITY.md'), 'utf8');
+  assert.doesNotMatch(securityDoc, /Zero external network calls/i, 'SECURITY.md must not falsely claim zero external network calls');
+  assert.match(securityDoc, /authenticated GitHub API/i, 'SECURITY.md must accurately mention authenticated GitHub API calls');
 });

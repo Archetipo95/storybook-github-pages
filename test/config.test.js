@@ -54,9 +54,9 @@ test('validateConfig - accepts a safe preview_root and rejects an unsafe one', (
   assert.throws(() => validateConfig({ preview_root: '.git' }), /preview_root/);
 });
 
-test('validateConfig - accepts a positive preview_retention_days and rejects invalid values', () => {
+test('validateConfig - accepts 0 or positive preview_retention_days and rejects invalid values', () => {
   assert.equal(validateConfig({ preview_retention_days: 14 }), true);
-  assert.throws(() => validateConfig({ preview_retention_days: 0 }), /preview_retention_days/);
+  assert.equal(validateConfig({ preview_retention_days: 0 }), true, 'retention 0 must be accepted to disable age-based pruning');
   assert.throws(() => validateConfig({ preview_retention_days: -1 }), /preview_retention_days/);
   assert.throws(() => validateConfig({ preview_retention_days: 'many' }), /preview_retention_days/);
 });

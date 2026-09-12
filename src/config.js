@@ -98,8 +98,8 @@ export function validateConfig(config) {
 
   if (config.preview_retention_days !== undefined) {
     const days = Number(config.preview_retention_days);
-    if (!Number.isInteger(days) || days <= 0) {
-      throw new Error(`Config preview_retention_days must be a positive integer, got "${config.preview_retention_days}"`);
+    if (!Number.isInteger(days) || days < 0) {
+      throw new Error(`Config preview_retention_days must be a non-negative integer, got "${config.preview_retention_days}"`);
     }
   }
 
