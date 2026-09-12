@@ -40,7 +40,7 @@ permissions:
 
 jobs:
   deploy-storybook:
-    uses: Archetipo95/storybook-github-pages/.github/workflows/deploy-storybook.yml@main
+    uses: Archetipo95/storybook-github-pages/.github/workflows/deploy-storybook.yml@v1
     with:
       path: 'storybook-static'
       package_manager: 'npm'
@@ -72,11 +72,25 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Build and Deploy Storybook
-        uses: Archetipo95/storybook-github-pages@main
+        uses: Archetipo95/storybook-github-pages@v1
         with:
           path: 'storybook-static'
           build_command: 'npm run build-storybook'
 ```
+
+---
+
+## Support Matrix & Execution Environment
+
+`storybook-github-pages` is designed and validated for the following support matrix:
+
+| Category | Supported Environments | Notes |
+|----------|------------------------|-------|
+| **Platform** | GitHub.com (Public & Private Repositories) | Uses native GitHub Pages API & OIDC JWTs |
+| **Runner OS** | GitHub-hosted Linux (`ubuntu-latest`) | Tested on `ubuntu-latest` with Node.js 20+ |
+| **Node.js Runtime** | Node.js 20+ | Zero external npm dependencies (uses native Node.js ES modules) |
+| **Package Managers** | `npm`, `yarn`, `pnpm`, `bun` | Configurable via `package_manager` input |
+| **Tagging Strategy** | `@v1` (major floating tag), `@v1.0.0` (immutable release) | Recommend `@v1` for automatic non-breaking updates |
 
 ---
 
@@ -126,7 +140,7 @@ jobs:
 | `build_command` | `build_command` / `custom_build_command` | Fully supported |
 
 **Migrating to `storybook-github-pages`:**
-Simply replace `bitovi/github-actions-storybook-to-github-pages@v1.0.3` with `Archetipo95/storybook-github-pages@main` in your workflow.
+Simply replace `bitovi/github-actions-storybook-to-github-pages@v1.0.3` with `Archetipo95/storybook-github-pages@v1` in your workflow.
 
 ---
 
@@ -231,6 +245,51 @@ This repository ships the four workflows above as a working reference implementa
 2. Replace the build step in `pr-preview-build.yml` with your real install/build commands (or the composite action with `path` set to your actual build output directory).
 3. Ensure a `gh-pages` (or your configured `pages_branch`) branch exists; the publish/cleanup/janitor workflows all target it.
 4. Optionally add `preview_root`/`preview_retention_days` to `.storybook-pages.yml`.
+
+---
+
+## Troubleshooting Guide
+
+### 1. GitHub Pages Deployment 404
+* **Symptom**: Deployment completes successfully, but accessing the site URL returns HTTP 404.
+* **Causes & Solutions**:
+  * **Build Directory**: Ensure your `path` input points to the directory containing the static output (e.g. `storybook-static` or `dist/storybook`). The output must contain an `index.html` file.
+  * **GitHub Pages Source Setting**: Ensure repository settings have GitHub Pages enabled (`Settings > Pages > Source: GitHub Actions` for artifact mode, or `Deploy from a branch: gh-pages` for directory mode).
+  * **Subpath / Base Path**: If publishing to a subpath (e.g., directory mode target `staging` or `pr-preview/pr-12`), ensure your Storybook build is configured with matching asset relative paths (`--base-path` or relative URL resolution).
+
+### 2. Permission Denied Errors in GitHub Actions
+* **Symptom**: Workflow fails with `403 Forbidden` or `Resource not accessible by integration`.
+* **Causes & Solutions**:
+  * **Artifact Mode**: The calling workflow job requires `pages: write` and `id-token: write` permissions.
+  * **Directory Mode**: The calling workflow job requires `contents: write` and `pages: write` permissions.
+  * **Repository Settings**: Verify `Settings > Actions > General > Workflow permissions` is configured to allow workflows to read/write as appropriate.
+
+### 3. PR Preview Publish Gate Skipped for Fork PRs
+* **Symptom**: `pr-preview-publish.yml` workflow run shows as skipped for a pull request from an external fork.
+* **Explanation**: This is intentional security behavior. External forks execute build code in an unprivileged runner (`contents: read`). For security, the trusted `workflow_run` publisher gates on `workflow_run.pull_requests[0] != null`, which GitHub populates only for same-repository PRs. Fork PRs produce build artifacts but are never permitted to publish or comment.
+
+### 4. Stale Run Skipped (`skip-stale`)
+* **Symptom**: `pr-preview-publish.yml` outputs `status: skipped` with a stale run notice.
+* **Explanation**: The publisher live-checks the pull request's current head SHA against the build artifact's head SHA. If a newer commit was pushed while an older run was building, the older run skips publishing to avoid overwriting newer code.
+
+### 5. Artifact Validation Failures
+* **Symptom**: `validate-artifact.js` fails with `Path escapes workspace root` or `No static content found`.
+* **Causes & Solutions**:
+  * **Path Escape**: Ensure `path` is relative to the workspace root and contains no `../` traversal or external symlinks.
+  * **Empty Output**: Verify that your build command actually produced files in the specified `path` directory before validation runs.
+
+### 6. Missing Pages Branch (`gh-pages`)
+* **Symptom**: Directory mode or PR preview workflows fail when attempting to check out `gh-pages`.
+* **Solution**: Create the `gh-pages` branch if it does not yet exist in your repository:
+  ```bash
+  git checkout --orphan gh-pages
+  git rm -rf .
+  echo "# GitHub Pages" > README.md
+  git add README.md
+  git commit -m "Initialize gh-pages branch"
+  git push origin gh-pages
+  git checkout main
+  ```
 
 ---
 
