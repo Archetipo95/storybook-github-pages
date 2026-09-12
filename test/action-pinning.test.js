@@ -85,3 +85,9 @@ test('directory publisher has Pages permission and rebuild is outside push retri
   assert.ok(publisher.indexOf("['push'") < publisher.indexOf("fetch(`https://api.github.com"));
   assert.ok(publisher.indexOf("fetch(`https://api.github.com") > publisher.indexOf('for (let attempt'));
 });
+
+test('directory publisher reference pins the reviewed implementation commit', () => {
+  const workflow = fs.readFileSync(path.join(process.cwd(), '.github/workflows/deploy-storybook.yml'), 'utf8');
+  assert.match(workflow, /Archetipo95\/storybook-github-pages\/publisher@9be19be83cb05f2f648b4c78dac27befdb93d740/);
+  assert.doesNotMatch(workflow, /publisher@f9dc8f9f0cc19f8df966a2a74b871c36322a789c/);
+});
