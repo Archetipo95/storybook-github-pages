@@ -64,7 +64,7 @@ runs:
 
     - name: Set up Node.js
       if: ${{ inputs.package_manager == 'npm' || inputs.package_manager == 'yarn' || inputs.package_manager == 'pnpm' }}
-      uses: actions/setup-node@39370e3970a6d050c38000445ffc8f609d702a20 # v4.1.0
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
         node-version: '20'
 
@@ -99,7 +99,7 @@ runs:
     - name: Deploy to GitHub Pages
       id: deploy
       if: ${{ inputs.publish == 'true' }}
-      uses: actions/deploy-pages@d6db5703080e22709e39600e123604f86d11e403 # v4.0.5
+      uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
       with:
         artifact_name: ${{ inputs.artifact_name }}
 
