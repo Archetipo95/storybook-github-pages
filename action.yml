@@ -43,6 +43,26 @@ inputs:
     description: 'Name of the GitHub Pages artifact'
     required: false
     default: 'github-pages'
+  mode:
+    description: 'Deployment mode: artifact or trusted branch-backed directory'
+    required: false
+    default: 'artifact'
+  pages_branch:
+    description: 'Branch used by directory mode'
+    required: false
+    default: 'gh-pages'
+  target_directory:
+    description: 'Directory replaced by directory mode; empty publishes the root'
+    required: false
+    default: ''
+  site_url:
+    description: 'Canonical Pages site URL'
+    required: false
+    default: ''
+  base_path:
+    description: 'Optional URL base path'
+    required: false
+    default: ''
 
 outputs:
   page_url:
@@ -90,7 +110,7 @@ runs:
         node "${{ github.action_path }}/src/validate-artifact.js" "${{ inputs.path }}" "${{ github.workspace }}"
 
     - name: Upload Pages artifact
-      if: ${{ inputs.publish == 'true' }}
+      if: ${{ inputs.publish == 'true' && inputs.mode == 'artifact' }}
       uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
       with:
         path: ${{ inputs.path }}
@@ -98,17 +118,42 @@ runs:
 
     - name: Deploy to GitHub Pages
       id: deploy
-      if: ${{ inputs.publish == 'true' }}
+      if: ${{ inputs.publish == 'true' && inputs.mode == 'artifact' }}
       uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
       with:
         artifact_name: ${{ inputs.artifact_name }}
+
+    - name: Checkout Pages branch
+      if: ${{ inputs.publish == 'true' && inputs.mode == 'directory' }}
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        ref: ${{ inputs.pages_branch }}
+        path: pages-repo
+        fetch-depth: 0
+        token: ${{ github.token }}
+
+    - name: Publish directory atomically
+      if: ${{ inputs.publish == 'true' && inputs.mode == 'directory' }}
+      shell: bash
+      env:
+        PAGES_REPO: ${{ github.workspace }}/pages-repo
+        SOURCE_DIRECTORY: ${{ github.workspace }}/${{ inputs.path }}
+        PAGES_BRANCH: ${{ inputs.pages_branch }}
+        TARGET_DIRECTORY: ${{ inputs.target_directory }}
+        SITE_URL: ${{ inputs.site_url }}
+        BASE_PATH: ${{ inputs.base_path }}
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: node "${{ github.action_path }}/src/publish-directory.js"
 
     - name: Set deployment status output
       id: set-status
       shell: bash
       run: |
-        if [ "${{ inputs.publish }}" = "true" ]; then
+        if [ "${{ inputs.publish }}" != "true" ]; then
+          echo "status=skipped" >> $GITHUB_OUTPUT
+        elif [ "${{ inputs.mode }}" = "directory" ]; then
           echo "status=success" >> $GITHUB_OUTPUT
         else
-          echo "status=skipped" >> $GITHUB_OUTPUT
+          echo "status=success" >> $GITHUB_OUTPUT
         fi

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { validateConfig, parseSimpleYaml, resolveConfiguration } from '../src/config.js';
+import { validateConfig, parseSimpleYaml, resolveConfiguration, resolveDeploymentTarget } from '../src/config.js';
 
 test('validateConfig - default valid config', () => {
   const valid = {
@@ -37,6 +37,25 @@ test('validateConfig - rejects path traversal', () => {
   assert.throws(() => {
     validateConfig({ path: '../outside' });
   }, /Config path "\.\.\/outside" is unsafe/);
+});
+
+test('validateConfig - accepts directory mode and rejects protected targets', () => {
+  assert.equal(validateConfig({ mode: 'directory', pages_branch: 'gh-pages', target_directory: 'en/preview' }), true);
+  assert.throws(() => validateConfig({ mode: 'directory', target_directory: '../outside' }), /target_directory/);
+  assert.throws(() => validateConfig({ mode: 'directory', target_directory: '.git/hooks' }), /target_directory/);
+});
+
+test('resolveDeploymentTarget - derives URL metadata for named environments', () => {
+  assert.deepEqual(resolveDeploymentTarget({
+    mode: 'directory',
+    target_directory: 'staging',
+    site_url: 'https://example.github.io/storybook'
+  }), {
+    directory: 'staging',
+    basePath: '/staging',
+    url: 'https://example.github.io/storybook/staging'
+  });
+  assert.equal(resolveDeploymentTarget({ mode: 'artifact' }).directory, null);
 });
 
 test('parseSimpleYaml - parses simple key-value YAML', () => {

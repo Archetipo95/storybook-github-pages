@@ -5,6 +5,11 @@ export const DEFAULT_CONFIG = {
   version: 1,
   mode: 'artifact',
   path: 'storybook-static',
+  pages_branch: 'gh-pages',
+  target_directory: '',
+  environment: '',
+  site_url: '',
+  base_path: '',
   package_manager: 'npm',
   build: {
     install_command: null,
@@ -13,7 +18,22 @@ export const DEFAULT_CONFIG = {
 };
 
 export const ALLOWED_PACKAGE_MANAGERS = new Set(['npm', 'yarn', 'pnpm', 'bun']);
-export const ALLOWED_MODES = new Set(['artifact']);
+export const ALLOWED_MODES = new Set(['artifact', 'directory']);
+
+const PROTECTED_DIRECTORIES = new Set(['.git', '.github']);
+
+export function validateRelativeDirectory(value, field = 'target_directory', { allowEmpty = false } = {}) {
+  if (allowEmpty && (value === undefined || value === '')) return true;
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(`${field} must be a non-empty relative directory`);
+  }
+  const normalized = path.posix.normalize(value.replaceAll('\\', '/'));
+  if (normalized === '.' || normalized.startsWith('../') || normalized.includes('/../') ||
+      normalized.startsWith('/') || normalized.includes(':') || PROTECTED_DIRECTORIES.has(normalized.split('/')[0])) {
+    throw new Error(`${field} "${value}" is unsafe. It must remain within the Pages branch.`);
+  }
+  return true;
+}
 
 export function validateConfig(config) {
   if (typeof config !== 'object' || config === null) {
@@ -28,7 +48,7 @@ export function validateConfig(config) {
 
   if (config.mode !== undefined) {
     if (!ALLOWED_MODES.has(config.mode)) {
-      throw new Error(`Unsupported mode: "${config.mode}". Currently supported modes in v1 MVP: artifact.`);
+      throw new Error(`Unsupported mode: "${config.mode}". Supported modes: artifact, directory.`);
     }
   }
 
@@ -42,9 +62,25 @@ export function validateConfig(config) {
     if (typeof config.path !== 'string' || config.path.trim() === '') {
       throw new Error('Config path must be a non-empty string');
     }
+
     const normalized = path.normalize(config.path);
     if (normalized.startsWith('..') || path.isAbsolute(normalized)) {
       throw new Error(`Config path "${config.path}" is unsafe. Path must be relative and contained within the repository root.`);
+    }
+
+  }
+
+  if (config.pages_branch !== undefined) {
+    if (typeof config.pages_branch !== 'string' || !/^[A-Za-z0-9._/-]+$/.test(config.pages_branch) ||
+        config.pages_branch.startsWith('/') || config.pages_branch.includes('..')) {
+      throw new Error(`Invalid pages_branch: "${config.pages_branch}"`);
+    }
+  }
+  if (config.target_directory !== undefined) validateRelativeDirectory(config.target_directory, 'target_directory', { allowEmpty: true });
+  if (config.environment !== undefined) validateRelativeDirectory(config.environment, 'environment', { allowEmpty: true });
+  for (const field of ['site_url', 'base_path']) {
+    if (config[field] !== undefined && typeof config[field] !== 'string') {
+      throw new Error(`Config ${field} must be a string`);
     }
   }
 
@@ -138,6 +174,11 @@ export function resolveConfiguration({ inputs = {}, configFilePath = '.storybook
     version: fileConfig?.version ?? DEFAULT_CONFIG.version,
     mode: inputs.mode || fileConfig?.mode || DEFAULT_CONFIG.mode,
     path: inputs.path || fileConfig?.path || DEFAULT_CONFIG.path,
+    pages_branch: inputs.pages_branch || fileConfig?.pages_branch || DEFAULT_CONFIG.pages_branch,
+    target_directory: inputs.target_directory || fileConfig?.target_directory || DEFAULT_CONFIG.target_directory,
+    environment: inputs.environment || fileConfig?.environment || DEFAULT_CONFIG.environment,
+    site_url: inputs.site_url || fileConfig?.site_url || DEFAULT_CONFIG.site_url,
+    base_path: inputs.base_path || fileConfig?.base_path || DEFAULT_CONFIG.base_path,
     package_manager: inputs.package_manager || fileConfig?.package_manager || DEFAULT_CONFIG.package_manager,
     build: {
       install_command: inputs.install_command || inputs.custom_install_command || fileConfig?.build?.install_command || DEFAULT_CONFIG.build.install_command,
@@ -147,6 +188,19 @@ export function resolveConfiguration({ inputs = {}, configFilePath = '.storybook
 
   validateConfig(merged);
   return merged;
+}
+
+export function resolveDeploymentTarget(config) {
+  validateConfig(config);
+  if (config.mode !== 'directory') return { directory: null, basePath: config.base_path || '/', url: config.site_url || '' };
+  const directory = config.target_directory || config.environment || '';
+  validateRelativeDirectory(directory, 'deployment target directory', { allowEmpty: true });
+  const basePath = config.base_path || (directory ? `/${directory}` : '/');
+  return {
+    directory,
+    basePath: basePath.startsWith('/') ? basePath : `/${basePath}`,
+    url: config.site_url ? `${config.site_url.replace(/\/$/, '')}${basePath === '/' ? '' : basePath}` : ''
+  };
 }
 
 if (process.argv[1] && process.argv[1].endsWith('config.js')) {

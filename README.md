@@ -14,6 +14,7 @@ Security-hardened GitHub Action and reusable workflows for building, validating,
 - **Bitovi Compatible**: Preserves interface compatibility with `bitovi/github-actions-storybook-to-github-pages` inputs (`checkout`, `path`, `install_command`, `build_command`) for zero-friction migration.
 - **Reusable Workflow & Composite Action**: Offers a primary reusable workflow for turnkey pipelines and a composite action for existing pipelines.
 - **Pinned Dependencies**: All third-party GitHub Actions are pinned to full 40-character commit SHAs.
+- **Directory Deployments**: Trusted publishers atomically update a directory on a Pages branch while preserving other environments.
 
 ---
 
@@ -94,6 +95,11 @@ jobs:
 | `publish` | `string` | `'true'` | Whether to upload and deploy the Pages artifact |
 | `artifact_name` | `string` | `github-pages` | GitHub Pages artifact name |
 | `environment` | `string` | `github-pages` | GitHub Pages deployment environment name |
+| `mode` | `string` | `artifact` | `artifact` or trusted branch-backed `directory` |
+| `pages_branch` | `string` | `gh-pages` | Pages branch used by directory mode |
+| `target_directory` | `string` | `''` | Relative directory to replace; empty means the production root |
+| `site_url` | `string` | `''` | Canonical site URL used for deployment metadata |
+| `base_path` | `string` | `''` | URL base path; derived from `target_directory` when empty |
 
 ### Outputs
 
@@ -155,6 +161,12 @@ build:
 ```
 
 *Note: Explicit workflow inputs override file configuration, which in turn overrides default values.*
+
+### Trusted directory mode
+
+Set `mode: directory` to publish to a shared Pages branch. The build job remains untrusted (`contents: read`) and transfers its validated output to a separate publisher job with `contents: write`. Writes are serialized per repository and branch, conflicts receive bounded fetch/rebase retries, and the configured target is staged and replaced atomically. A Pages rebuild is requested only after a successful push.
+
+Use an empty `target_directory` for the production root and a name such as `staging` for a named environment; both can coexist. Targets must be relative and cannot traverse or address `.git` or `.github`. Unrelated directories are preserved. GitHub Pages has one site/custom-domain configuration, so named environments are URL subpaths (for example `/staging`) and publication is eventually visible after the rebuild.
 
 ---
 
