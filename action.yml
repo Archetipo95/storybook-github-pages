@@ -1,0 +1,114 @@
+name: 'Deploy Storybook to GitHub Pages'
+description: 'Security-hardened GitHub Action to build, validate, and deploy Storybook to GitHub Pages with Bitovi compatibility'
+author: 'Archetipo95'
+
+branding:
+  icon: 'book-open'
+  color: 'blue'
+
+inputs:
+  checkout:
+    description: 'Whether to check out the repository automatically'
+    required: false
+    default: 'true'
+  path:
+    description: 'Path to the directory containing built static Storybook files'
+    required: false
+    default: 'storybook-static'
+  package_manager:
+    description: 'Package manager to use: npm, yarn, pnpm, or bun'
+    required: false
+    default: 'npm'
+  install_command:
+    description: 'Bitovi-compatible custom install command escape hatch'
+    required: false
+    default: ''
+  build_command:
+    description: 'Bitovi-compatible custom build command escape hatch'
+    required: false
+    default: ''
+  custom_install_command:
+    description: 'Alias for install_command'
+    required: false
+    default: ''
+  custom_build_command:
+    description: 'Alias for build_command'
+    required: false
+    default: ''
+  publish:
+    description: 'Whether to upload and deploy the Pages artifact'
+    required: false
+    default: 'true'
+  artifact_name:
+    description: 'Name of the GitHub Pages artifact'
+    required: false
+    default: 'github-pages'
+
+outputs:
+  page_url:
+    description: 'The URL of the deployed GitHub Pages site'
+    value: ${{ steps.deploy.outputs.page_url }}
+  deployment_id:
+    description: 'The GitHub Pages deployment ID'
+    value: ${{ steps.deploy.outputs.deployment_id }}
+  status:
+    description: 'Status of the deployment operation (success, skipped, failed)'
+    value: ${{ steps.set-status.outputs.status }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      if: ${{ inputs.checkout == 'true' }}
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+    - name: Set up Node.js
+      if: ${{ inputs.package_manager == 'npm' || inputs.package_manager == 'yarn' || inputs.package_manager == 'pnpm' }}
+      uses: actions/setup-node@39370e3970a6d050c38000445ffc8f609d702a20 # v4.1.0
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      if: ${{ inputs.install_command != '' || inputs.custom_install_command != '' }}
+      shell: bash
+      run: |
+        CMD="${{ inputs.custom_install_command || inputs.install_command }}"
+        echo "Running custom install command: $CMD"
+        eval "$CMD"
+
+    - name: Build Storybook
+      if: ${{ inputs.build_command != '' || inputs.custom_build_command != '' }}
+      shell: bash
+      run: |
+        CMD="${{ inputs.custom_build_command || inputs.build_command }}"
+        echo "Running custom build command: $CMD"
+        eval "$CMD"
+
+    - name: Validate static artifact
+      shell: bash
+      run: |
+        node "${{ github.action_path }}/src/validate-artifact.js" "${{ inputs.path }}" "${{ github.workspace }}"
+
+    - name: Upload Pages artifact
+      if: ${{ inputs.publish == 'true' }}
+      uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+      with:
+        path: ${{ inputs.path }}
+        name: ${{ inputs.artifact_name }}
+
+    - name: Deploy to GitHub Pages
+      id: deploy
+      if: ${{ inputs.publish == 'true' }}
+      uses: actions/deploy-pages@d6db5703080e22709e39600e123604f86d11e403 # v4.0.5
+      with:
+        artifact_name: ${{ inputs.artifact_name }}
+
+    - name: Set deployment status output
+      id: set-status
+      shell: bash
+      run: |
+        if [ "${{ inputs.publish }}" = "true" ]; then
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "status=skipped" >> $GITHUB_OUTPUT
+        fi

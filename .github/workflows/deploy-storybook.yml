@@ -1,0 +1,117 @@
+name: Deploy Storybook to GitHub Pages
+
+on:
+  workflow_call:
+    inputs:
+      path:
+        description: 'Path to the built static Storybook directory'
+        required: false
+        type: string
+        default: 'storybook-static'
+      package_manager:
+        description: 'Package manager to use (npm, yarn, pnpm, bun)'
+        required: false
+        type: string
+        default: 'npm'
+      install_command:
+        description: 'Custom command to install dependencies'
+        required: false
+        type: string
+        default: ''
+      build_command:
+        description: 'Custom command to build Storybook'
+        required: false
+        type: string
+        default: ''
+      artifact_name:
+        description: 'GitHub Pages artifact name'
+        required: false
+        type: string
+        default: 'github-pages'
+      environment:
+        description: 'GitHub Pages deployment environment name'
+        required: false
+        type: string
+        default: 'github-pages'
+    outputs:
+      page_url:
+        description: 'The URL of the deployed GitHub Pages site'
+        value: ${{ jobs.deploy.outputs.page_url }}
+      status:
+        description: 'Status of the deployment'
+        value: ${{ jobs.deploy.outputs.status }}
+      deployment_id:
+        description: 'The deployment ID'
+        value: ${{ jobs.deploy.outputs.deployment_id }}
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-upload:
+    name: Build & Validate Storybook
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Node.js
+        if: ${{ inputs.package_manager == 'npm' || inputs.package_manager == 'yarn' || inputs.package_manager == 'pnpm' }}
+        uses: actions/setup-node@39370e3970a6d050c38000445ffc8f609d702a20 # v4.1.0
+        with:
+          node-version: '20'
+
+      - name: Run custom install command
+        if: ${{ inputs.install_command != '' }}
+        run: ${{ inputs.install_command }}
+
+      - name: Run custom build command
+        if: ${{ inputs.build_command != '' }}
+        run: ${{ inputs.build_command }}
+
+      - name: Validate static artifact
+        run: |
+          node -e '
+            import("./src/validate-artifact.js").then(m => {
+              m.validateArtifactDirectory(process.env.TARGET_PATH, process.env.WORKSPACE_ROOT);
+              console.log("Artifact validation successful");
+            });
+          '
+        env:
+          TARGET_PATH: ${{ inputs.path }}
+          WORKSPACE_ROOT: ${{ github.workspace }}
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: ${{ inputs.path }}
+          name: ${{ inputs.artifact_name }}
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build-and-upload
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.deploy-pages.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    outputs:
+      page_url: ${{ steps.deploy-pages.outputs.page_url }}
+      status: 'success'
+      deployment_id: ${{ steps.deploy-pages.outputs.deployment_id }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy-pages
+        uses: actions/deploy-pages@d6db5703080e22709e39600e123604f86d11e403 # v4.0.5
+        with:
+          artifact_name: ${{ inputs.artifact_name }}
