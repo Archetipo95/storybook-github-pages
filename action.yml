@@ -14,11 +14,11 @@ inputs:
   path:
     description: 'Path to the directory containing built static Storybook files'
     required: false
-    default: 'storybook-static'
+    default: ''
   package_manager:
     description: 'Package manager to use: npm, yarn, pnpm, or bun'
     required: false
-    default: 'npm'
+    default: ''
   install_command:
     description: 'Bitovi-compatible custom install command escape hatch'
     required: false
@@ -86,35 +86,50 @@ runs:
       if: ${{ inputs.checkout == 'true' }}
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
+    - name: Resolve and validate configuration
+      shell: bash
+      env:
+        CONFIG_INPUTS: ${{ toJSON(inputs) }}
+      run: |
+        node -e 'import("${{ github.action_path }}/src/config.js").then(async ({resolveConfiguration}) => {
+          const c = resolveConfiguration({inputs: JSON.parse(process.env.CONFIG_INPUTS)});
+          const lines = [
+            `SB_MODE=${c.mode}`, `SB_PATH=${c.path}`, `SB_PACKAGE_MANAGER=${c.package_manager}`,
+            `SB_INSTALL_COMMAND=${c.build.install_command || ""}`, `SB_BUILD_COMMAND=${c.build.build_command || ""}`
+          ];
+          const {appendFileSync} = await import("node:fs");
+          appendFileSync(process.env.GITHUB_ENV, `${lines.join("\n")}\n`);
+        })'
+
     - name: Set up Node.js
-      if: ${{ inputs.package_manager == 'npm' || inputs.package_manager == 'yarn' || inputs.package_manager == 'pnpm' }}
+      if: ${{ env.SB_PACKAGE_MANAGER == 'npm' || env.SB_PACKAGE_MANAGER == 'yarn' || env.SB_PACKAGE_MANAGER == 'pnpm' }}
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
         node-version: '20'
 
     - name: Install dependencies
-      if: ${{ inputs.install_command != '' || inputs.custom_install_command != '' }}
+      if: ${{ env.SB_INSTALL_COMMAND != '' }}
       shell: bash
       run: |
-        CMD="${{ inputs.custom_install_command || inputs.install_command }}"
+        CMD="${{ env.SB_INSTALL_COMMAND }}"
         echo "Running custom install command: $CMD"
         eval "$CMD"
 
     - name: Build Storybook
-      if: ${{ inputs.build_command != '' || inputs.custom_build_command != '' }}
+      if: ${{ env.SB_BUILD_COMMAND != '' }}
       shell: bash
       run: |
-        CMD="${{ inputs.custom_build_command || inputs.build_command }}"
+        CMD="${{ env.SB_BUILD_COMMAND }}"
         echo "Running custom build command: $CMD"
         eval "$CMD"
 
     - name: Validate static artifact
       shell: bash
       run: |
-        node "${{ github.action_path }}/src/validate-artifact.js" "${{ inputs.path }}" "${{ github.workspace }}"
+        node "${{ github.action_path }}/src/validate-artifact.js" "${{ env.SB_PATH }}" "${{ github.workspace }}"
 
     - name: Upload Pages artifact
-      if: ${{ inputs.publish == 'true' && inputs.mode == 'artifact' }}
+      if: ${{ inputs.publish == 'true' && env.SB_MODE == 'artifact' }}
       uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
       with:
         path: ${{ inputs.path }}
@@ -122,13 +137,13 @@ runs:
 
     - name: Deploy to GitHub Pages
       id: deploy
-      if: ${{ inputs.publish == 'true' && inputs.mode == 'artifact' }}
+      if: ${{ inputs.publish == 'true' && env.SB_MODE == 'artifact' }}
       uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
       with:
         artifact_name: ${{ inputs.artifact_name }}
 
     - name: Reject directory mode in composite action
-      if: ${{ inputs.mode == 'directory' }}
+      if: ${{ env.SB_MODE == 'directory' }}
       shell: bash
       run: echo 'Directory mode requires the reusable workflow for repository-wide serialization.' >&2; exit 1
 
@@ -138,7 +153,7 @@ runs:
       run: |
         if [ "${{ inputs.publish }}" != "true" ]; then
           echo "status=skipped" >> $GITHUB_OUTPUT
-        elif [ "${{ inputs.mode }}" = "directory" ]; then
+        elif [ "${{ env.SB_MODE }}" = "directory" ]; then
           echo "status=success" >> $GITHUB_OUTPUT
         else
           echo "status=success" >> $GITHUB_OUTPUT
