@@ -8,6 +8,7 @@ test('verify all action uses are pinned to full commit SHAs', () => {
   const filesToCheck = [
     path.join(root, 'action.yml'),
     path.join(root, 'publisher/action.yml'),
+    path.join(root, 'preview-publisher/action.yml'),
     path.join(root, 'preview-cleanup/action.yml'),
     path.join(root, 'preview-janitor/action.yml'),
     path.join(root, '.github/workflows/deploy-storybook.yml'),
@@ -130,4 +131,7 @@ test('preview cleanup and janitor references pin the reviewed implementation com
 
   const janitor = fs.readFileSync(path.join(process.cwd(), '.github/workflows/pr-preview-janitor.yml'), 'utf8');
   assert.match(janitor, /Archetipo95\/storybook-github-pages\/preview-janitor@[a-f0-9]{40}/);
+
+  const publish = fs.readFileSync(path.join(process.cwd(), '.github/workflows/pr-preview-publish.yml'), 'utf8');
+  assert.match(publish, /Archetipo95\/storybook-github-pages\/preview-publisher@[a-f0-9]{40}/);
 });

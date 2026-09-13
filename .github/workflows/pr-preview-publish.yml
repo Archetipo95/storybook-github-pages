@@ -23,6 +23,49 @@ on:
   workflow_run:
     workflows: ["PR Preview Build"]
     types: [completed]
+  workflow_call:
+    inputs:
+      workflow_run_id:
+        description: 'Run ID of the completed workflow_run build to publish (defaults to github.event.workflow_run.id)'
+        required: false
+        type: number
+      preview_root:
+        description: 'Root directory for previews on the Pages branch'
+        required: false
+        type: string
+        default: ''
+      pages_branch:
+        description: 'Pages branch containing previews'
+        required: false
+        type: string
+        default: ''
+      site_url:
+        description: 'Canonical Pages site URL'
+        required: false
+        type: string
+        default: ''
+      base_path:
+        description: 'Optional URL base path'
+        required: false
+        type: string
+        default: ''
+      managed_directories:
+        description: 'Comma-separated managed directories preserved during root publication'
+        required: false
+        type: string
+        default: ''
+      artifact_name:
+        description: 'Override expected preview artifact name'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      page_url:
+        description: 'The URL of the published preview'
+        value: ${{ jobs.publish.outputs.page_url }}
+      action:
+        description: 'Publication action taken (published, skip-fork, skip-stale)'
+        value: ${{ jobs.publish.outputs.action }}
 
 concurrency:
   group: storybook-pages-${{ github.repository }}
@@ -35,37 +78,91 @@ jobs:
   gate:
     name: Validate provenance (trusted, read-only)
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.repository.full_name == github.repository &&
-      github.event.workflow_run.head_repository.full_name == github.repository &&
-      github.event.workflow_run.pull_requests[0] != null
+      (github.event.workflow_run == null || (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'pull_request' &&
+        github.event.workflow_run.repository.full_name == github.repository &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        github.event.workflow_run.pull_requests[0] != null
+      ))
     runs-on: ubuntu-latest
     permissions:
       contents: read
     outputs:
+      run_id: ${{ steps.context.outputs.run_id }}
       pr_number: ${{ steps.context.outputs.pr_number }}
       base_ref: ${{ steps.context.outputs.base_ref }}
+      head_sha: ${{ steps.context.outputs.head_sha }}
+      head_repository: ${{ steps.context.outputs.head_repository }}
       current_head_sha: ${{ steps.current.outputs.head_sha }}
     steps:
       - name: Extract trusted pull request context
         id: context
         env:
-          PULL_REQUESTS: ${{ toJSON(github.event.workflow_run.pull_requests) }}
+          WORKFLOW_RUN_EVENT: ${{ toJSON(github.event.workflow_run) }}
+          INPUT_RUN_ID: ${{ inputs.workflow_run_id }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           node -e '
-            const prs = JSON.parse(process.env.PULL_REQUESTS || "[]");
-            if (!Array.isArray(prs) || prs.length === 0) {
-              console.error("No same-repository pull request is associated with this workflow run");
-              process.exit(1);
+            async function main() {
+              let runData = process.env.WORKFLOW_RUN_EVENT ? JSON.parse(process.env.WORKFLOW_RUN_EVENT) : null;
+              const inputRunId = process.env.INPUT_RUN_ID ? Number(process.env.INPUT_RUN_ID) : null;
+              const targetRunId = inputRunId || (runData && runData.id);
+
+              if (!targetRunId) {
+                console.error("No workflow_run event context or workflow_run_id input provided");
+                process.exit(1);
+              }
+
+              if (!runData || (inputRunId && runData.id !== inputRunId)) {
+                const res = await fetch(`https://api.github.com/repos/${process.env.REPOSITORY}/actions/runs/${targetRunId}`, {
+                  headers: {
+                    authorization: `token ${process.env.GITHUB_TOKEN}`,
+                    accept: "application/vnd.github+json"
+                  }
+                });
+                if (!res.ok) {
+                  console.error(`Failed to fetch workflow run ${targetRunId}: ${res.status}`);
+                  process.exit(1);
+                }
+                runData = await res.json();
+              }
+
+              if (runData.conclusion !== "success") {
+                console.error(`Workflow run conclusion is "${runData.conclusion}", expected "success"`);
+                process.exit(1);
+              }
+              if (runData.event !== "pull_request") {
+                console.error(`Workflow run event is "${runData.event}", expected "pull_request"`);
+                process.exit(1);
+              }
+              const repo = process.env.REPOSITORY;
+              if (runData.repository?.full_name !== repo || runData.head_repository?.full_name !== repo) {
+                console.error(`Workflow run is from a fork or repository mismatch (${runData.head_repository?.full_name} vs ${repo})`);
+                process.exit(1);
+              }
+              const prs = runData.pull_requests || [];
+              if (!Array.isArray(prs) || prs.length === 0) {
+                console.error("No same-repository pull request associated with workflow run");
+                process.exit(1);
+              }
+              const pr = prs[0];
+              if (!Number.isInteger(pr.number) || pr.number <= 0) {
+                console.error("Invalid pull request number in workflow run context");
+                process.exit(1);
+              }
+              const baseRef = pr.base?.ref || "";
+              const headSha = runData.head_sha;
+              const headRepository = runData.head_repository?.full_name || repo;
+
+              console.log(`run_id=${targetRunId}`);
+              console.log(`pr_number=${pr.number}`);
+              console.log(`base_ref=${baseRef}`);
+              console.log(`head_sha=${headSha}`);
+              console.log(`head_repository=${headRepository}`);
             }
-            const pr = prs[0];
-            if (!Number.isInteger(pr.number) || pr.number <= 0) {
-              console.error("Pull request number from workflow_run context is invalid");
-              process.exit(1);
-            }
-            console.log(`pr_number=${pr.number}`);
-            console.log(`base_ref=${pr.base.ref}`);
+            main().catch(err => { console.error(err.message); process.exit(1); });
           ' >> "$GITHUB_OUTPUT"
 
       - name: Fetch current pull request head SHA
@@ -99,50 +196,131 @@ jobs:
       pages: write
       pull-requests: write
       actions: read
+    outputs:
+      page_url: ${{ steps.publisher.outputs.page_url }}
+      action: ${{ steps.publisher.outputs.action }}
     steps:
       - name: Checkout default branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Resolve trusted base configuration
         id: config
+        env:
+          INPUT_PREVIEW_ROOT: ${{ inputs.preview_root }}
+          INPUT_PAGES_BRANCH: ${{ inputs.pages_branch }}
+          INPUT_SITE_URL: ${{ inputs.site_url }}
+          INPUT_BASE_PATH: ${{ inputs.base_path }}
+          INPUT_MANAGED_DIRECTORIES: ${{ inputs.managed_directories }}
         run: |
-          node -e 'import("./src/config.js").then(({resolveConfiguration}) => {
-            const c = resolveConfiguration({inputs: {}});
-            console.log(`preview_root=${c.preview_root}`);
-          })' >> "$GITHUB_OUTPUT"
+          node -e '
+            import("node:fs").then(async ({existsSync}) => {
+              if (existsSync("./src/config.js")) {
+                const {resolveConfiguration} = await import("./src/config.js");
+                const c = resolveConfiguration({inputs: {
+                  preview_root: process.env.INPUT_PREVIEW_ROOT,
+                  pages_branch: process.env.INPUT_PAGES_BRANCH,
+                  site_url: process.env.INPUT_SITE_URL,
+                  base_path: process.env.INPUT_BASE_PATH,
+                  managed_directories: process.env.INPUT_MANAGED_DIRECTORIES
+                }});
+                console.log(`preview_root=${c.preview_root}`);
+                console.log(`pages_branch=${c.pages_branch}`);
+                console.log(`site_url=${c.site_url}`);
+                console.log(`base_path=${c.base_path}`);
+                console.log(`managed_directories=${Array.isArray(c.managed_directories) ? c.managed_directories.join(",") : c.managed_directories || ""}`);
+              } else {
+                let preview_root = process.env.INPUT_PREVIEW_ROOT || "";
+                let pages_branch = process.env.INPUT_PAGES_BRANCH || "";
+                let site_url = process.env.INPUT_SITE_URL || "";
+                let base_path = process.env.INPUT_BASE_PATH || "";
+                let managed_directories = process.env.INPUT_MANAGED_DIRECTORIES || "";
+                if (existsSync(".storybook-pages.yml")) {
+                  const {readFileSync} = await import("node:fs");
+                  const content = readFileSync(".storybook-pages.yml", "utf8");
+                  for (const line of content.split("\n")) {
+                    const trimmed = line.trim();
+                    if (!preview_root && trimmed.startsWith("preview_root:")) {
+                      preview_root = trimmed.slice("preview_root:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                    if (!pages_branch && trimmed.startsWith("pages_branch:")) {
+                      pages_branch = trimmed.slice("pages_branch:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                    if (!site_url && trimmed.startsWith("site_url:")) {
+                      site_url = trimmed.slice("site_url:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                    if (!base_path && trimmed.startsWith("base_path:")) {
+                      base_path = trimmed.slice("base_path:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                    if (!managed_directories && trimmed.startsWith("managed_directories:")) {
+                      managed_directories = trimmed.slice("managed_directories:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                  }
+                }
+                if (preview_root === "" && process.env.INPUT_PREVIEW_ROOT === undefined) {
+                  preview_root = "pr-preview";
+                }
+                if (!pages_branch) pages_branch = "gh-pages";
+                console.log(`preview_root=${preview_root}`);
+                console.log(`pages_branch=${pages_branch}`);
+                console.log(`site_url=${site_url}`);
+                console.log(`base_path=${base_path}`);
+                console.log(`managed_directories=${managed_directories}`);
+              }
+            });
+          ' >> "$GITHUB_OUTPUT"
+
+      - name: Check Pages branch existence
+        id: branch_check
+        env:
+          PAGES_BRANCH: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
+        run: |
+          if git ls-remote --exit-code --heads origin "$PAGES_BRANCH" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Pages branch '$PAGES_BRANCH' does not exist; skipping preview publication."
+            if [ -n "$GITHUB_STEP_SUMMARY" ]; then
+              echo -e "### Storybook preview publication\n\nPages branch \`$PAGES_BRANCH\` does not exist; please create the branch first.\n" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
 
       - name: Download build artifact from the source run
+        if: steps.branch_check.outputs.exists == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: storybook-preview-pr-${{ needs.gate.outputs.pr_number }}-run-${{ github.event.workflow_run.id }}
-          run-id: ${{ github.event.workflow_run.id }}
+          name: ${{ inputs.artifact_name || format('storybook-preview-pr-{0}-run-{1}', needs.gate.outputs.pr_number, needs.gate.outputs.run_id) }}
+          run-id: ${{ needs.gate.outputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ runner.temp }}/preview-bundle
 
       - name: Checkout Pages branch
+        if: steps.branch_check.outputs.exists == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: gh-pages
+          ref: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
           path: pages-repo
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Validate provenance and publish
-        env:
-          BUNDLE_DIR: ${{ runner.temp }}/preview-bundle
-          PAGES_REPO: ${{ github.workspace }}/pages-repo
-          PAGES_BRANCH: gh-pages
-          PREVIEW_ROOT: ${{ steps.config.outputs.preview_root }}
-          SITE_URL: ''
-          BASE_PATH: ''
-          TRUSTED_REPOSITORY: ${{ github.repository }}
-          TRUSTED_RUN_ID: ${{ github.event.workflow_run.id }}
-          TRUSTED_PR_NUMBER: ${{ needs.gate.outputs.pr_number }}
-          TRUSTED_BASE_REF: ${{ needs.gate.outputs.base_ref }}
-          TRUSTED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          TRUSTED_HEAD_REPOSITORY: ${{ github.event.workflow_run.head_repository.full_name }}
-          EXPECTED_ARTIFACT_NAME: storybook-preview-pr-${{ needs.gate.outputs.pr_number }}-run-${{ github.event.workflow_run.id }}
-          CURRENT_HEAD_SHA: ${{ needs.gate.outputs.current_head_sha }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: node src/preview-publish.js
+        id: publisher
+        if: steps.branch_check.outputs.exists == 'true'
+        uses: Archetipo95/storybook-github-pages/preview-publisher@6fdc8e329e5109026e6f0312f3886c1e64328719
+        with:
+          bundle_dir: ${{ runner.temp }}/preview-bundle
+          pages_repo: ${{ github.workspace }}/pages-repo
+          pages_branch: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
+          preview_root: ${{ steps.config.outputs.preview_root }}
+          site_url: ${{ steps.config.outputs.site_url }}
+          base_path: ${{ steps.config.outputs.base_path }}
+          managed_directories: ${{ steps.config.outputs.managed_directories }}
+          trusted_repository: ${{ github.repository }}
+          trusted_run_id: ${{ needs.gate.outputs.run_id }}
+          trusted_pr_number: ${{ needs.gate.outputs.pr_number }}
+          trusted_head_sha: ${{ needs.gate.outputs.head_sha }}
+          trusted_head_repository: ${{ needs.gate.outputs.head_repository }}
+          trusted_base_ref: ${{ needs.gate.outputs.base_ref }}
+          expected_artifact_name: ${{ inputs.artifact_name || format('storybook-preview-pr-{0}-run-{1}', needs.gate.outputs.pr_number, needs.gate.outputs.run_id) }}
+          current_head_sha: ${{ needs.gate.outputs.current_head_sha }}

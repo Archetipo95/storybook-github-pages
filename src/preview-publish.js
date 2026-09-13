@@ -73,20 +73,22 @@ export async function publishPreview({
 
   let commentResult = null;
   let commentError = null;
-  try {
-    const body = buildCommentBody({
-      prNumber: metadata.prNumber,
-      previewUrl: publishResult.url,
-      headSha: metadata.headSha,
-      runId: metadata.runId,
-      repository: metadata.repository
-    });
-    commentResult = await upsertPreviewComment({ token, repository, prNumber: metadata.prNumber, body });
-  } catch (error) {
-    // The publish already succeeded and must not be rolled back; a comment
-    // failure is surfaced independently so it is visible without masking a
-    // successful publication as a failure of the deployment itself.
-    commentError = error.message;
+  if (token && repository) {
+    try {
+      const body = buildCommentBody({
+        prNumber: metadata.prNumber,
+        previewUrl: publishResult.url,
+        headSha: metadata.headSha,
+        runId: metadata.runId,
+        repository: metadata.repository
+      });
+      commentResult = await upsertPreviewComment({ token, repository, prNumber: metadata.prNumber, body });
+    } catch (error) {
+      // The publish already succeeded and must not be rolled back; a comment
+      // failure is surfaced independently so it is visible without masking a
+      // successful publication as a failure of the deployment itself.
+      commentError = error.message;
+    }
   }
 
   return { action: 'published', reason: decision.reason, metadata, publishResult, commentResult, commentError };
@@ -94,13 +96,13 @@ export async function publishPreview({
 
 if (process.argv[1] && process.argv[1].endsWith('preview-publish.js')) {
   const trustedContext = {
-    repository: process.env.TRUSTED_REPOSITORY,
+    repository: process.env.TRUSTED_REPOSITORY || undefined,
     runId: process.env.TRUSTED_RUN_ID ? Number(process.env.TRUSTED_RUN_ID) : undefined,
     prNumber: process.env.TRUSTED_PR_NUMBER ? Number(process.env.TRUSTED_PR_NUMBER) : undefined,
-    headSha: process.env.TRUSTED_HEAD_SHA,
-    headRepository: process.env.TRUSTED_HEAD_REPOSITORY,
-    baseRef: process.env.TRUSTED_BASE_REF,
-    artifactName: process.env.EXPECTED_ARTIFACT_NAME,
+    headSha: process.env.TRUSTED_HEAD_SHA || undefined,
+    headRepository: process.env.TRUSTED_HEAD_REPOSITORY || undefined,
+    baseRef: process.env.TRUSTED_BASE_REF || undefined,
+    artifactName: process.env.EXPECTED_ARTIFACT_NAME || undefined,
     previewRoot: process.env.PREVIEW_ROOT !== undefined ? process.env.PREVIEW_ROOT : 'pr-preview'
   };
 
@@ -120,6 +122,9 @@ if (process.argv[1] && process.argv[1].endsWith('preview-publish.js')) {
     if (result.action !== 'published') {
       if (process.env.GITHUB_STEP_SUMMARY) {
         await fsp.appendFile(process.env.GITHUB_STEP_SUMMARY, `### Storybook preview\n\n${result.reason}\n`);
+      }
+      if (process.env.GITHUB_OUTPUT) {
+        await fsp.appendFile(process.env.GITHUB_OUTPUT, `action=${result.action}\n`);
       }
       return;
     }

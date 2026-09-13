@@ -30,6 +30,14 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
   const content = read('.github/workflows/pr-preview-publish.yml');
 
   assert.match(content, /workflow_run:\s*\n\s*workflows: \["PR Preview Build"\]/);
+  assert.match(content, /workflow_call:/, 'publish must support reusable workflow_call trigger');
+  assert.match(content, /workflow_run_id:/, 'publish must support workflow_run_id input');
+  assert.match(content, /preview_root:/, 'publish must support preview_root input');
+  assert.match(content, /pages_branch:/, 'publish must support pages_branch input');
+  assert.match(content, /site_url:/, 'publish must support site_url input');
+  assert.match(content, /base_path:/, 'publish must support base_path input');
+  assert.match(content, /managed_directories:/, 'publish must support managed_directories input');
+  assert.match(content, /artifact_name:/, 'publish must support artifact_name input');
   const gateJob = extractJobBlock(content, 'gate');
   assert.match(gateJob, /github\.event\.workflow_run\.conclusion == 'success'/);
   assert.match(gateJob, /github\.event\.workflow_run\.event == 'pull_request'/);
@@ -40,8 +48,12 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
   const publishJob = extractJobBlock(content, 'publish');
   assert.match(publishJob, /contents:\s*write/);
   assert.match(publishJob, /pages:\s*write/);
-  assert.match(publishJob, /run-id: \$\{\{ github\.event\.workflow_run\.id \}\}/);
+  assert.match(publishJob, /pull-requests:\s*write/);
+  assert.match(publishJob, /actions:\s*read/);
+  assert.match(publishJob, /run-id: \$\{\{ needs\.gate\.outputs\.run_id \}\}/);
   assert.match(publishJob, /github-token: \$\{\{ secrets\.GITHUB_TOKEN \}\}/);
+  assert.match(publishJob, /git ls-remote --exit-code --heads origin/, 'publish must check if Pages branch exists remotely before attempting checkout');
+  assert.match(publishJob, /steps\.branch_check\.outputs\.exists == 'true'/, 'checkout and publish steps must be guarded by Pages branch existence');
 });
 
 test('pr-preview-cleanup workflow never checks out the pull request head and stays metadata-only', () => {
@@ -97,13 +109,15 @@ test('preview target resolution and metadata modules are wired into the workflow
   const publish = read('.github/workflows/pr-preview-publish.yml');
   const cleanupWorkflow = read('.github/workflows/pr-preview-cleanup.yml');
   const janitorWorkflow = read('.github/workflows/pr-preview-janitor.yml');
+  const publisherAction = read('preview-publisher/action.yml');
   const cleanupAction = read('preview-cleanup/action.yml');
   const janitorAction = read('preview-janitor/action.yml');
 
   assert.match(build, /node src\/preview-metadata\.js/);
-  assert.match(publish, /node src\/preview-publish\.js/);
+  assert.match(publish, /preview-publisher@/);
   assert.match(cleanupWorkflow, /preview-cleanup@/);
   assert.match(janitorWorkflow, /preview-janitor@/);
+  assert.match(publisherAction, /preview-publish\.js/);
   assert.match(cleanupAction, /preview-cleanup\.js/);
   assert.match(janitorAction, /preview-janitor\.js/);
 });
