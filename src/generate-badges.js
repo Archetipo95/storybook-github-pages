@@ -125,6 +125,69 @@ export function extractStorybookVersion(workspaceRoot = process.cwd()) {
   return 'deployed';
 }
 
+const IGNORED_DIRS = new Set([
+  'node_modules',
+  '.git',
+  '.github',
+  'storybook-static',
+  'dist',
+  'build',
+  '.next',
+  '.nuxt',
+  '.output',
+  'coverage',
+  '.playwright',
+  '.playwright-mcp',
+  '.cache'
+]);
+
+const COMPONENT_EXTENSIONS = new Set(['.vue', '.jsx', '.tsx', '.svelte']);
+
+/**
+ * Counts total framework component files in workspace to compare against covered components.
+ */
+export function countWorkspaceComponents(workspaceRoot = process.cwd(), maxDepth = 6) {
+  if (!workspaceRoot || !fs.existsSync(workspaceRoot)) return 0;
+  let count = 0;
+
+  function scan(dir, depth) {
+    if (depth > maxDepth) return;
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') && entry.isDirectory()) continue;
+      if (IGNORED_DIRS.has(entry.name)) continue;
+
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        scan(fullPath, depth + 1);
+      } else if (entry.isFile()) {
+        const ext = path.extname(entry.name).toLowerCase();
+        if (COMPONENT_EXTENSIONS.has(ext)) {
+          const lowerName = entry.name.toLowerCase();
+          if (
+            !lowerName.includes('.stories.') &&
+            !lowerName.includes('.story.') &&
+            !lowerName.includes('.test.') &&
+            !lowerName.includes('.spec.') &&
+            !lowerName.endsWith('.d.ts')
+          ) {
+            count++;
+          }
+        }
+      }
+    }
+  }
+
+  scan(path.resolve(workspaceRoot), 0);
+  return count;
+}
+
 /**
  * Extracts story counts and component counts from static Storybook output.
  */
@@ -188,10 +251,15 @@ export function extractStorybookMetrics(staticDir, workspaceRoot = process.cwd()
   }
 
   const storybookVersion = extractStorybookVersion(workspaceRoot);
+  const workspaceTotal = countWorkspaceComponents(workspaceRoot);
+  const totalComponents = Math.max(componentsCount, workspaceTotal);
+  const coveragePercent = totalComponents > 0 ? Math.min(100, Math.round((componentsCount / totalComponents) * 100)) : 100;
 
   return {
     storiesCount,
     componentsCount,
+    totalComponents,
+    coveragePercent,
     docsCount,
     storybookVersion,
     hasStoriesData
@@ -277,10 +345,18 @@ export function generateBadges({
     messageColor: '#4caf50'
   });
 
+  const svgCoverage = renderBadgeSvg({
+    label: 'coverage',
+    message: `${metrics.coveragePercent}% (${metrics.componentsCount}/${metrics.totalComponents})`,
+    labelColor: '#555555',
+    messageColor: metrics.coveragePercent >= 100 ? '#4caf50' : metrics.coveragePercent >= 75 ? '#0288d1' : '#ff9800'
+  });
+
   fs.writeFileSync(path.join(outDir, 'storybook.svg'), svgStorybook, 'utf8');
   fs.writeFileSync(path.join(outDir, 'stories.svg'), svgStories, 'utf8');
   fs.writeFileSync(path.join(outDir, 'components.svg'), svgComponents, 'utf8');
   fs.writeFileSync(path.join(outDir, 'status.svg'), svgStatus, 'utf8');
+  fs.writeFileSync(path.join(outDir, 'coverage.svg'), svgCoverage, 'utf8');
 
   // 2. Generate Shields.io-compatible JSON endpoints
   const jsonStories = {
@@ -297,6 +373,13 @@ export function generateBadges({
     color: '4caf50'
   };
 
+  const jsonCoverage = {
+    schemaVersion: 1,
+    label: 'coverage',
+    message: `${metrics.coveragePercent}%`,
+    color: metrics.coveragePercent >= 100 ? '4caf50' : metrics.coveragePercent >= 75 ? '0288d1' : 'ff9800'
+  };
+
   const jsonStorybook = {
     schemaVersion: 1,
     label: 'storybook',
@@ -309,6 +392,8 @@ export function generateBadges({
     storybookVersion: storybookMsg,
     storiesCount: metrics.storiesCount,
     componentsCount: metrics.componentsCount,
+    totalComponents: metrics.totalComponents,
+    coveragePercent: metrics.coveragePercent,
     docsCount: metrics.docsCount,
     hasStoriesData: metrics.hasStoriesData,
     generatedAt: new Date().toISOString()
@@ -316,6 +401,7 @@ export function generateBadges({
 
   fs.writeFileSync(path.join(outDir, 'stories.json'), JSON.stringify(jsonStories, null, 2), 'utf8');
   fs.writeFileSync(path.join(outDir, 'components.json'), JSON.stringify(jsonComponents, null, 2), 'utf8');
+  fs.writeFileSync(path.join(outDir, 'coverage.json'), JSON.stringify(jsonCoverage, null, 2), 'utf8');
   fs.writeFileSync(path.join(outDir, 'storybook.json'), JSON.stringify(jsonStorybook, null, 2), 'utf8');
   fs.writeFileSync(path.join(outDir, 'overview.json'), JSON.stringify(jsonOverview, null, 2), 'utf8');
 
@@ -345,8 +431,10 @@ export function generateBadges({
       'stories.svg',
       'components.svg',
       'status.svg',
+      'coverage.svg',
       'stories.json',
       'components.json',
+      'coverage.json',
       'storybook.json',
       'overview.json'
     ]
@@ -372,6 +460,8 @@ if (process.argv[1] && process.argv[1].endsWith('generate-badges.js')) {
     console.log(`✅ Storybook badges generated in "${result.outDir}":`);
     console.log(`   • Stories: ${result.metrics.storiesCount}`);
     console.log(`   • Components: ${result.metrics.componentsCount}`);
+    console.log(`   • Total Components: ${result.metrics.totalComponents}`);
+    console.log(`   • Coverage: ${result.metrics.coveragePercent}%`);
     console.log(`   • Storybook: ${result.metrics.storybookVersion}`);
     console.log('');
     console.log('Markdown snippets:');

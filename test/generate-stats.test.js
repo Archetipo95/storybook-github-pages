@@ -41,9 +41,9 @@ test('roughCurve handles empty, single-point, and multi-point series', () => {
 
 test('renderHandDrawnChartSvg renders complete SVG with title, axes, and series', () => {
   const history = [
-    { date: '2026-09-01', stories: 4, components: 2, version: 'v10.0.0' },
-    { date: '2026-09-08', stories: 10, components: 3, version: 'v10.1.0' },
-    { date: '2026-09-13', stories: 16, components: 4, version: 'v10.6.0' }
+    { date: '2026-09-01', stories: 4, components: 2, totalComponents: 3, coveragePercent: 67, version: 'v10.0.0' },
+    { date: '2026-09-08', stories: 10, components: 3, totalComponents: 4, coveragePercent: 75, version: 'v10.1.0' },
+    { date: '2026-09-13', stories: 16, components: 4, totalComponents: 5, coveragePercent: 80, version: 'v10.6.0' }
   ];
 
   const svg = renderHandDrawnChartSvg({
@@ -55,7 +55,8 @@ test('renderHandDrawnChartSvg renders complete SVG with title, axes, and series'
   assert.ok(svg.includes('<svg'));
   assert.ok(svg.includes('Custom Component Growth'));
   assert.ok(svg.includes('Stories (16)'));
-  assert.ok(svg.includes('Components (4)'));
+  assert.ok(svg.includes('Covered Components (4 • 80%)'));
+  assert.ok(svg.includes('Total Components (5)'));
   assert.ok(svg.includes('2026-09-01'));
   assert.ok(svg.includes('2026-09-13'));
   assert.ok(svg.includes('</svg>'));
@@ -131,7 +132,7 @@ test('generateStatsGraph creates history.json and history.svg in static output d
   const svgContent = fs.readFileSync(result.historySvgPath, 'utf8');
   assert.ok(svgContent.includes('Storybook Component &amp; Story Growth') || svgContent.includes('Storybook Component'));
   assert.ok(svgContent.includes('Stories (3)'));
-  assert.ok(svgContent.includes('Components (2)'));
+  assert.ok(svgContent.includes('Covered Components (2'));
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
