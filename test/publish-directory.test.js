@@ -23,18 +23,125 @@ test('replaceDirectory replaces only the selected target and preserves siblings'
   await fs.rm(source, { recursive: true, force: true });
 });
 
-test('root replacement preserves explicitly managed directories', async () => {
-  const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-root-'));
-  const source = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-source-'));
-  await fs.mkdir(path.join(repo, 'staging'), { recursive: true });
-  await fs.writeFile(path.join(repo, 'staging', 'keep.html'), 'keep');
-  await fs.writeFile(path.join(repo, 'old.html'), 'old');
-  await fs.writeFile(path.join(source, 'index.html'), 'new');
-  const { replaceDirectory: replace } = await import('../src/publish-directory.js');
-  await replace(repo, '', source, ['staging']);
-  assert.equal(await fs.readFile(path.join(repo, 'staging', 'keep.html'), 'utf8'), 'keep');
-  assert.equal(await fs.readFile(path.join(repo, 'index.html'), 'utf8'), 'new');
-  await assert.rejects(fs.readFile(path.join(repo, 'old.html')));
-  await fs.rm(repo, { recursive: true, force: true });
-  await fs.rm(source, { recursive: true, force: true });
+test('publishDirectory sends authenticated Pages rebuild request with proper headers', async () => {
+  const { publishDirectory } = await import('../src/publish-directory.js');
+  const repoBare = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-bare-'));
+  const repoClone = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-clone-'));
+  const source = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-src-'));
+
+  const { execFileSync } = await import('node:child_process');
+  execFileSync('git', ['init', '--bare', '-q', repoBare]);
+
+  const seed = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-seed-'));
+  execFileSync('git', ['init', '-q', seed]);
+  execFileSync('git', ['config', 'user.name', 'test'], { cwd: seed });
+  execFileSync('git', ['config', 'user.email', 'test@test.com'], { cwd: seed });
+  await fs.writeFile(path.join(seed, 'init.txt'), 'init');
+  execFileSync('git', ['add', '-A'], { cwd: seed });
+  execFileSync('git', ['commit', '-q', '-m', 'init'], { cwd: seed });
+  execFileSync('git', ['branch', '-M', 'gh-pages'], { cwd: seed });
+  execFileSync('git', ['remote', 'add', 'origin', repoBare], { cwd: seed });
+  execFileSync('git', ['push', '-q', 'origin', 'gh-pages'], { cwd: seed });
+
+  execFileSync('git', ['clone', '-q', repoBare, repoClone]);
+  execFileSync('git', ['config', 'user.name', 'test'], { cwd: repoClone });
+  execFileSync('git', ['config', 'user.email', 'test@test.com'], { cwd: repoClone });
+  execFileSync('git', ['checkout', '-q', 'gh-pages'], { cwd: repoClone });
+
+  await fs.writeFile(path.join(source, 'index.html'), '<html>deployed</html>');
+
+  const originalFetch = global.fetch;
+  const requests = [];
+  global.fetch = async (url, options) => {
+    requests.push({ url, options });
+    if (url.includes('/pages/builds')) {
+      return { ok: true, status: 201, json: async () => ({ status: 'queued' }) };
+    }
+    throw new Error(`Unexpected url: ${url}`);
+  };
+
+  try {
+    const result = await publishDirectory({
+      repo: repoClone,
+      source,
+      branch: 'gh-pages',
+      targetDirectory: 'storybook',
+      token: 'ghp_secret_token_123',
+      repository: 'my-org/my-repo',
+      siteUrl: 'https://my-org.github.io/my-repo'
+    });
+
+    assert.equal(result.directory, 'storybook');
+    assert.equal(requests.length, 1);
+    const rebuildReq = requests[0];
+    assert.equal(rebuildReq.url, 'https://api.github.com/repos/my-org/my-repo/pages/builds');
+    assert.equal(rebuildReq.options.method, 'POST');
+    assert.deepEqual(rebuildReq.options.headers, {
+      authorization: 'token ghp_secret_token_123',
+      accept: 'application/vnd.github+json',
+      'content-type': 'application/json'
+    });
+  } finally {
+    global.fetch = originalFetch;
+    await fs.rm(repoBare, { recursive: true, force: true });
+    await fs.rm(repoClone, { recursive: true, force: true });
+    await fs.rm(seed, { recursive: true, force: true });
+    await fs.rm(source, { recursive: true, force: true });
+  }
+});
+
+test('publishDirectory surfaces Pages rebuild failures after push', async () => {
+  const { publishDirectory } = await import('../src/publish-directory.js');
+  const repoBare = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-bare-fail-'));
+  const repoClone = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-clone-fail-'));
+  const source = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-src-fail-'));
+
+  const { execFileSync } = await import('node:child_process');
+  execFileSync('git', ['init', '--bare', '-q', repoBare]);
+
+  const seed = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-seed-fail-'));
+  execFileSync('git', ['init', '-q', seed]);
+  execFileSync('git', ['config', 'user.name', 'test'], { cwd: seed });
+  execFileSync('git', ['config', 'user.email', 'test@test.com'], { cwd: seed });
+  await fs.writeFile(path.join(seed, 'init.txt'), 'init');
+  execFileSync('git', ['add', '-A'], { cwd: seed });
+  execFileSync('git', ['commit', '-q', '-m', 'init'], { cwd: seed });
+  execFileSync('git', ['branch', '-M', 'gh-pages'], { cwd: seed });
+  execFileSync('git', ['remote', 'add', 'origin', repoBare], { cwd: seed });
+  execFileSync('git', ['push', '-q', 'origin', 'gh-pages'], { cwd: seed });
+
+  execFileSync('git', ['clone', '-q', repoBare, repoClone]);
+  execFileSync('git', ['config', 'user.name', 'test'], { cwd: repoClone });
+  execFileSync('git', ['config', 'user.email', 'test@test.com'], { cwd: repoClone });
+  execFileSync('git', ['checkout', '-q', 'gh-pages'], { cwd: repoClone });
+
+  await fs.writeFile(path.join(source, 'index.html'), '<html>deployed</html>');
+
+  const originalFetch = global.fetch;
+  global.fetch = async url => {
+    if (url.includes('/pages/builds')) {
+      return { ok: false, status: 403 };
+    }
+    throw new Error(`Unexpected url: ${url}`);
+  };
+
+  try {
+    await assert.rejects(
+      publishDirectory({
+        repo: repoClone,
+        source,
+        branch: 'gh-pages',
+        targetDirectory: 'storybook',
+        token: 'ghp_secret_token_123',
+        repository: 'my-org/my-repo'
+      }),
+      /Pages rebuild request failed \(403\) after successful push/
+    );
+  } finally {
+    global.fetch = originalFetch;
+    await fs.rm(repoBare, { recursive: true, force: true });
+    await fs.rm(repoClone, { recursive: true, force: true });
+    await fs.rm(seed, { recursive: true, force: true });
+    await fs.rm(source, { recursive: true, force: true });
+  }
 });

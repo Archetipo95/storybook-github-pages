@@ -1,0 +1,92 @@
+name: 'Trusted Storybook preview publisher'
+description: 'Validate build artifact provenance and publish Storybook preview to Pages branch'
+inputs:
+  bundle_dir:
+    description: 'Path to downloaded preview bundle directory'
+    required: true
+  pages_repo:
+    description: 'Path to checked-out Pages branch repository'
+    required: true
+  pages_branch:
+    description: 'Pages branch name'
+    required: false
+    default: 'gh-pages'
+  preview_root:
+    description: 'Root directory for previews on the Pages branch'
+    required: false
+    default: 'pr-preview'
+  site_url:
+    description: 'Canonical Pages site URL'
+    required: false
+    default: ''
+  base_path:
+    description: 'Optional URL base path'
+    required: false
+    default: ''
+  managed_directories:
+    description: 'Comma-separated managed directories preserved during root publication'
+    required: false
+    default: ''
+  trusted_repository:
+    description: 'Expected base repository'
+    required: false
+    default: ${{ github.repository }}
+  trusted_run_id:
+    description: 'Trusted build workflow run ID'
+    required: false
+    default: ''
+  trusted_pr_number:
+    description: 'Trusted pull request number'
+    required: false
+    default: ''
+  trusted_head_sha:
+    description: 'Trusted build head commit SHA'
+    required: false
+    default: ''
+  trusted_head_repository:
+    description: 'Trusted head repository'
+    required: false
+    default: ${{ github.repository }}
+  trusted_base_ref:
+    description: 'Trusted base branch ref'
+    required: false
+    default: ''
+  expected_artifact_name:
+    description: 'Expected artifact name'
+    required: false
+    default: ''
+  current_head_sha:
+    description: 'Current live pull request head commit SHA'
+    required: false
+    default: ''
+outputs:
+  page_url:
+    description: 'The URL of the published GitHub Pages site'
+    value: ${{ steps.publish.outputs.page_url }}
+  action:
+    description: 'Publication action taken (published, skip-fork, skip-stale)'
+    value: ${{ steps.publish.outputs.action }}
+runs:
+  using: 'composite'
+  steps:
+    - id: publish
+      shell: bash
+      env:
+        BUNDLE_DIR: ${{ inputs.bundle_dir }}
+        PAGES_REPO: ${{ inputs.pages_repo }}
+        PAGES_BRANCH: ${{ inputs.pages_branch }}
+        PREVIEW_ROOT: ${{ inputs.preview_root }}
+        SITE_URL: ${{ inputs.site_url }}
+        BASE_PATH: ${{ inputs.base_path }}
+        MANAGED_DIRECTORIES: ${{ inputs.managed_directories }}
+        TRUSTED_REPOSITORY: ${{ inputs.trusted_repository }}
+        TRUSTED_RUN_ID: ${{ inputs.trusted_run_id }}
+        TRUSTED_PR_NUMBER: ${{ inputs.trusted_pr_number }}
+        TRUSTED_HEAD_SHA: ${{ inputs.trusted_head_sha }}
+        TRUSTED_HEAD_REPOSITORY: ${{ inputs.trusted_head_repository }}
+        TRUSTED_BASE_REF: ${{ inputs.trusted_base_ref }}
+        EXPECTED_ARTIFACT_NAME: ${{ inputs.expected_artifact_name }}
+        CURRENT_HEAD_SHA: ${{ inputs.current_head_sha }}
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: node "${{ github.action_path }}/../src/preview-publish.js"

@@ -329,9 +329,83 @@ When `preview_root` is set to `''` (empty string), previews are placed directly 
 
 ### Reusable Preview Lifecycle APIs
 
-Consumers can invoke the preview cleanup and janitor workflows and actions directly without checking out platform source or duplicating internal scripts:
+Consumers can invoke the preview publisher, cleanup, and janitor workflows and actions directly without checking out platform source or duplicating internal scripts:
 
-#### 1. Reusable Closed-PR Preview Cleanup
+#### 1. Reusable Trusted PR Preview Publisher
+
+Call the reusable publisher workflow on completion of your unprivileged PR build workflow (`workflow_run: types: [completed]`):
+
+```yaml
+name: PR Preview Publish
+
+on:
+  workflow_run:
+    workflows: ["PR Preview Build"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pages: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  publish:
+    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-publish.yml@v1.0.0
+    with:
+      preview_root: ''       # optional: override preview root; defaults to .storybook-pages.yml or 'pr-preview'
+      pages_branch: 'gh-pages'
+```
+
+Or call the composite action `preview-publisher` in a custom `workflow_run` job:
+
+```yaml
+    steps:
+      - name: Fetch current PR head SHA
+        id: current
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: |
+          response=$(curl -sf -H "authorization: token $GITHUB_TOKEN" -H "accept: application/vnd.github+json" "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER")
+          sha=$(node -e 'console.log(JSON.parse(process.argv[1]).head.sha)' "$response")
+          echo "head_sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Download build artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: storybook-preview-pr-${{ github.event.workflow_run.pull_requests[0].number }}-run-${{ github.event.workflow_run.id }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/preview-bundle
+
+      - name: Checkout Pages branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          path: pages-repo
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate provenance and publish preview
+        uses: Archetipo95/storybook-github-pages/preview-publisher@v1.0.0
+        with:
+          bundle_dir: ${{ runner.temp }}/preview-bundle
+          pages_repo: pages-repo
+          pages_branch: gh-pages
+          preview_root: ''
+          trusted_repository: ${{ github.repository }}
+          trusted_run_id: ${{ github.event.workflow_run.id }}
+          trusted_pr_number: ${{ github.event.workflow_run.pull_requests[0].number }}
+          trusted_head_sha: ${{ github.event.workflow_run.head_sha }}
+          trusted_head_repository: ${{ github.event.workflow_run.head_repository.full_name }}
+          trusted_base_ref: ${{ github.event.workflow_run.pull_requests[0].base.ref }}
+          expected_artifact_name: storybook-preview-pr-${{ github.event.workflow_run.pull_requests[0].number }}-run-${{ github.event.workflow_run.id }}
+          current_head_sha: ${{ steps.current.outputs.head_sha }}
+```
+
+#### 2. Reusable Closed-PR Preview Cleanup
 
 Call the reusable workflow on PR closure (`pull_request_target: types: [closed]`):
 
@@ -373,7 +447,7 @@ Or call the composite action in a custom job:
           pr_number: ${{ github.event.pull_request.number }}
 ```
 
-#### 2. Reusable Stale-Preview Janitor
+#### 3. Reusable Stale-Preview Janitor
 
 Call the reusable janitor workflow on schedule or dispatch:
 
