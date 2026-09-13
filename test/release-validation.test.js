@@ -29,7 +29,7 @@ test('release validation - version metadata consistency across files', () => {
 
   // Check action.yml
   const actionYml = fs.readFileSync(path.join(root, 'action.yml'), 'utf8');
-  assert.match(actionYml, /name:\s*['"]?Deploy Storybook to GitHub Pages['"]?/);
+  assert.match(actionYml, /name:\s*['"]?Security-Hardened Storybook to GitHub Pages['"]?/);
   assert.match(actionYml, /using:\s*['"]?composite['"]?/);
 
   // Check publisher/action.yml

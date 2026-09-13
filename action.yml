@@ -1,4 +1,4 @@
-name: 'Deploy Storybook to GitHub Pages'
+name: 'Security-Hardened Storybook to GitHub Pages'
 description: 'Security-hardened GitHub Action to build, validate, and deploy Storybook to GitHub Pages with Bitovi compatibility'
 author: 'Archetipo95'
 
