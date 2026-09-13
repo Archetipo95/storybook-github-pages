@@ -55,6 +55,7 @@ jobs:
         with:
           checkout: 'false'
           path: 'test/fixtures/sample-storybook'
+          package_manager: 'npm'
           publish: 'false'
 
       - name: Generate preview metadata and stage bundle

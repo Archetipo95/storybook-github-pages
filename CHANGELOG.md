@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Bun Package-Manager Support**: The reusable deployment workflow accepts `package_manager: bun`, defaults to `bun install --frozen-lockfile` and `bun run build-storybook`, and provisions SHA-pinned `oven-sh/setup-bun` only in its read-only build job. The deploy-capable composite action intentionally excludes Bun.
 - **Reusable PR Preview Cleanup Workflow and Action (`.github/workflows/pr-preview-cleanup.yml` & `preview-cleanup/action.yml`)**: Expose reusable workflow (`workflow_call`) and supported composite action for trusted closed-PR preview cleanup without requiring consumers to check out platform source or duplicate internal scripts.
 - **Reusable Stale-Preview Janitor Workflow and Action (`.github/workflows/pr-preview-janitor.yml` & `preview-janitor/action.yml`)**: Expose reusable workflow (`workflow_call`) and supported composite action for scheduled and manual reconciliation of stale or orphaned PR previews according to retention configuration.
 - **Repository-Root Preview Layout Support (`preview_root: ''`)**: Support empty string `preview_root` across configuration resolution, metadata validation, trusted publication, close cleanup, and janitor pruning, safely managing `pr-<number>` directories directly at the Pages branch root while strictly preserving production root assets and named environments.

@@ -92,8 +92,8 @@ test('release validation - immutable release tag recommended in README and issue
   );
   assert.match(
     readme,
-    /`@v1\.0\.0` \(immutable release tag\)/,
-    'README support matrix must recommend immutable release tag @v1.0.0'
+    /Immutable release tags \(for example, `@v1\.0\.1`\)/,
+    'README support matrix must recommend current immutable release tags'
   );
   assert.match(
     bugReport,
@@ -102,16 +102,15 @@ test('release validation - immutable release tag recommended in README and issue
   );
 });
 
-test('release validation - package manager validation strictly excludes bun', () => {
+test('release validation - package manager validation documents Bun workflow-only support', () => {
   const root = process.cwd();
   const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
   const actionYml = fs.readFileSync(path.join(root, 'action.yml'), 'utf8');
   const deployYml = fs.readFileSync(path.join(root, '.github/workflows/deploy-storybook.yml'), 'utf8');
 
-  // Verify bun is not advertised in docs or workflow inputs
-  assert.doesNotMatch(readme, /\bpackage_manager\b.*bun/, 'README must not advertise bun as a package manager');
-  assert.doesNotMatch(actionYml, /\bpackage_manager\b.*bun/, 'action.yml must not list bun as a package manager');
-  assert.doesNotMatch(deployYml, /\bpackage_manager\b.*bun/, 'deploy-storybook.yml must not list bun as a package manager');
+  assert.match(readme, /\bpackage_manager\b.*bun/, 'README must document bun as a package manager');
+  assert.match(actionYml, /package_manager:\s*\n\s*description:.*Bun requires the reusable workflow/, 'action.yml must exclude Bun from the deploy-capable composite action');
+  assert.match(deployYml, /package_manager:\s*\n\s*description:.*bun/, 'deploy-storybook.yml must list bun as a package manager');
 });
 
 test('release validation - directory mode integration documents dedicated publisher action', () => {

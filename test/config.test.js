@@ -3,7 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { validateConfig, parseSimpleYaml, resolveConfiguration, resolveDeploymentTarget } from '../src/config.js';
+import {
+  COMPOSITE_PACKAGE_MANAGERS,
+  validateConfig,
+  parseSimpleYaml,
+  resolveConfiguration,
+  resolveDeploymentTarget
+} from '../src/config.js';
 
 test('validateConfig - default valid config', () => {
   const valid = {
@@ -31,9 +37,46 @@ test('validateConfig - rejects invalid package_manager', () => {
   assert.throws(() => {
     validateConfig({ package_manager: 'pip' });
   }, /Unsupported package_manager: "pip"/);
-  assert.throws(() => {
-    validateConfig({ package_manager: 'bun' });
-  }, /Unsupported package_manager: "bun"\. Allowed options: npm, yarn, pnpm\./);
+});
+
+test('validateConfig - accepts bun package_manager', () => {
+  assert.equal(validateConfig({ package_manager: 'bun' }), true);
+});
+
+test('resolveConfiguration - applies Bun defaults after explicit and file commands', () => {
+  const missingConfigPath = path.join(os.tmpdir(), 'sb-config-bun-missing.yml');
+  const defaults = resolveConfiguration({ inputs: { package_manager: 'bun' }, configFilePath: missingConfigPath });
+  assert.deepEqual(defaults.build, {
+    install_command: 'bun install --frozen-lockfile',
+    build_command: 'bun run build-storybook'
+  });
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-bun-'));
+  const configPath = path.join(tmpDir, '.storybook-pages.yml');
+  fs.writeFileSync(configPath, 'package_manager: bun\nbuild:\n  install_command: bun install\n  build_command: bun run build\n');
+  const fromFile = resolveConfiguration({ inputs: {}, configFilePath: configPath });
+  assert.deepEqual(fromFile.build, { install_command: 'bun install', build_command: 'bun run build' });
+
+  const fromInputs = resolveConfiguration({
+    inputs: { install_command: 'bun install --exact', build_command: 'bun run build:ci' },
+    configFilePath: configPath
+  });
+  assert.deepEqual(fromInputs.build, {
+    install_command: 'bun install --exact',
+    build_command: 'bun run build:ci'
+  });
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test('resolveConfiguration - rejects Bun from the deploy-capable composite action', () => {
+  assert.throws(
+    () => resolveConfiguration({
+      inputs: { package_manager: 'bun' },
+      configFilePath: path.join(os.tmpdir(), 'sb-config-bun-composite.yml'),
+      allowedPackageManagers: COMPOSITE_PACKAGE_MANAGERS
+    }),
+    /Unsupported package_manager: "bun"\. Allowed options: npm, yarn, pnpm\./
+  );
 });
 
 test('validateConfig - rejects path traversal', () => {

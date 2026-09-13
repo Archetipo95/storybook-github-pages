@@ -16,7 +16,7 @@ inputs:
     required: false
     default: ''
   package_manager:
-    description: 'Package manager to use: npm, yarn, or pnpm'
+    description: 'Package manager to use: npm, yarn, or pnpm (Bun requires the reusable workflow)'
     required: false
     default: ''
   install_command:
@@ -93,8 +93,8 @@ runs:
         PUBLISH_INPUT: ${{ inputs.publish }}
         ARTIFACT_NAME_INPUT: ${{ inputs.artifact_name }}
       run: |
-        node -e 'import("${{ github.action_path }}/src/config.js").then(async ({resolveConfiguration}) => {
-          const c = resolveConfiguration({inputs: JSON.parse(process.env.CONFIG_INPUTS)});
+        node -e 'import("${{ github.action_path }}/src/config.js").then(async ({resolveConfiguration, COMPOSITE_PACKAGE_MANAGERS}) => {
+          const c = resolveConfiguration({inputs: JSON.parse(process.env.CONFIG_INPUTS), allowedPackageManagers: COMPOSITE_PACKAGE_MANAGERS});
           const lines = [
             `SB_MODE=${c.mode}`, `SB_PATH=${c.path}`, `SB_PACKAGE_MANAGER=${c.package_manager}`,
             `SB_INSTALL_COMMAND=${c.build.install_command || ""}`, `SB_BUILD_COMMAND=${c.build.build_command || ""}`,
