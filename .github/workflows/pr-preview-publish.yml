@@ -220,6 +220,7 @@ jobs:
           INPUT_SITE_URL: ${{ inputs.site_url }}
           INPUT_BASE_PATH: ${{ inputs.base_path }}
           INPUT_MANAGED_DIRECTORIES: ${{ inputs.managed_directories }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           node -e '
             import("node:fs").then(async ({existsSync}) => {
@@ -279,9 +280,21 @@ jobs:
                   ? rawPagesBranch
                   : (file_pages_branch !== undefined ? file_pages_branch : "gh-pages");
                 const rawSiteUrl = process.env.INPUT_SITE_URL;
-                const site_url = (rawSiteUrl !== undefined && rawSiteUrl !== "")
-                  ? rawSiteUrl
-                  : (file_site_url !== undefined ? file_site_url : "");
+                let site_url;
+                if (rawSiteUrl !== undefined && rawSiteUrl !== "") {
+                  site_url = rawSiteUrl;
+                } else if (file_site_url !== undefined) {
+                  site_url = file_site_url;
+                } else {
+                  const repo = process.env.REPOSITORY || "";
+                  const [owner, repoName] = repo.split("/");
+                  if (owner && repoName) {
+                    const isUserPage = repoName.toLowerCase() === `${owner.toLowerCase()}.github.io`;
+                    site_url = isUserPage ? `https://${owner}.github.io` : `https://${owner}.github.io/${repoName}`;
+                  } else {
+                    site_url = "";
+                  }
+                }
                 const rawBasePath = process.env.INPUT_BASE_PATH;
                 const base_path = (rawBasePath !== undefined && rawBasePath !== "")
                   ? rawBasePath
