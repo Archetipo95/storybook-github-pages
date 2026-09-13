@@ -161,7 +161,7 @@ jobs:
 | **Platform** | GitHub.com (Public & Private Repositories) | Uses native GitHub Pages API & OIDC JWTs |
 | **Runner OS** | GitHub-hosted Linux (`ubuntu-latest`) | Tested on `ubuntu-latest` with Node.js 20+ |
 | **Node.js Runtime** | Node.js 20+ | Zero external npm dependencies (uses native Node.js ES modules) |
-| **Package Managers** | `npm`, `yarn`, `pnpm` | Configurable via `package_manager` input |
+| **Package Managers** | `npm`, `yarn`, `pnpm`, `bun` | Configurable via `package_manager`; Bun is provisioned automatically for build jobs |
 | **Tagging Strategy** | `@v1.0.0` (immutable release tag) | **Recommended for stable, reproducible use.** The `v1.0.0` release tag will be created upon PR merge. Floating major tags (e.g. `@v1`) are optional and non-reproducible. |
 
 ---
@@ -173,7 +173,7 @@ jobs:
 | Input | Type | Default | Description |
 |-------|------|---------|-------------|
 | `path` | `string` | `storybook-static` | Path to the directory containing built static Storybook files |
-| `package_manager` | `string` | `npm` | Package manager to use (`npm`, `yarn`, `pnpm`) |
+| `package_manager` | `string` | `npm` | Package manager to use (`npm`, `yarn`, `pnpm`, `bun`) |
 | `checkout` | `string` | `'true'` | Whether to check out the repository automatically (Action only) |
 | `install_command` | `string` | `''` | Bitovi compatibility / custom dependency installation command |
 | `build_command` | `string` | `''` | Bitovi compatibility / custom Storybook build command |
@@ -265,6 +265,15 @@ build:
 ```
 
 *Note: Explicit workflow inputs override file configuration, which in turn overrides default values.*
+
+For Bun projects, set `package_manager: bun` and use Bun commands; the action and reusable workflow provision Bun in their read-only build jobs:
+
+```yaml
+package_manager: bun
+build:
+  install_command: bun install --frozen-lockfile
+  build_command: bun run build-storybook
+```
 
 ### Trusted directory mode
 

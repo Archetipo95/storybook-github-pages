@@ -72,9 +72,29 @@ test('verify deploy-storybook workflow build-and-upload job has minimal permissi
 test('workflow resolves configuration before setup and uses resolved deployment values', () => {
   const content = fs.readFileSync(path.join(process.cwd(), '.github/workflows/deploy-storybook.yml'), 'utf8');
   assert.ok(content.indexOf('id: config') < content.indexOf('actions/setup-node@'));
+  assert.ok(content.indexOf('id: config') < content.indexOf('oven-sh/setup-bun@'));
   assert.match(content, /path: \$\{\{ steps\.config\.outputs\.path \}\}/);
   assert.match(content, /target_directory: \$\{\{ needs\.build-and-upload\.outputs\.target_directory \}\}/);
   assert.doesNotMatch(content, /TARGET_DIRECTORY: \$\{\{ inputs\.target_directory \}\}/);
+});
+
+test('Bun setup is SHA-pinned and restricted to build contexts', () => {
+  const action = fs.readFileSync(path.join(process.cwd(), 'action.yml'), 'utf8');
+  const workflow = fs.readFileSync(path.join(process.cwd(), '.github/workflows/deploy-storybook.yml'), 'utf8');
+  const bunSetup = /oven-sh\/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2\.2\.0/;
+
+  assert.match(action, bunSetup);
+  assert.match(action, /if: \$\{\{ env\.SB_PACKAGE_MANAGER == 'bun' \}\}/);
+  assert.match(workflow, bunSetup);
+  assert.match(workflow, /if: \$\{\{ steps\.config\.outputs\.package_manager == 'bun' \}\}/);
+
+  for (const file of [
+    '.github/workflows/pr-preview-publish.yml',
+    '.github/workflows/pr-preview-cleanup.yml',
+    '.github/workflows/pr-preview-janitor.yml'
+  ]) {
+    assert.doesNotMatch(fs.readFileSync(path.join(process.cwd(), file), 'utf8'), /oven-sh\/setup-bun/);
+  }
 });
 
 test('composite action passes dynamic paths and publish flags through runtime environment', () => {
