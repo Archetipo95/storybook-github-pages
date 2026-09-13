@@ -37,9 +37,6 @@ concurrency:
   group: storybook-pages-${{ github.repository }}
   cancel-in-progress: false
 
-permissions:
-  contents: read
-
 jobs:
   cleanup:
     name: Remove closed PR preview (trusted, metadata-only)
