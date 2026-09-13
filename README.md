@@ -16,6 +16,7 @@ Security-hardened GitHub Action and reusable workflows for building, validating,
 - **Pinned Dependencies**: All third-party GitHub Actions are pinned to full 40-character commit SHAs.
 - **Directory Deployments**: Trusted publishers atomically update a directory on a Pages branch while preserving other environments.
 - **PR Preview Lifecycle**: Unprivileged per-PR builds, a trusted `workflow_run` publisher with strict provenance/stale-run validation, an idempotent bot preview comment, metadata-only close cleanup, and a scheduled/manual retention janitor.
+- **Dynamic SVG Badges**: Automatically generates Shields.io-style SVG badges (Story count, Component count, Storybook version, and deployment status) and JSON endpoints (`badges/`) for your documentation and README.
 
 ---
 
@@ -170,25 +171,27 @@ jobs:
 
 ### Action / Workflow Inputs
 
-| Input                    | Type     | Default            | Description                                                                                                                               |
-| ------------------------ | -------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `path`                   | `string` | `storybook-static` | Path to the directory containing built static Storybook files                                                                             |
-| `package_manager`        | `string` | `npm`              | Reusable workflow: `npm`, `yarn`, `pnpm`, or `bun`; composite action: `npm`, `yarn`, or `pnpm`                                            |
-| `checkout`               | `string` | `'true'`           | Whether to check out the repository automatically (Action only)                                                                           |
-| `install_command`        | `string` | `''`               | Bitovi compatibility / custom dependency installation command                                                                             |
-| `build_command`          | `string` | `''`               | Bitovi compatibility / custom Storybook build command                                                                                     |
-| `custom_install_command` | `string` | `''`               | Alias for `install_command`                                                                                                               |
-| `custom_build_command`   | `string` | `''`               | Alias for `build_command`                                                                                                                 |
-| `publish`                | `string` | `'true'`           | Whether to upload and deploy the Pages artifact                                                                                           |
-| `artifact_name`          | `string` | `github-pages`     | GitHub Pages artifact name                                                                                                                |
-| `environment`            | `string` | `github-pages`     | GitHub Pages deployment environment name                                                                                                  |
-| `mode`                   | `string` | `artifact`         | `artifact` or trusted branch-backed `directory`                                                                                           |
-| `pages_branch`           | `string` | `gh-pages`         | Pages branch used by directory mode                                                                                                       |
-| `target_directory`       | `string` | `''`               | Relative directory to replace; empty means the production root                                                                            |
-| `site_url`               | `string` | `''`               | Canonical site URL used for deployment metadata                                                                                           |
-| `base_path`              | `string` | `''`               | URL base path; derived from `target_directory` when empty                                                                                 |
-| `preview_root`           | `string` | `pr-preview`       | Root directory (on the Pages branch) under which PR previews are published, as `<preview_root>/pr-<number>`                               |
-| `preview_retention_days` | `number` | `30`               | Days an _open_ PR's preview may remain before the janitor prunes it; closed-PR previews are always eligible for removal regardless of age |
+| Input                    | Type      | Default            | Description                                                                                                                               |
+| ------------------------ | --------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`                   | `string`  | `storybook-static` | Path to the directory containing built static Storybook files                                                                             |
+| `package_manager`        | `string`  | `npm`              | Reusable workflow: `npm`, `yarn`, `pnpm`, or `bun`; composite action: `npm`, `yarn`, or `pnpm`                                            |
+| `checkout`               | `string`  | `'true'`           | Whether to check out the repository automatically (Action only)                                                                           |
+| `install_command`        | `string`  | `''`               | Bitovi compatibility / custom dependency installation command                                                                             |
+| `build_command`          | `string`  | `''`               | Bitovi compatibility / custom Storybook build command                                                                                     |
+| `custom_install_command` | `string`  | `''`               | Alias for `install_command`                                                                                                               |
+| `custom_build_command`   | `string`  | `''`               | Alias for `build_command`                                                                                                                 |
+| `publish`                | `string`  | `'true'`           | Whether to upload and deploy the Pages artifact                                                                                           |
+| `artifact_name`          | `string`  | `github-pages`     | GitHub Pages artifact name                                                                                                                |
+| `environment`            | `string`  | `github-pages`     | GitHub Pages deployment environment name                                                                                                  |
+| `mode`                   | `string`  | `artifact`         | `artifact` or trusted branch-backed `directory`                                                                                           |
+| `pages_branch`           | `string`  | `gh-pages`         | Pages branch used by directory mode                                                                                                       |
+| `target_directory`       | `string`  | `''`               | Relative directory to replace; empty means the production root                                                                            |
+| `site_url`               | `string`  | `''`               | Canonical site URL used for deployment metadata                                                                                           |
+| `base_path`              | `string`  | `''`               | URL base path; derived from `target_directory` when empty                                                                                 |
+| `preview_root`           | `string`  | `pr-preview`       | Root directory (on the Pages branch) under which PR previews are published, as `<preview_root>/pr-<number>`                               |
+| `preview_retention_days` | `number`  | `30`               | Days an _open_ PR's preview may remain before the janitor prunes it; closed-PR previews are always eligible for removal regardless of age |
+| `generate_badges`        | `boolean` | `true`             | Whether to automatically generate SVG/JSON component and story count badges                                                               |
+| `badges_directory`       | `string`  | `badges`           | Relative directory inside the static output where generated badges are hosted                                                             |
 
 ### Outputs
 
@@ -197,6 +200,26 @@ jobs:
 | `page_url`      | The URL of the published GitHub Pages site                |
 | `status`        | Status of the deployment (`success`, `skipped`, `failed`) |
 | `deployment_id` | The GitHub Pages deployment ID                            |
+
+---
+
+## Dynamic SVG Badges & Endpoints
+
+When `generate_badges` is enabled (default), `storybook-github-pages` analyzes your Storybook output (`index.json` / `stories.json`) and generates static SVG badges and Shields.io JSON endpoints into the `<badges_directory>/` subfolder on GitHub Pages:
+
+- `badges/storybook.svg` — Storybook version badge (e.g. `storybook | v8.6.0`)
+- `badges/stories.svg` — Story count badge (e.g. `stories | 42`)
+- `badges/components.svg` — Unique component count badge (e.g. `components | 18`)
+- `badges/status.svg` — Deployment status badge (`storybook | deployed`)
+- `badges/*.json` — Shields.io custom endpoint schemas for dynamic external badge rendering
+
+You can embed these badges directly into your `README.md`:
+
+```markdown
+[![Storybook](https://<owner>.github.io/<repo>/badges/storybook.svg)](https://<owner>.github.io/<repo>)
+[![Stories](https://<owner>.github.io/<repo>/badges/stories.svg)](https://<owner>.github.io/<repo>)
+[![Components](https://<owner>.github.io/<repo>/badges/components.svg)](https://<owner>.github.io/<repo>)
+```
 
 ---
 

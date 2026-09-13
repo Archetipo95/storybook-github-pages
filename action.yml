@@ -67,6 +67,14 @@ inputs:
     description: 'Comma-separated managed directories preserved during root publication'
     required: false
     default: ''
+  generate_badges:
+    description: 'Whether to auto-generate dynamic SVG badges for components and stories'
+    required: false
+    default: 'true'
+  badges_directory:
+    description: 'Directory within the static build output to store generated badges'
+    required: false
+    default: 'badges'
 
 outputs:
   page_url:
@@ -98,7 +106,9 @@ runs:
           const lines = [
             `SB_MODE=${c.mode}`, `SB_PATH=${c.path}`, `SB_PACKAGE_MANAGER=${c.package_manager}`,
             `SB_INSTALL_COMMAND=${c.build.install_command || ""}`, `SB_BUILD_COMMAND=${c.build.build_command || ""}`,
-            `SB_PUBLISH=${process.env.PUBLISH_INPUT || "true"}`, `SB_ARTIFACT_NAME=${process.env.ARTIFACT_NAME_INPUT || "github-pages"}`
+            `SB_PUBLISH=${process.env.PUBLISH_INPUT || "true"}`, `SB_ARTIFACT_NAME=${process.env.ARTIFACT_NAME_INPUT || "github-pages"}`,
+            `SB_GENERATE_BADGES=${c.generate_badges}`, `SB_BADGES_DIRECTORY=${c.badges_directory || "badges"}`,
+            `SB_SITE_URL=${c.site_url || ""}`, `SB_BASE_PATH=${c.base_path || ""}`
           ];
           const {appendFileSync} = await import("node:fs");
           appendFileSync(process.env.GITHUB_ENV, `${lines.join("\n")}\n`);
@@ -125,6 +135,17 @@ runs:
         CMD="${{ env.SB_BUILD_COMMAND }}"
         echo "Running custom build command: $CMD"
         eval "$CMD"
+
+    - name: Generate Storybook badges
+      if: ${{ env.SB_GENERATE_BADGES == 'true' }}
+      shell: bash
+      env:
+        SB_PATH: ${{ env.SB_PATH }}
+        SB_BADGES_DIRECTORY: ${{ env.SB_BADGES_DIRECTORY }}
+        SB_SITE_URL: ${{ env.SB_SITE_URL }}
+        SB_BASE_PATH: ${{ env.SB_BASE_PATH }}
+        WORKSPACE_ROOT: ${{ github.workspace }}
+      run: node "${{ github.action_path }}/src/generate-badges.js" "$SB_PATH" "$WORKSPACE_ROOT"
 
     - name: Validate static artifact
       shell: bash
