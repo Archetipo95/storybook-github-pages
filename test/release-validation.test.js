@@ -92,8 +92,8 @@ test('release validation - immutable release tag recommended in README and issue
   );
   assert.match(
     readme,
-    /`@v1\.0\.0` \(immutable release tag\)/,
-    'README support matrix must recommend immutable release tag @v1.0.0'
+    /Immutable release tags \(for example, `@v1\.0\.1`\)/,
+    'README support matrix must recommend current immutable release tags'
   );
   assert.match(
     bugReport,

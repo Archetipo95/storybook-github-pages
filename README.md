@@ -162,7 +162,7 @@ jobs:
 | **Runner OS** | GitHub-hosted Linux (`ubuntu-latest`) | Tested on `ubuntu-latest` with Node.js 20+ |
 | **Node.js Runtime** | Node.js 20+ | Zero external npm dependencies (uses native Node.js ES modules) |
 | **Package Managers** | Reusable workflow: `npm`, `yarn`, `pnpm`, `bun`; composite action: `npm`, `yarn`, `pnpm` | Bun is provisioned only in the reusable workflow's read-only build job |
-| **Tagging Strategy** | `@v1.0.0` (immutable release tag) | **Recommended for stable, reproducible use.** The `v1.0.0` release tag will be created upon PR merge. Floating major tags (e.g. `@v1`) are optional and non-reproducible. |
+| **Tagging Strategy** | Immutable release tags (for example, `@v1.0.1`) | **Recommended for stable, reproducible use.** This Bun support change requires a new release tag after merge. Floating major tags (e.g. `@v1`) are optional and non-reproducible. |
 
 ---
 

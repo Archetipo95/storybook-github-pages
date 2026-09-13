@@ -24,8 +24,6 @@ test('pr-preview-build workflow is unprivileged: contents:read only, no secrets,
   assert.doesNotMatch(content, /secrets\./, 'the untrusted build workflow must never reference secrets');
   assert.match(content, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
   assert.doesNotMatch(content, /uses: actions\/cache/, 'no shared build cache to avoid cross-fork cache poisoning');
-  assert.match(content, /oven-sh\/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2\.2\.0/);
-  assert.match(content, /if: \$\{\{ steps\.config\.outputs\.package_manager == 'bun' \}\}/);
 });
 
 test('pr-preview-publish workflow gates on success/event/repository and requires a matching same-repo pull request', () => {
