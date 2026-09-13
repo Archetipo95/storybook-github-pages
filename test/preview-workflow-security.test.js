@@ -114,11 +114,14 @@ test('preview target resolution and metadata modules are wired into the workflow
   const publish = read('.github/workflows/pr-preview-publish.yml');
   const cleanupWorkflow = read('.github/workflows/pr-preview-cleanup.yml');
   const janitorWorkflow = read('.github/workflows/pr-preview-janitor.yml');
+  const buildAction = read('preview-build/action.yml');
   const publisherAction = read('preview-publisher/action.yml');
   const cleanupAction = read('preview-cleanup/action.yml');
   const janitorAction = read('preview-janitor/action.yml');
 
-  assert.match(build, /node src\/preview-metadata\.js/);
+  assert.match(build, /uses:\s*\.\/preview-build/, 'the reference build workflow must dogfood the public preview-build action');
+  assert.match(buildAction, /preview-metadata\.js/);
+  assert.match(buildAction, /validate-artifact\.js/);
   assert.match(publish, /preview-publisher@/);
   assert.match(cleanupWorkflow, /preview-cleanup@/);
   assert.match(janitorWorkflow, /preview-janitor@/);

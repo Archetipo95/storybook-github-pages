@@ -50,6 +50,11 @@ test('release validation - version metadata consistency across files', () => {
   const previewPublisherYml = fs.readFileSync(path.join(root, 'preview-publisher/action.yml'), 'utf8');
   assert.match(previewPublisherYml, /name:\s*['"]?Trusted Storybook preview publisher['"]?/);
   assert.match(previewPublisherYml, /using:\s*['"]?composite['"]?/);
+
+  // Check preview-build/action.yml
+  const previewBuildYml = fs.readFileSync(path.join(root, 'preview-build/action.yml'), 'utf8');
+  assert.match(previewBuildYml, /name:\s*['"]?Storybook PR preview bundle['"]?/);
+  assert.match(previewBuildYml, /using:\s*['"]?composite['"]?/);
 });
 
 test('release validation - documentation and governance files presence', () => {

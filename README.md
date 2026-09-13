@@ -331,6 +331,95 @@ When `preview_root` is set to `''` (empty string), previews are placed directly 
 
 Consumers can invoke the preview publisher, cleanup, and janitor workflows and actions directly without checking out platform source or duplicating internal scripts:
 
+#### 0. Reusable Untrusted PR Preview Bundle Action
+
+The trusted publisher (below) expects a specific artifact contract: a workflow artifact named `storybook-preview-pr-<PR>-run-<run>` containing a `storybook/` directory (the static Storybook output) and a `preview-metadata.json` file with a SHA-256 digest binding the two together. The `preview-build` composite action produces that exact artifact from your **already-built** static Storybook output, so you never need to reimplement or copy the metadata-generation internals.
+
+`preview-build` is intended **exclusively** for your unprivileged `pull_request` build job:
+
+- it accepts your build output directory (`source_path`) and reads the pull request's event context (`pr_number`, `base_ref`, `head_sha`, `head_repository`) directly from `github.event.pull_request.*`, so nothing PR-controlled is ever interpolated into a shell command;
+- it validates the output directory (non-empty static content, no nested `.git`, no path traversal, no symlink escapes) using the same `validate-artifact.js` module the main deploy action uses;
+- it stages `preview-metadata.json` + `storybook/` and computes the content digest with the same `preview-metadata.js` module the trusted publisher independently re-validates against;
+- it uploads the artifact under the deterministic name the publisher expects (or returns the name/bundle path as outputs if you set `upload: 'false'` to upload it yourself);
+- it requires **no** `contents: write`, `pages`, `actions: read`, or `pull-requests: write` permission — the job that runs it needs only `contents: read` (the default for `pull_request`-triggered workflows) — and it never checks out or writes to the Pages branch, so it cannot be repurposed as a trusted publisher component even if misconfigured or run in a privileged context.
+- every nested third-party action (`actions/upload-artifact`) is pinned to a full 40-character commit SHA.
+
+A complete, secure pairing of the untrusted build job with the trusted `v1.2` publisher:
+
+```yaml
+# .github/workflows/pr-preview-build.yml (untrusted, runs for same-repo and fork PRs alike)
+name: PR Preview Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read     # the only permission this job ever needs
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      # Replace with your real install/build commands (or the main `Archetipo95/storybook-github-pages@v1.2.0`
+      # composite action with `publish: 'false'`) so `storybook-static` contains your actual build output.
+      - run: npm ci && npm run build-storybook
+
+      - name: Package and upload preview bundle
+        uses: Archetipo95/storybook-github-pages/preview-build@v1.2.0
+        with:
+          source_path: storybook-static   # your built static Storybook output directory
+```
+
+```yaml
+# .github/workflows/pr-preview-publish.yml (trusted, only runs after the build above completes)
+name: PR Preview Publish
+
+on:
+  workflow_run:
+    workflows: ["PR Preview Build"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pages: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  publish:
+    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-publish.yml@v1.2.0
+    with:
+      pages_branch: 'gh-pages'
+```
+
+Required inputs/outputs and the artifact contract at a glance:
+
+| Input | Required | Default | Description |
+|-------|----------|---------|--------------|
+| `source_path` | Yes | — | Path to the already-built static Storybook output directory |
+| `preview_root` | No | `pr-preview` | Must match the trusted publisher's configured `preview_root` |
+| `upload` | No | `true` | Set `'false'` to stage the bundle without uploading it yourself |
+| `retention_days` | No | `7` | Artifact retention when `upload` is true |
+
+| Output | Description |
+|--------|--------------|
+| `artifact_name` | The deterministic `storybook-preview-pr-<PR>-run-<run>` artifact name used; there is no input to override it |
+| `bundle_dir` | Path to the staged `storybook/` + `preview-metadata.json` bundle |
+| `content_digest` | SHA-256 digest binding `storybook/` to `preview-metadata.json` |
+| `is_fork` | Whether the pull request head repository differs from the base repository |
+
+The artifact name is **not configurable**: it is always derived from the validated pull request number and run id available to the untrusted build job, so this action can never emit an artifact outside the exact `storybook-preview-pr-<PR>-run-<run>` namespace the trusted publisher expects, and cannot be used to redirect or spoof a different artifact name.
+
+The action fails closed (non-zero exit, no artifact uploaded) if it is invoked outside a `pull_request`-triggered job (`github.event_name` is not `pull_request`, `github.event.pull_request.number` is empty, or the pull request number/run id are not positive integers), if `source_path` fails artifact validation, or if any event-context field is malformed - the same strict, shell/path-safe validation the trusted publisher itself relies on.
+
 #### 1. Reusable Trusted PR Preview Publisher
 
 Call the reusable publisher workflow on completion of your unprivileged PR build workflow (`workflow_run: types: [completed]`):
