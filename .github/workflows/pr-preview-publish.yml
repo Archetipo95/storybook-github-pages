@@ -67,10 +67,6 @@ on:
         description: 'Publication action taken (published, skip-fork, skip-stale)'
         value: ${{ jobs.publish.outputs.action }}
 
-concurrency:
-  group: storybook-pages-${{ github.repository }}
-  cancel-in-progress: false
-
 jobs:
   gate:
     name: Validate provenance (trusted, read-only)
@@ -190,6 +186,9 @@ jobs:
     name: Publish preview (trusted)
     needs: gate
     if: needs.gate.result == 'success'
+    concurrency:
+      group: storybook-pages-${{ github.repository }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     permissions:
       contents: write
