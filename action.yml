@@ -154,6 +154,7 @@ runs:
         SB_SITE_URL: ${{ env.SB_SITE_URL }}
         SB_BASE_PATH: ${{ env.SB_BASE_PATH }}
         WORKSPACE_ROOT: ${{ github.workspace }}
+        GITHUB_SHA: ${{ github.sha }}
       run: node "${{ github.action_path }}/src/generate-badges.js" "$SB_PATH" "$WORKSPACE_ROOT"
 
     - name: Generate Storybook growth graph

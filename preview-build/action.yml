@@ -135,6 +135,7 @@ runs:
         SOURCE_PATH: ${{ inputs.source_path }}
         SB_BADGES_DIRECTORY: ${{ inputs.badges_directory || 'badges' }}
         WORKSPACE_ROOT: ${{ github.workspace }}
+        GITHUB_SHA: ${{ inputs.head_sha || github.sha }}
       run: node "${{ github.action_path }}/../src/generate-badges.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
 
     - name: Generate Storybook growth graph

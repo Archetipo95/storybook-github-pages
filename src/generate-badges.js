@@ -275,6 +275,8 @@ export function buildBadgeMarkdown({ badgesUrl, siteUrl }) {
 
   return [
     `[![Storybook](${cleanBadgesUrl}/storybook.svg)](${cleanSiteUrl})`,
+    `[![Status](${cleanBadgesUrl}/status.svg)](${cleanSiteUrl})`,
+    `[![Coverage](${cleanBadgesUrl}/coverage.svg)](${cleanSiteUrl})`,
     `[![Stories](${cleanBadgesUrl}/stories.svg)](${cleanSiteUrl})`,
     `[![Components](${cleanBadgesUrl}/components.svg)](${cleanSiteUrl})`
   ].join(' ');
@@ -288,7 +290,9 @@ export function generateBadges({
   workspaceRoot = process.cwd(),
   badgesDirectory = 'badges',
   siteUrl = '',
-  basePath = ''
+  basePath = '',
+  commitSha = process.env.GITHUB_SHA || '',
+  statusMessage = ''
 } = {}) {
   if (!staticDir || typeof staticDir !== 'string') {
     throw new Error('generateBadges requires a valid staticDir');
@@ -312,9 +316,12 @@ export function generateBadges({
 
   const metrics = extractStorybookMetrics(staticAbs, workspaceRoot);
 
+  const shortSha = commitSha ? commitSha.slice(0, 7) : '';
   const storybookMsg = metrics.storybookVersion || 'deployed';
   const storiesMsg = metrics.hasStoriesData ? String(metrics.storiesCount) : 'active';
   const componentsMsg = metrics.hasStoriesData ? String(metrics.componentsCount) : 'active';
+  const statusMsg = statusMessage || (shortSha ? `published • ${shortSha}` : 'published');
+  const buildMsg = shortSha ? `passed • ${shortSha}` : 'passed';
 
   // 1. Generate standard SVGs
   const svgStorybook = renderBadgeSvg({
@@ -340,7 +347,14 @@ export function generateBadges({
 
   const svgStatus = renderBadgeSvg({
     label: 'storybook',
-    message: 'deployed',
+    message: statusMsg,
+    labelColor: '#555555',
+    messageColor: '#4caf50'
+  });
+
+  const svgBuild = renderBadgeSvg({
+    label: 'build',
+    message: buildMsg,
     labelColor: '#555555',
     messageColor: '#4caf50'
   });
@@ -356,6 +370,7 @@ export function generateBadges({
   fs.writeFileSync(path.join(outDir, 'stories.svg'), svgStories, 'utf8');
   fs.writeFileSync(path.join(outDir, 'components.svg'), svgComponents, 'utf8');
   fs.writeFileSync(path.join(outDir, 'status.svg'), svgStatus, 'utf8');
+  fs.writeFileSync(path.join(outDir, 'build.svg'), svgBuild, 'utf8');
   fs.writeFileSync(path.join(outDir, 'coverage.svg'), svgCoverage, 'utf8');
 
   // 2. Generate Shields.io-compatible JSON endpoints
@@ -380,6 +395,20 @@ export function generateBadges({
     color: metrics.coveragePercent >= 100 ? '4caf50' : metrics.coveragePercent >= 75 ? '0288d1' : 'ff9800'
   };
 
+  const jsonStatus = {
+    schemaVersion: 1,
+    label: 'storybook',
+    message: statusMsg,
+    color: '4caf50'
+  };
+
+  const jsonBuild = {
+    schemaVersion: 1,
+    label: 'build',
+    message: buildMsg,
+    color: '4caf50'
+  };
+
   const jsonStorybook = {
     schemaVersion: 1,
     label: 'storybook',
@@ -389,6 +418,9 @@ export function generateBadges({
 
   const jsonOverview = {
     schemaVersion: 1,
+    status: statusMsg,
+    build: buildMsg,
+    commit: shortSha,
     storybookVersion: storybookMsg,
     storiesCount: metrics.storiesCount,
     componentsCount: metrics.componentsCount,
@@ -402,6 +434,8 @@ export function generateBadges({
   fs.writeFileSync(path.join(outDir, 'stories.json'), JSON.stringify(jsonStories, null, 2), 'utf8');
   fs.writeFileSync(path.join(outDir, 'components.json'), JSON.stringify(jsonComponents, null, 2), 'utf8');
   fs.writeFileSync(path.join(outDir, 'coverage.json'), JSON.stringify(jsonCoverage, null, 2), 'utf8');
+  fs.writeFileSync(path.join(outDir, 'status.json'), JSON.stringify(jsonStatus, null, 2), 'utf8');
+  fs.writeFileSync(path.join(outDir, 'build.json'), JSON.stringify(jsonBuild, null, 2), 'utf8');
   fs.writeFileSync(path.join(outDir, 'storybook.json'), JSON.stringify(jsonStorybook, null, 2), 'utf8');
   fs.writeFileSync(path.join(outDir, 'overview.json'), JSON.stringify(jsonOverview, null, 2), 'utf8');
 
@@ -431,10 +465,13 @@ export function generateBadges({
       'stories.svg',
       'components.svg',
       'status.svg',
+      'build.svg',
       'coverage.svg',
       'stories.json',
       'components.json',
       'coverage.json',
+      'status.json',
+      'build.json',
       'storybook.json',
       'overview.json'
     ]
@@ -447,6 +484,8 @@ if (process.argv[1] && process.argv[1].endsWith('generate-badges.js')) {
   const badgesDir = process.env.SB_BADGES_DIRECTORY || 'badges';
   const siteUrl = process.env.SB_SITE_URL || '';
   const basePath = process.env.SB_BASE_PATH || '';
+  const commitSha = process.env.GITHUB_SHA || '';
+  const statusMessage = process.env.SB_STATUS_MESSAGE || '';
 
   try {
     const result = generateBadges({
@@ -454,7 +493,9 @@ if (process.argv[1] && process.argv[1].endsWith('generate-badges.js')) {
       workspaceRoot,
       badgesDirectory: badgesDir,
       siteUrl,
-      basePath
+      basePath,
+      commitSha,
+      statusMessage
     });
 
     console.log(`✅ Storybook badges generated in "${result.outDir}":`);
