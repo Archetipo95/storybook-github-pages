@@ -129,15 +129,19 @@ export function renderHandDrawnChartSvg({
   const plotHeight = height - padding.top - padding.bottom;
 
   // Format data points
-  const validHistory = (Array.isArray(history) && history.length > 0 ? history : [
-    {
-      date: new Date().toISOString().slice(0, 10),
-      stories: 0,
-      components: 0,
-      totalComponents: 0,
-      coveragePercent: 100
-    }
-  ]).map((entry, idx) => ({
+  const validHistory = (
+    Array.isArray(history) && history.length > 0
+      ? history
+      : [
+          {
+            date: new Date().toISOString().slice(0, 10),
+            stories: 0,
+            components: 0,
+            totalComponents: 0,
+            coveragePercent: 100
+          }
+        ]
+  ).map((entry, idx) => ({
     index: idx,
     date: entry.date || (entry.timestamp ? entry.timestamp.slice(0, 10) : `Run ${idx + 1}`),
     stories: Number(entry.stories || 0),
@@ -150,10 +154,7 @@ export function renderHandDrawnChartSvg({
   const hasTotalComponents = validHistory.some(d => d.totalComponents !== undefined && d.totalComponents > 0);
 
   // Determine Y domain
-  const maxVal = Math.max(
-    5,
-    ...validHistory.map(d => Math.max(d.stories, d.components, d.totalComponents || 0))
-  );
+  const maxVal = Math.max(5, ...validHistory.map(d => Math.max(d.stories, d.components, d.totalComponents || 0)));
   // Round maxVal up to nice round number
   const yMax = Math.ceil(maxVal * 1.15);
 
@@ -178,7 +179,11 @@ export function renderHandDrawnChartSvg({
   const storiesPoints = validHistory.map((d, i) => ({ x: getX(i), y: getY(d.stories), ...d }));
   const componentsPoints = validHistory.map((d, i) => ({ x: getX(i), y: getY(d.components), ...d }));
   const totalComponentsPoints = hasTotalComponents
-    ? validHistory.map((d, i) => ({ x: getX(i), y: getY(d.totalComponents !== undefined ? d.totalComponents : d.components), ...d }))
+    ? validHistory.map((d, i) => ({
+        x: getX(i),
+        y: getY(d.totalComponents !== undefined ? d.totalComponents : d.components),
+        ...d
+      }))
     : [];
 
   // Hand-drawn axes
@@ -187,11 +192,17 @@ export function renderHandDrawnChartSvg({
     overshoot: 6,
     random
   });
-  const axisXPath = roughLine(padding.left - 5, padding.top + plotHeight, padding.left + plotWidth + 15, padding.top + plotHeight, {
-    roughness: 1.2,
-    overshoot: 6,
-    random
-  });
+  const axisXPath = roughLine(
+    padding.left - 5,
+    padding.top + plotHeight,
+    padding.left + plotWidth + 15,
+    padding.top + plotHeight,
+    {
+      roughness: 1.2,
+      overshoot: 6,
+      random
+    }
+  );
 
   // Hand-drawn grid lines
   const gridPaths = yTicks.slice(1).map(tick => ({
@@ -266,7 +277,9 @@ export function renderHandDrawnChartSvg({
           --legend-bg: #161b22;
         }
       }
-      ${theme === 'dark' ? `
+      ${
+        theme === 'dark'
+          ? `
         :root {
           --bg-color: #0d1117;
           --border-color: #e6edf3;
@@ -278,7 +291,9 @@ export function renderHandDrawnChartSvg({
           --total-color: #a78bfa;
           --legend-bg: #161b22;
         }
-      ` : theme === 'light' ? `
+      `
+          : theme === 'light'
+            ? `
         :root {
           --bg-color: #ffffff;
           --border-color: #1e293b;
@@ -290,7 +305,9 @@ export function renderHandDrawnChartSvg({
           --total-color: #8b5cf6;
           --legend-bg: #ffffff;
         }
-      ` : ''}
+      `
+            : ''
+      }
       .axis { stroke: var(--border-color); stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
       .grid { stroke: var(--grid-color); stroke-width: 1.2; stroke-dasharray: 4,4; fill: none; }
       .stories-line { stroke: var(--stories-color); stroke-width: 2.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
@@ -331,20 +348,28 @@ export function renderHandDrawnChartSvg({
 
   <!-- X Tick Labels -->
   <g id="x-labels">
-    ${xTicks.map(t => `
+    ${xTicks
+      .map(
+        t => `
       <path d="${t.tickD}" class="axis" />
       <text x="${t.x.toFixed(1)}" y="${(padding.top + plotHeight + 24).toFixed(1)}" class="label-text" text-anchor="middle">${escapeXml(t.label)}</text>
-    `).join('')}
+    `
+      )
+      .join('')}
     <text x="${(padding.left + plotWidth / 2).toFixed(1)}" y="${height - 14}" class="axis-label">Date</text>
   </g>
 
   <!-- Series Curves -->
   <g id="series-curves">
-    ${hasTotalComponents ? `
+    ${
+      hasTotalComponents
+        ? `
     <!-- Total Components Curve -->
     <path d="${totalComponentsPath1}" class="total-line" />
     <path d="${totalComponentsPath2}" class="total-line" opacity="0.6" />
-    ` : ''}
+    `
+        : ''
+    }
 
     <!-- Covered Components Curve -->
     <path d="${componentsPath1}" class="components-line" />
@@ -357,15 +382,31 @@ export function renderHandDrawnChartSvg({
 
   <!-- Data Point Markers -->
   <g id="data-points">
-    ${hasTotalComponents ? totalComponentsPoints.map(p => `
+    ${
+      hasTotalComponents
+        ? totalComponentsPoints
+            .map(
+              p => `
       <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="var(--total-color)" stroke="var(--bg-color)" stroke-width="1.5" />
-    `).join('') : ''}
-    ${componentsPoints.map(p => `
+    `
+            )
+            .join('')
+        : ''
+    }
+    ${componentsPoints
+      .map(
+        p => `
       <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="var(--components-color)" stroke="var(--bg-color)" stroke-width="1.5" />
-    `).join('')}
-    ${storiesPoints.map(p => `
+    `
+      )
+      .join('')}
+    ${storiesPoints
+      .map(
+        p => `
       <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="var(--stories-color)" stroke="var(--bg-color)" stroke-width="1.5" />
-    `).join('')}
+    `
+      )
+      .join('')}
   </g>
 
   <!-- Legend Box -->
@@ -381,11 +422,15 @@ export function renderHandDrawnChartSvg({
     <rect x="${legendX + 14}" y="${legendY + 32}" width="14" height="10" rx="2" fill="var(--components-color)" />
     <text x="${legendX + 36}" y="${legendY + 41}" class="label-text" font-weight="bold">Covered Components (${latestEntry.components}${latestEntry.coveragePercent !== undefined ? ` • ${latestEntry.coveragePercent}%` : ''})</text>
 
-    ${hasTotalComponents ? `
+    ${
+      hasTotalComponents
+        ? `
     <!-- Total Components Legend Item -->
     <rect x="${legendX + 14}" y="${legendY + 52}" width="14" height="10" rx="2" fill="var(--total-color)" />
     <text x="${legendX + 36}" y="${legendY + 61}" class="label-text" font-weight="bold">Total Components (${latestEntry.totalComponents || latestEntry.components})</text>
-    ` : ''}
+    `
+        : ''
+    }
   </g>
 
   <!-- Footer / Watermark -->
@@ -398,11 +443,7 @@ export function renderHandDrawnChartSvg({
 /**
  * Updates or creates the history ledger file (history.json).
  */
-export function updateHistoryLedger({
-  existingHistory = [],
-  currentSnapshot,
-  maxEntries = 150
-} = {}) {
+export function updateHistoryLedger({ existingHistory = [], currentSnapshot, maxEntries = 150 } = {}) {
   const history = Array.isArray(existingHistory) ? [...existingHistory] : [];
 
   if (currentSnapshot) {
@@ -412,8 +453,10 @@ export function updateHistoryLedger({
       commit: currentSnapshot.commit || '',
       version: currentSnapshot.version || '',
       components: Number(currentSnapshot.components || 0),
-      totalComponents: currentSnapshot.totalComponents !== undefined ? Number(currentSnapshot.totalComponents) : undefined,
-      coveragePercent: currentSnapshot.coveragePercent !== undefined ? Number(currentSnapshot.coveragePercent) : undefined,
+      totalComponents:
+        currentSnapshot.totalComponents !== undefined ? Number(currentSnapshot.totalComponents) : undefined,
+      coveragePercent:
+        currentSnapshot.coveragePercent !== undefined ? Number(currentSnapshot.coveragePercent) : undefined,
       stories: Number(currentSnapshot.stories || 0),
       docs: Number(currentSnapshot.docs || 0)
     };
@@ -587,13 +630,7 @@ if (process.argv[1] && process.argv[1].endsWith('generate-stats.js')) {
     console.log(result.markdownSnippet);
 
     if (process.env.GITHUB_STEP_SUMMARY) {
-      const summaryContent = [
-        '',
-        '### 📈 Storybook Growth History',
-        '',
-        result.markdownSnippet,
-        ''
-      ].join('\n');
+      const summaryContent = ['', '### 📈 Storybook Growth History', '', result.markdownSnippet, ''].join('\n');
       fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summaryContent);
     }
   } catch (err) {

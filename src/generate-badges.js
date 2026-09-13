@@ -253,7 +253,8 @@ export function extractStorybookMetrics(staticDir, workspaceRoot = process.cwd()
   const storybookVersion = extractStorybookVersion(workspaceRoot);
   const workspaceTotal = countWorkspaceComponents(workspaceRoot);
   const totalComponents = Math.max(componentsCount, workspaceTotal);
-  const coveragePercent = totalComponents > 0 ? Math.min(100, Math.round((componentsCount / totalComponents) * 100)) : 100;
+  const coveragePercent =
+    totalComponents > 0 ? Math.min(100, Math.round((componentsCount / totalComponents) * 100)) : 100;
 
   return {
     storiesCount,

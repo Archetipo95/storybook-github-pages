@@ -106,7 +106,9 @@ export function buildCommentBody({
       lines.push(`| 📚 **Stories** | ${baseMetrics.storiesCount} | ${metrics.storiesCount} | ${storiesDiff} |`);
 
       const compDiff = formatDiff(baseMetrics.componentsCount, metrics.componentsCount);
-      lines.push(`| 🧩 **Documented Components** | ${baseMetrics.componentsCount} | ${metrics.componentsCount} | ${compDiff} |`);
+      lines.push(
+        `| 🧩 **Documented Components** | ${baseMetrics.componentsCount} | ${metrics.componentsCount} | ${compDiff} |`
+      );
     } else {
       lines.push('| Metric | PR Preview |');
       lines.push('| :--- | :---: |');

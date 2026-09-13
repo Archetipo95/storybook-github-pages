@@ -63,9 +63,7 @@ test('renderHandDrawnChartSvg renders complete SVG with title, axes, and series'
 });
 
 test('updateHistoryLedger appends new snapshot and handles deduplication on same commit', () => {
-  const initial = [
-    { date: '2026-09-01', commit: 'abc1234', stories: 4, components: 2 }
-  ];
+  const initial = [{ date: '2026-09-01', commit: 'abc1234', stories: 4, components: 2 }];
 
   // Appending new commit
   const step1 = updateHistoryLedger({
@@ -130,7 +128,9 @@ test('generateStatsGraph creates history.json and history.svg in static output d
   assert.equal(savedHistory[0].commit, 'a1b2c3d');
 
   const svgContent = fs.readFileSync(result.historySvgPath, 'utf8');
-  assert.ok(svgContent.includes('Storybook Component &amp; Story Growth') || svgContent.includes('Storybook Component'));
+  assert.ok(
+    svgContent.includes('Storybook Component &amp; Story Growth') || svgContent.includes('Storybook Component')
+  );
   assert.ok(svgContent.includes('Stories (3)'));
   assert.ok(svgContent.includes('Covered Components (2'));
 

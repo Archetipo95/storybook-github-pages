@@ -75,4 +75,3 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
       run: node "${{ github.action_path }}/../src/publish-directory.js"
-

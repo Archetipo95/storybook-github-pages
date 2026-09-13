@@ -226,7 +226,7 @@ test('generateBadges renders building state with yellow color', () => {
   };
   fs.writeFileSync(path.join(tmpDir, 'stories.json'), JSON.stringify(storiesData));
 
-  const result = generateBadges({
+  const _result = generateBadges({
     staticDir: tmpDir,
     workspaceRoot: tmpDir,
     badgesDirectory: 'badges',
@@ -248,7 +248,7 @@ test('generateBadges renders building state with yellow color', () => {
 
 test('generateBadges renders failed state with red color', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-badge-failed-'));
-  const result = generateBadges({
+  const _result = generateBadges({
     staticDir: tmpDir,
     workspaceRoot: tmpDir,
     badgesDirectory: 'badges',
