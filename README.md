@@ -406,18 +406,19 @@ Required inputs/outputs and the artifact contract at a glance:
 |-------|----------|---------|--------------|
 | `source_path` | Yes | — | Path to the already-built static Storybook output directory |
 | `preview_root` | No | `pr-preview` | Must match the trusted publisher's configured `preview_root` |
-| `artifact_name` | No | `storybook-preview-pr-<PR>-run-<run>` | Override only if you also override it on the publisher side |
 | `upload` | No | `true` | Set `'false'` to stage the bundle without uploading it yourself |
 | `retention_days` | No | `7` | Artifact retention when `upload` is true |
 
 | Output | Description |
 |--------|--------------|
-| `artifact_name` | The deterministic (or overridden) artifact name used |
+| `artifact_name` | The deterministic `storybook-preview-pr-<PR>-run-<run>` artifact name used; there is no input to override it |
 | `bundle_dir` | Path to the staged `storybook/` + `preview-metadata.json` bundle |
 | `content_digest` | SHA-256 digest binding `storybook/` to `preview-metadata.json` |
 | `is_fork` | Whether the pull request head repository differs from the base repository |
 
-The action fails closed (non-zero exit, no artifact uploaded) if it is invoked outside a `pull_request`-triggered job (`github.event_name` is not `pull_request`, or `github.event.pull_request.number` is empty), if `source_path` fails artifact validation, or if any event-context field is malformed - the same strict, shell/path-safe validation the trusted publisher itself relies on.
+The artifact name is **not configurable**: it is always derived from the validated pull request number and run id available to the untrusted build job, so this action can never emit an artifact outside the exact `storybook-preview-pr-<PR>-run-<run>` namespace the trusted publisher expects, and cannot be used to redirect or spoof a different artifact name.
+
+The action fails closed (non-zero exit, no artifact uploaded) if it is invoked outside a `pull_request`-triggered job (`github.event_name` is not `pull_request`, `github.event.pull_request.number` is empty, or the pull request number/run id are not positive integers), if `source_path` fails artifact validation, or if any event-context field is malformed - the same strict, shell/path-safe validation the trusted publisher itself relies on.
 
 #### 1. Reusable Trusted PR Preview Publisher
 

@@ -76,6 +76,12 @@ test('preview-build action.yml is a read-only, untrusted-job-scoped composite ac
   assert.match(content, /must run in a job triggered by the pull_request event/);
   assert.match(content, /exit 1/);
 
+  // Never accepts a caller-supplied artifact name override - the deterministic
+  // storybook-preview-pr-<PR>-run-<run> namespace the trusted publisher expects
+  // must never be spoofable or redirectable by this untrusted build-job action.
+  assert.doesNotMatch(content, /artifact_name:\s*\n\s*description:.*\n\s*required:\s*false/, 'preview-build must not expose an artifact_name input');
+  assert.doesNotMatch(content, /ARTIFACT_NAME_INPUT/, 'preview-build must never accept an artifact name override from the caller');
+
   // Outputs expose the artifact contract for callers that disable upload
   assert.match(content, /artifact_name:\s*\n\s*description:/);
   assert.match(content, /bundle_dir:\s*\n\s*description:/);
@@ -219,25 +225,46 @@ test('preview-metadata CLI rejects an invalid PR number even when a source direc
 });
 
 test('preview-build config step guard executes and rejects non-pull_request invocation even with a spoofed pr_number', () => {
-  const nonPullRequest = runConfigStep({ EVENT_NAME: 'workflow_dispatch', PR_NUMBER: '999', ARTIFACT_NAME_INPUT: '', RUN_ID: '1' });
+  const nonPullRequest = runConfigStep({ EVENT_NAME: 'workflow_dispatch', PR_NUMBER: '999', RUN_ID: '1' });
   assert.notEqual(nonPullRequest.status, 0, 'the guard must reject a non-pull_request event even when pr_number is supplied');
   assert.match(nonPullRequest.stderr, /must run in a job triggered by the pull_request event/);
   assert.equal(nonPullRequest.output, '', 'no artifact_name/bundle_dir output must be produced when the event guard rejects the invocation');
 });
 
 test('preview-build config step guard rejects a pull_request event with an empty pr_number', () => {
-  const missingPr = runConfigStep({ EVENT_NAME: 'pull_request', PR_NUMBER: '', ARTIFACT_NAME_INPUT: '', RUN_ID: '1' });
+  const missingPr = runConfigStep({ EVENT_NAME: 'pull_request', PR_NUMBER: '', RUN_ID: '1' });
   assert.notEqual(missingPr.status, 0);
   assert.match(missingPr.stderr, /github\.event\.pull_request\.number is empty/);
 });
 
-test('preview-build config step guard computes the deterministic artifact name and honors an explicit override', () => {
-  const computed = runConfigStep({ EVENT_NAME: 'pull_request', PR_NUMBER: '42', ARTIFACT_NAME_INPUT: '', RUN_ID: '555' });
+test('preview-build config step guard rejects non-numeric or zero pr_number/run_id before deriving an artifact name', () => {
+  for (const badPr of ['7; rm -rf /', '7abc', '-1', '0', '7.5']) {
+    const result = runConfigStep({ EVENT_NAME: 'pull_request', PR_NUMBER: badPr, RUN_ID: '1' });
+    assert.notEqual(result.status, 0, `pr_number "${badPr}" must be rejected`);
+    assert.match(result.stderr, /pr_number/);
+    assert.equal(result.output, '', `no output must be produced for invalid pr_number "${badPr}"`);
+  }
+
+  for (const badRun of ['1; rm -rf /', 'abc', '-1', '0']) {
+    const result = runConfigStep({ EVENT_NAME: 'pull_request', PR_NUMBER: '42', RUN_ID: badRun });
+    assert.notEqual(result.status, 0, `run_id "${badRun}" must be rejected`);
+    assert.match(result.stderr, /run_id/);
+    assert.equal(result.output, '', `no output must be produced for invalid run_id "${badRun}"`);
+  }
+});
+
+test('preview-build config step guard always derives the deterministic artifact name and ignores any attempted override', () => {
+  const computed = runConfigStep({ EVENT_NAME: 'pull_request', PR_NUMBER: '42', RUN_ID: '555' });
   assert.equal(computed.status, 0, `config step failed: ${computed.stderr}`);
   assert.match(computed.output, /artifact_name=storybook-preview-pr-42-run-555/);
   assert.match(computed.output, /bundle_dir=/);
 
-  const overridden = runConfigStep({ EVENT_NAME: 'pull_request', PR_NUMBER: '42', ARTIFACT_NAME_INPUT: 'custom-name', RUN_ID: '555' });
-  assert.equal(overridden.status, 0, `config step failed: ${overridden.stderr}`);
-  assert.match(overridden.output, /artifact_name=custom-name/);
+  // Even if a caller sets an ARTIFACT_NAME_INPUT-like environment variable (as the
+  // removed input used to be wired), the script no longer reads it - the name is
+  // always storybook-preview-pr-<PR>-run-<run>.
+  const attemptedOverride = runConfigStep({ EVENT_NAME: 'pull_request', PR_NUMBER: '42', RUN_ID: '555', ARTIFACT_NAME_INPUT: 'attacker-controlled-name' });
+  assert.equal(attemptedOverride.status, 0, `config step failed: ${attemptedOverride.stderr}`);
+  assert.match(attemptedOverride.output, /artifact_name=storybook-preview-pr-42-run-555/);
+  assert.doesNotMatch(attemptedOverride.output, /attacker-controlled-name/, 'artifact_name must never reflect a caller-supplied override');
 });
+
