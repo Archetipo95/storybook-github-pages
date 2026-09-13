@@ -186,6 +186,68 @@ test('publishPreview publishes a same-repo, current-head preview and posts an id
   }
 });
 
+test('publishPreview includes badges, coverage diff, and stats graph in PR comment when generated', async () => {
+  const { bundleDir, metadata } = makeBundle();
+  const contentDir = path.join(bundleDir, 'storybook');
+  fs.mkdirSync(path.join(contentDir, 'badges'), { recursive: true });
+  fs.mkdirSync(path.join(contentDir, 'stats'), { recursive: true });
+  fs.writeFileSync(path.join(contentDir, 'badges', 'coverage.svg'), '<svg>coverage</svg>');
+  fs.writeFileSync(
+    path.join(contentDir, 'badges', 'overview.json'),
+    JSON.stringify({ storiesCount: 30, componentsCount: 8, totalComponents: 8, coveragePercent: 100 })
+  );
+  fs.writeFileSync(path.join(contentDir, 'stats', 'history.svg'), '<svg>graph</svg>');
+
+  // Update content digest after adding files
+  metadata.contentDigest = digestDirectory(contentDir);
+  fs.writeFileSync(path.join(bundleDir, 'preview-metadata.json'), JSON.stringify(metadata, null, 2));
+
+  const pagesRepo = initBarePagesRepo();
+  fs.mkdirSync(path.join(pagesRepo, 'badges'), { recursive: true });
+  fs.writeFileSync(
+    path.join(pagesRepo, 'badges', 'overview.json'),
+    JSON.stringify({ storiesCount: 20, componentsCount: 5, totalComponents: 8, coveragePercent: 63 })
+  );
+
+  const originalFetch = global.fetch;
+  const requests = [];
+  global.fetch = async (url, options) => {
+    requests.push({ url, options });
+    if (url.includes('/comments') && (!options || options.method === undefined || options.method === 'GET')) {
+      return { ok: true, status: 200, json: async () => [] };
+    }
+    if (url.includes('/comments') && options.method === 'POST') {
+      return { ok: true, status: 201, json: async () => ({ id: 1 }) };
+    }
+    if (url.includes('/pages/builds')) {
+      return { ok: true, status: 201, json: async () => ({}) };
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  try {
+    const result = await publishPreview({
+      bundleDir,
+      pagesRepo,
+      trustedContext: trustedContextFor(metadata),
+      currentHeadSha: SHA_A,
+      token: 'tok',
+      repository: 'octo/widgets',
+      siteUrl: 'https://octo.github.io/widgets'
+    });
+
+    assert.equal(result.action, 'published');
+    const commentPost = requests.find(r => r.options && r.options.method === 'POST' && r.url.includes('/comments'));
+    const commentBody = commentPost.options.body;
+    assert.ok(commentBody.includes('badges/coverage.svg'));
+    assert.ok(commentBody.includes('| 🎯 **Component Coverage** | `63% (5/8)` | `100% (8/8)` | **+37%** 🟢 |'));
+    assert.ok(commentBody.includes('| 📚 **Stories** | 20 | 30 | +10 📈 |'));
+    assert.ok(commentBody.includes('stats/history.svg'));
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test('publishPreview surfaces a comment failure independently without treating the publish as failed', async () => {
   const { bundleDir, metadata } = makeBundle();
   const pagesRepo = initBarePagesRepo();

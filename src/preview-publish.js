@@ -91,12 +91,45 @@ export async function publishPreview({
           return `${baseSiteUrl}${targetPath}`;
         })();
 
+      // Extract preview metrics and badges if present
+      let metrics = null;
+      const overviewPath = path.join(contentDir, 'badges', 'overview.json');
+      if (fs.existsSync(overviewPath)) {
+        try {
+          metrics = JSON.parse(fs.readFileSync(overviewPath, 'utf8'));
+        } catch {
+          // ignore
+        }
+      }
+
+      // Extract base metrics from pagesRepo (gh-pages) if available
+      let baseMetrics = null;
+      if (pagesRepo) {
+        const baseOverviewPath = path.join(pagesRepo, 'badges', 'overview.json');
+        if (fs.existsSync(baseOverviewPath)) {
+          try {
+            baseMetrics = JSON.parse(fs.readFileSync(baseOverviewPath, 'utf8'));
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      const hasBadges =
+        fs.existsSync(path.join(contentDir, 'badges', 'coverage.svg')) ||
+        fs.existsSync(path.join(contentDir, 'badges', 'status.svg'));
+      const hasStatsGraph = fs.existsSync(path.join(contentDir, 'stats', 'history.svg'));
+
       const body = buildCommentBody({
         prNumber: metadata.prNumber,
         previewUrl,
         headSha: metadata.headSha,
         runId: metadata.runId,
-        repository: metadata.repository
+        repository: metadata.repository,
+        metrics,
+        baseMetrics,
+        hasBadges,
+        hasStatsGraph
       });
       commentResult = await upsertPreviewComment({ token, repository, prNumber: metadata.prNumber, body });
     } catch (error) {
