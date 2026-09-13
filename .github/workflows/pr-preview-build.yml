@@ -58,24 +58,14 @@ jobs:
           package_manager: 'npm'
           publish: 'false'
 
-      - name: Generate preview metadata and stage bundle
-        env:
-          REPOSITORY: ${{ github.repository }}
-          RUN_ID: ${{ github.run_id }}
-          RUN_ATTEMPT: ${{ github.run_attempt }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
-          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          ARTIFACT_NAME: storybook-preview-pr-${{ github.event.pull_request.number }}-run-${{ github.run_id }}
-          PREVIEW_ROOT: ${{ steps.config.outputs.preview_root }}
-          SOURCE_PATH: test/fixtures/sample-storybook
-        run: node src/preview-metadata.js "${{ runner.temp }}/preview-bundle"
-
-      - name: Upload preview bundle artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      # Reuses the public, supported preview-build action - the same one
+      # documented for external consumers - so this reference pipeline never
+      # drifts from what ships. It stages `preview-metadata.json` + the
+      # digest-bound `storybook/` directory and uploads the deterministic
+      # `storybook-preview-pr-<PR>-run-<run>` artifact the trusted publisher
+      # expects.
+      - name: Package and upload preview bundle
+        uses: ./preview-build
         with:
-          name: storybook-preview-pr-${{ github.event.pull_request.number }}-run-${{ github.run_id }}
-          path: ${{ runner.temp }}/preview-bundle
-          if-no-files-found: error
-          retention-days: 7
+          source_path: 'test/fixtures/sample-storybook'
+          preview_root: ${{ steps.config.outputs.preview_root }}

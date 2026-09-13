@@ -11,6 +11,7 @@ test('verify all action uses are pinned to full commit SHAs', () => {
     path.join(root, 'preview-publisher/action.yml'),
     path.join(root, 'preview-cleanup/action.yml'),
     path.join(root, 'preview-janitor/action.yml'),
+    path.join(root, 'preview-build/action.yml'),
     path.join(root, '.github/workflows/deploy-storybook.yml'),
     path.join(root, '.github/workflows/ci.yml'),
     path.join(root, '.github/workflows/pr-preview-build.yml'),

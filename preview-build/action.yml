@@ -1,0 +1,138 @@
+name: 'Storybook PR preview bundle'
+description: >-
+  Untrusted pull_request build-job action. Packages an already-built static
+  Storybook directory into the storybook-preview-pr-<PR>-run-<run> artifact
+  contract (storybook/ + preview-metadata.json + SHA-256 digest binding)
+  consumed by the trusted preview publisher. Read-only: never checks out or
+  publishes to the Pages branch, never touches secrets, and requires no
+  write, Pages, Actions-read, or pull-request write permissions.
+
+inputs:
+  source_path:
+    description: 'Path (relative to the workspace) to the already-built static Storybook output directory'
+    required: true
+  preview_root:
+    description: 'Root directory used to compute the preview target path; must match the trusted publisher configuration'
+    required: false
+    default: 'pr-preview'
+  artifact_name:
+    description: 'Override the computed artifact name (rarely needed; defaults to the required storybook-preview-pr-<PR>-run-<run> contract expected by the trusted publisher)'
+    required: false
+    default: ''
+  upload:
+    description: 'Whether to upload the staged bundle as a workflow artifact'
+    required: false
+    default: 'true'
+  retention_days:
+    description: 'Artifact retention in days, used only when upload is true'
+    required: false
+    default: '7'
+  repository:
+    description: 'Base repository in owner/name form'
+    required: false
+    default: ${{ github.repository }}
+  run_id:
+    description: 'Workflow run id'
+    required: false
+    default: ${{ github.run_id }}
+  run_attempt:
+    description: 'Workflow run attempt'
+    required: false
+    default: ${{ github.run_attempt }}
+  pr_number:
+    description: 'Pull request number'
+    required: false
+    default: ${{ github.event.pull_request.number }}
+  base_ref:
+    description: 'Pull request base ref'
+    required: false
+    default: ${{ github.event.pull_request.base.ref }}
+  head_repository:
+    description: 'Pull request head repository in owner/name form'
+    required: false
+    default: ${{ github.event.pull_request.head.repo.full_name }}
+  head_sha:
+    description: 'Pull request head commit SHA'
+    required: false
+    default: ${{ github.event.pull_request.head.sha }}
+  event_name:
+    description: 'Triggering event name (must be pull_request; do not override)'
+    required: false
+    default: ${{ github.event_name }}
+
+outputs:
+  artifact_name:
+    description: 'The deterministic artifact name used (or that would be used) for upload'
+    value: ${{ steps.bundle.outputs.artifact_name }}
+  bundle_dir:
+    description: 'Path to the staged bundle directory (storybook/ + preview-metadata.json)'
+    value: ${{ steps.bundle.outputs.bundle_dir }}
+  content_digest:
+    description: 'SHA-256 digest binding the staged storybook/ content to preview-metadata.json'
+    value: ${{ steps.bundle.outputs.content_digest }}
+  is_fork:
+    description: 'Whether the pull request head repository differs from the base repository'
+    value: ${{ steps.bundle.outputs.is_fork }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Resolve bundle configuration
+      id: config
+      shell: bash
+      env:
+        PR_NUMBER: ${{ inputs.pr_number }}
+        ARTIFACT_NAME_INPUT: ${{ inputs.artifact_name }}
+        RUN_ID: ${{ inputs.run_id }}
+        EVENT_NAME: ${{ inputs.event_name }}
+      run: |
+        if [ "$EVENT_NAME" != "pull_request" ]; then
+          echo "::error::storybook-github-pages/preview-build must run in a job triggered by the pull_request event (got event_name=\"$EVENT_NAME\")." >&2
+          exit 1
+        fi
+        if [ -z "$PR_NUMBER" ]; then
+          echo '::error::storybook-github-pages/preview-build must run in a job triggered by the pull_request event (github.event.pull_request.number is empty).' >&2
+          exit 1
+        fi
+        if [ -n "$ARTIFACT_NAME_INPUT" ]; then
+          echo "artifact_name=$ARTIFACT_NAME_INPUT" >> "$GITHUB_OUTPUT"
+        else
+          echo "artifact_name=storybook-preview-pr-${PR_NUMBER}-run-${RUN_ID}" >> "$GITHUB_OUTPUT"
+        fi
+        echo "bundle_dir=${RUNNER_TEMP}/storybook-preview-bundle" >> "$GITHUB_OUTPUT"
+
+    - name: Validate static Storybook output
+      shell: bash
+      env:
+        SOURCE_PATH: ${{ inputs.source_path }}
+        WORKSPACE_ROOT: ${{ github.workspace }}
+      run: node "${{ github.action_path }}/../src/validate-artifact.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
+
+    - name: Stage preview bundle (metadata + content digest)
+      id: bundle
+      shell: bash
+      env:
+        REPOSITORY: ${{ inputs.repository }}
+        RUN_ID: ${{ inputs.run_id }}
+        RUN_ATTEMPT: ${{ inputs.run_attempt }}
+        PR_NUMBER: ${{ inputs.pr_number }}
+        BASE_REF: ${{ inputs.base_ref }}
+        HEAD_REPOSITORY: ${{ inputs.head_repository }}
+        HEAD_SHA: ${{ inputs.head_sha }}
+        ARTIFACT_NAME: ${{ steps.config.outputs.artifact_name }}
+        PREVIEW_ROOT: ${{ inputs.preview_root }}
+        SOURCE_PATH: ${{ inputs.source_path }}
+        EVENT_NAME: ${{ inputs.event_name }}
+        BUNDLE_DIR: ${{ steps.config.outputs.bundle_dir }}
+      run: |
+        node "${{ github.action_path }}/../src/preview-metadata.js" "$BUNDLE_DIR"
+        echo "bundle_dir=$BUNDLE_DIR" >> "$GITHUB_OUTPUT"
+
+    - name: Upload preview bundle artifact
+      if: ${{ inputs.upload == 'true' }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ steps.bundle.outputs.artifact_name }}
+        path: ${{ steps.bundle.outputs.bundle_dir }}
+        if-no-files-found: error
+        retention-days: ${{ inputs.retention_days }}

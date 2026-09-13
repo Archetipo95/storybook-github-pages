@@ -259,6 +259,17 @@ if (process.argv[1] && process.argv[1].endsWith('preview-metadata.js')) {
 
     console.log(`Preview metadata written for PR #${metadata.prNumber} (fork: ${metadata.isFork}, target: ${metadata.target ?? 'n/a'})`);
 
+    const outputPath = process.env.GITHUB_OUTPUT;
+    if (outputPath) {
+      const lines = [
+        `artifact_name=${metadata.artifactName}`,
+        `content_digest=${metadata.contentDigest}`,
+        `is_fork=${metadata.isFork}`,
+        `target=${metadata.target ?? ''}`
+      ];
+      fs.appendFileSync(outputPath, `${lines.join('\n')}\n`);
+    }
+
     const summaryPath = process.env.GITHUB_STEP_SUMMARY;
     if (summaryPath) {
       const summary = metadata.isFork
