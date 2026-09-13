@@ -71,9 +71,6 @@ concurrency:
   group: storybook-pages-${{ github.repository }}
   cancel-in-progress: false
 
-permissions:
-  contents: read
-
 jobs:
   gate:
     name: Validate provenance (trusted, read-only)
