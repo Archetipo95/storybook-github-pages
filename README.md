@@ -16,9 +16,10 @@ Security-hardened GitHub Action and reusable workflows for building, validating,
 - **Bitovi Compatible**: Preserves interface compatibility with `bitovi/github-actions-storybook-to-github-pages` inputs (`checkout`, `path`, `install_command`, `build_command`) for zero-friction migration.
 - **Reusable Workflow & Composite Action**: Offers a primary reusable workflow for turnkey pipelines and a composite action for existing pipelines.
 - **Pinned Dependencies**: All third-party GitHub Actions are pinned to full 40-character commit SHAs.
-- **Directory Deployments**: Trusted publishers atomically update a directory on a Pages branch while preserving other environments.
-- **PR Preview Lifecycle**: Unprivileged per-PR builds, a trusted `workflow_run` publisher with strict provenance/stale-run validation, an idempotent bot preview comment, metadata-only close cleanup, and a scheduled/manual retention janitor.
-- **Dynamic SVG Badges**: Automatically generates Shields.io-style SVG badges (Story count, Component count, Storybook version, and deployment status) and JSON endpoints (`badges/`) for your documentation and README.
+- **Directory Deployments**: Trusted publishers atomically update a directory on a Pages branch while preserving other environments and root `.nojekyll`.
+- **PR Preview Lifecycle**: Unprivileged per-PR builds, a trusted `workflow_run` publisher with strict provenance/stale-run validation, an idempotent bot preview comment with live badges, base vs PR delta comparison table, collapsible growth chart, metadata-only close cleanup, and a scheduled/manual retention janitor.
+- **Dynamic SVG Badges**: Automatically generates Shields.io-style SVG badges (Component Coverage %, Story count, Component count, Storybook version, and state-aware Status/Build) and JSON endpoints (`badges/`) for your documentation and README.
+- **Hand-Drawn Growth Chart**: Generates a star-history styled hand-drawn SVG growth chart (`stats/history.svg`) and metrics ledger (`stats/history.json`) tracking component coverage, story count, and component count evolution.
 
 ---
 
@@ -192,8 +193,11 @@ jobs:
 | `base_path`              | `string`  | `''`               | URL base path; derived from `target_directory` when empty                                                                                 |
 | `preview_root`           | `string`  | `pr-preview`       | Root directory (on the Pages branch) under which PR previews are published, as `<preview_root>/pr-<number>`                               |
 | `preview_retention_days` | `number`  | `30`               | Days an _open_ PR's preview may remain before the janitor prunes it; closed-PR previews are always eligible for removal regardless of age |
+| `managed_directories`    | `string`  | `''`               | Comma-separated directories preserved during root publication in directory mode (e.g. `pr-preview`)                                       |
 | `generate_badges`        | `boolean` | `true`             | Whether to automatically generate SVG/JSON component and story count badges                                                               |
 | `badges_directory`       | `string`  | `badges`           | Relative directory inside the static output where generated badges are hosted                                                             |
+| `generate_stats_graph`   | `boolean` | `true`             | Whether to automatically generate hand-drawn growth chart (`history.svg`) and update metrics ledger (`history.json`)                      |
+| `stats_directory`        | `string`  | `stats`            | Relative directory inside the static output where generated stats graph and history ledger are hosted                                     |
 
 ### Outputs
 
@@ -207,20 +211,39 @@ jobs:
 
 ## Dynamic SVG Badges & Endpoints
 
-When `generate_badges` is enabled (default), `storybook-github-pages` analyzes your Storybook output (`index.json` / `stories.json`) and generates static SVG badges and Shields.io JSON endpoints into the `<badges_directory>/` subfolder on GitHub Pages:
+When `generate_badges` is enabled (default), `storybook-github-pages` analyzes your Storybook output (`index.json` / `stories.json`) and source tree to generate static SVG badges and Shields.io JSON endpoints into the `<badges_directory>/` subfolder on GitHub Pages:
 
-- `badges/storybook.svg` — Storybook version badge (e.g. `storybook | v8.6.0`)
-- `badges/stories.svg` — Story count badge (e.g. `stories | 42`)
-- `badges/components.svg` — Unique component count badge (e.g. `components | 18`)
-- `badges/status.svg` — Deployment status badge (`storybook | deployed`)
-- `badges/*.json` — Shields.io custom endpoint schemas for dynamic external badge rendering
+- `badges/coverage.svg` / `badges/coverage.json` — Component coverage percentage and ratio (e.g. `coverage | 86% (6/7)` with dynamic green/yellow/red thresholds).
+- `badges/stories.svg` / `badges/stories.json` — Story count badge (e.g. `stories | 26`).
+- `badges/components.svg` / `badges/components.json` — Documented component count badge (e.g. `components | 6`).
+- `badges/storybook.svg` / `badges/storybook.json` — Storybook version badge (e.g. `storybook | v8.6.0` or `v10.0.0`).
+- `badges/status.svg` / `badges/status.json` — State-aware deployment status badge with commit SHA (e.g. `storybook | published • 8ba5315`, `storybook | building • 8ba5315` in yellow, or `storybook | failed • 8ba5315` in red).
+- `badges/build.svg` / `badges/build.json` — Build status badge (`build | passed • 8ba5315`, `build | building`, `build | failed`).
+- `badges/overview.json` — Comprehensive metadata endpoint aggregating story count, component count, total components, coverage percentage, build status, and commit details.
 
 You can embed these badges directly into your `README.md`:
 
 ```markdown
 [![Storybook](https://<owner>.github.io/<repo>/badges/storybook.svg)](https://<owner>.github.io/<repo>)
+[![Coverage](https://<owner>.github.io/<repo>/badges/coverage.svg)](https://<owner>.github.io/<repo>)
 [![Stories](https://<owner>.github.io/<repo>/badges/stories.svg)](https://<owner>.github.io/<repo>)
 [![Components](https://<owner>.github.io/<repo>/badges/components.svg)](https://<owner>.github.io/<repo>)
+[![Status](https://<owner>.github.io/<repo>/badges/status.svg)](https://<owner>.github.io/<repo>)
+```
+
+---
+
+## 📈 Hand-Drawn Growth Chart & Metrics Ledger
+
+When `generate_stats_graph` is enabled (default), `storybook-github-pages` generates a star-history styled hand-drawn SVG chart and keeps an incremental metrics ledger across deployments:
+
+- `stats/history.svg` — Hand-drawn SVG growth chart showing historical component coverage, stories count, and components count trajectories over time. Supports dark-mode viewing with vintage hand-drawn styling and responsive layout.
+- `stats/history.json` — Historical commit ledger appending metrics (`timestamp`, `commitSha`, `stories`, `components`, `totalComponents`, `coveragePercent`) on every deployment.
+
+Embed the growth chart in your `README.md`:
+
+```markdown
+[![Storybook Growth History](https://<owner>.github.io/<repo>/stats/history.svg)](https://<owner>.github.io/<repo>)
 ```
 
 ---
@@ -337,6 +360,13 @@ Because multiple build runs can complete out of order (retries, re-runs, or a fa
 
 The comment is idempotent: it is identified by a stable hidden marker (`<!-- storybook-pages-preview:pr-<number> -->`), created once, and updated in place on every subsequent successful publish - never duplicated. Updates are restricted to an existing comment authored by `github-actions[bot]` with GitHub's `Bot` user type; if a user comment claims the marker, the publisher fails closed without editing or creating a comment. Comment failures are reported independently of the publish step: if the directory push already succeeded but the comment API call fails (for example, a transient GitHub outage), the job fails visibly on the comment step without rolling back or hiding the successful publish.
 
+The PR preview comment provides a rich overview for reviewers:
+
+- **Live Badge Row**: Real-time badges for Coverage %, Stories count, Documented Components count, and Build Status.
+- **Metrics & Coverage Comparison Table**: Compares Base branch vs PR Preview metrics with computed diff deltas (e.g., `+19%` 🟢 component coverage improvement, `+10` stories 📈).
+- **Collapsible Growth Chart**: An expandable `<details>` section embedding the hand-drawn `stats/history.svg` growth graph.
+- **Provenance Footer**: Built commit SHA, workflow run link, and clear update timestamping.
+
 ### Configuring the preview path and retention
 
 Both are ordinary `.storybook-pages.yml` / workflow-input settings, validated the same way as `target_directory`:
@@ -394,12 +424,12 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
-      # Replace with your real install/build commands (or the main `Archetipo95/storybook-github-pages@v1.2.0`
+      # Replace with your real install/build commands (or the main `Archetipo95/storybook-github-pages@v1.5.0`
       # composite action with `publish: 'false'`) so `storybook-static` contains your actual build output.
       - run: npm ci && npm run build-storybook
 
       - name: Package and upload preview bundle
-        uses: Archetipo95/storybook-github-pages/preview-build@v1.2.0
+        uses: Archetipo95/storybook-github-pages/preview-build@v1.5.0
         with:
           source_path: storybook-static # your built static Storybook output directory
 ```
@@ -421,7 +451,7 @@ permissions:
 
 jobs:
   publish:
-    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-publish.yml@v1.2.0
+    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-publish.yml@v1.5.0
     with:
       pages_branch: 'gh-pages'
 ```
@@ -466,7 +496,7 @@ permissions:
 
 jobs:
   publish:
-    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-publish.yml@v1.0.0
+    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-publish.yml@v1.5.0
     with:
       preview_root: '' # optional: override preview root; defaults to .storybook-pages.yml or 'pr-preview'
       pages_branch: 'gh-pages'
@@ -504,7 +534,7 @@ steps:
       token: ${{ secrets.GITHUB_TOKEN }}
 
   - name: Validate provenance and publish preview
-    uses: Archetipo95/storybook-github-pages/preview-publisher@v1.0.0
+    uses: Archetipo95/storybook-github-pages/preview-publisher@v1.5.0
     with:
       bundle_dir: ${{ runner.temp }}/preview-bundle
       pages_repo: pages-repo
@@ -537,7 +567,7 @@ permissions:
 
 jobs:
   cleanup:
-    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-cleanup.yml@v1.0.0
+    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-cleanup.yml@v1.5.0
     with:
       preview_root: '' # optional: override preview root; defaults to .storybook-pages.yml or 'pr-preview'
       pages_branch: 'gh-pages'
@@ -554,7 +584,7 @@ steps:
       path: pages-repo
       token: ${{ secrets.GITHUB_TOKEN }}
   - name: Remove preview directory
-    uses: Archetipo95/storybook-github-pages/preview-cleanup@v1.0.0
+    uses: Archetipo95/storybook-github-pages/preview-cleanup@v1.5.0
     with:
       pages_repo: pages-repo
       pages_branch: gh-pages
@@ -581,7 +611,7 @@ permissions:
 
 jobs:
   janitor:
-    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-janitor.yml@v1.0.0
+    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-janitor.yml@v1.5.0
     with:
       preview_root: ''
       pages_branch: 'gh-pages'
@@ -599,7 +629,7 @@ steps:
       path: pages-repo
       token: ${{ secrets.GITHUB_TOKEN }}
   - name: Prune stale previews
-    uses: Archetipo95/storybook-github-pages/preview-janitor@v1.0.0
+    uses: Archetipo95/storybook-github-pages/preview-janitor@v1.5.0
     with:
       pages_repo: pages-repo
       pages_branch: gh-pages
