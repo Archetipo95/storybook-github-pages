@@ -19,9 +19,28 @@ inputs:
   base_path:
     required: false
     default: ''
+  generate_badges:
+    description: 'Whether to auto-generate dynamic SVG badges for components and stories'
+    required: false
+    default: 'true'
+  badges_directory:
+    description: 'Directory within the static build output to store generated badges'
+    required: false
+    default: 'badges'
 runs:
   using: composite
   steps:
+    - name: Generate Storybook badges
+      if: ${{ inputs.generate_badges != 'false' }}
+      shell: bash
+      env:
+        SOURCE_PATH: ${{ inputs.source_directory }}
+        SB_BADGES_DIRECTORY: ${{ inputs.badges_directory || 'badges' }}
+        SB_SITE_URL: ${{ inputs.site_url || '' }}
+        SB_BASE_PATH: ${{ inputs.base_path || '' }}
+        WORKSPACE_ROOT: ${{ github.workspace }}
+      run: node "${{ github.action_path }}/../src/generate-badges.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
+
     - shell: bash
       env:
         PAGES_REPO: ${{ inputs.pages_repo }}
@@ -34,3 +53,4 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
       run: node "${{ github.action_path }}/../src/publish-directory.js"
+
