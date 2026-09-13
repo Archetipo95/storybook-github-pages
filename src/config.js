@@ -17,6 +17,8 @@ export const DEFAULT_CONFIG = {
   preview_retention_days: 30,
   generate_badges: true,
   badges_directory: 'badges',
+  generate_stats_graph: true,
+  stats_directory: 'stats',
   build: {
     install_command: null,
     build_command: null
@@ -138,6 +140,14 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
 
   if (config.badges_directory !== undefined) {
     validateRelativeDirectory(config.badges_directory, 'badges_directory', { allowEmpty: false });
+  }
+
+  if (config.generate_stats_graph !== undefined && typeof config.generate_stats_graph !== 'boolean') {
+    throw new Error('Config generate_stats_graph must be a boolean');
+  }
+
+  if (config.stats_directory !== undefined) {
+    validateRelativeDirectory(config.stats_directory, 'stats_directory', { allowEmpty: false });
   }
 
   if (config.build !== undefined && config.build !== null) {
@@ -269,6 +279,13 @@ export function resolveConfiguration({
           ? Boolean(fileConfig.generate_badges)
           : DEFAULT_CONFIG.generate_badges,
     badges_directory: inputs.badges_directory || fileConfig?.badges_directory || DEFAULT_CONFIG.badges_directory,
+    generate_stats_graph:
+      inputs.generate_stats_graph !== undefined && inputs.generate_stats_graph !== ''
+        ? String(inputs.generate_stats_graph) === 'true'
+        : fileConfig?.generate_stats_graph !== undefined
+          ? Boolean(fileConfig.generate_stats_graph)
+          : DEFAULT_CONFIG.generate_stats_graph,
+    stats_directory: inputs.stats_directory || fileConfig?.stats_directory || DEFAULT_CONFIG.stats_directory,
     build: {
       install_command:
         inputs.install_command ||
