@@ -20,7 +20,6 @@ test('verify all action uses are pinned to full commit SHAs', () => {
     path.join(root, '.github/workflows/pr-preview-janitor.yml')
   ];
 
-  const shaUsesRegex = /uses:\s*([a-zA-Z0-9-_\/]+)@([a-f0-9]{40})/g;
   const anyUsesRegex = /uses:\s*([^\s]+)/g;
 
   for (const file of filesToCheck) {
@@ -59,7 +58,11 @@ test('verify deploy-storybook workflow build-and-upload job has minimal permissi
   const buildJobContent = buildJobMatch[0];
   assert.match(buildJobContent, /contents:\s*read/);
   assert.doesNotMatch(buildJobContent, /pages:\s*write/, 'build-and-upload job must not have pages: write permission');
-  assert.doesNotMatch(buildJobContent, /id-token:\s*write/, 'build-and-upload job must not have id-token: write permission');
+  assert.doesNotMatch(
+    buildJobContent,
+    /id-token:\s*write/,
+    'build-and-upload job must not have id-token: write permission'
+  );
 
   // Extract deploy job block
   const deployJobMatch = content.match(/deploy:[\s\S]*$/);
@@ -116,8 +119,8 @@ test('directory publisher has Pages permission and rebuild is outside push retri
   const job = workflow.match(/directory-publish:[\s\S]*$/)[0];
   assert.match(job, /contents:\s*write[\s\S]*pages:\s*write/);
   const publisher = fs.readFileSync(path.join(process.cwd(), 'src/publish-directory.js'), 'utf8');
-  assert.ok(publisher.indexOf("['push'") < publisher.indexOf("fetch(`https://api.github.com"));
-  assert.ok(publisher.indexOf("fetch(`https://api.github.com") > publisher.indexOf('for (let attempt'));
+  assert.ok(publisher.indexOf("['push'") < publisher.indexOf('fetch(`https://api.github.com'));
+  assert.ok(publisher.indexOf('fetch(`https://api.github.com') > publisher.indexOf('for (let attempt'));
 });
 
 test('directory publisher reference pins the reviewed implementation commit', () => {

@@ -11,7 +11,9 @@ function makeTempDir(prefix) {
 }
 
 function git(cwd, ...args) {
-  return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
+  return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+    .toString()
+    .trim();
 }
 
 function initBarePagesRepo({ withPreview } = {}) {
@@ -48,13 +50,21 @@ function initBarePagesRepo({ withPreview } = {}) {
 test('removePreviewDirectory removes only the targeted PR directory', async () => {
   const { cloneDir } = initBarePagesRepo({ withPreview: true });
 
-  const result = await removePreviewDirectory({ repo: cloneDir, branch: 'gh-pages', previewRoot: 'pr-preview', prNumber: 5 });
+  const result = await removePreviewDirectory({
+    repo: cloneDir,
+    branch: 'gh-pages',
+    previewRoot: 'pr-preview',
+    prNumber: 5
+  });
 
   assert.equal(result.changed, true);
   assert.equal(result.target, 'pr-preview/pr-5');
   assert.ok(!fs.existsSync(path.join(cloneDir, 'pr-preview', 'pr-5')), 'targeted preview must be removed');
   assert.ok(fs.existsSync(path.join(cloneDir, 'pr-preview', 'pr-9')), 'sibling preview must be preserved');
-  assert.ok(fs.existsSync(path.join(cloneDir, 'staging', 'index.html')), 'unrelated environment directory must be untouched');
+  assert.ok(
+    fs.existsSync(path.join(cloneDir, 'staging', 'index.html')),
+    'unrelated environment directory must be untouched'
+  );
   assert.ok(fs.existsSync(path.join(cloneDir, 'index.html')), 'production root must be untouched');
 });
 
@@ -62,7 +72,12 @@ test('removePreviewDirectory is an idempotent no-op when the directory does not 
   const { cloneDir } = initBarePagesRepo({ withPreview: false });
   const beforeHead = git(cloneDir, 'rev-parse', 'HEAD');
 
-  const result = await removePreviewDirectory({ repo: cloneDir, branch: 'gh-pages', previewRoot: 'pr-preview', prNumber: 123 });
+  const result = await removePreviewDirectory({
+    repo: cloneDir,
+    branch: 'gh-pages',
+    previewRoot: 'pr-preview',
+    prNumber: 123
+  });
 
   assert.equal(result.changed, false);
   assert.equal(git(cloneDir, 'rev-parse', 'HEAD'), beforeHead, 'a no-op removal must not create a commit');
@@ -74,7 +89,10 @@ test('removePreviewDirectory rejects unsafe PR numbers before touching the files
     removePreviewDirectory({ repo: cloneDir, branch: 'gh-pages', previewRoot: 'pr-preview', prNumber: '5; rm -rf /' }),
     /prNumber/
   );
-  assert.ok(fs.existsSync(path.join(cloneDir, 'pr-preview', 'pr-5')), 'nothing should be removed when the PR number is invalid');
+  assert.ok(
+    fs.existsSync(path.join(cloneDir, 'pr-preview', 'pr-5')),
+    'nothing should be removed when the PR number is invalid'
+  );
 });
 
 test('removePreviewDirectory rejects an unsafe configured preview root', async () => {
@@ -118,13 +136,21 @@ test('removePreviewDirectory supports repository-root layout and preserves root/
   assert.equal(result.target, 'pr-5');
   assert.ok(!fs.existsSync(path.join(cloneDir, 'pr-5')), 'targeted root preview pr-5 must be removed');
   assert.ok(fs.existsSync(path.join(cloneDir, 'pr-9', 'index.html')), 'sibling preview pr-9 at root must be preserved');
-  assert.ok(fs.existsSync(path.join(cloneDir, 'staging', 'index.html')), 'unrelated environment directory must be untouched');
+  assert.ok(
+    fs.existsSync(path.join(cloneDir, 'staging', 'index.html')),
+    'unrelated environment directory must be untouched'
+  );
   assert.ok(fs.existsSync(path.join(cloneDir, 'index.html')), 'production root must be untouched');
 });
 
 test('removePreviewDirectory safely skips when repo directory does not exist', async () => {
   const nonexistentDir = path.join(os.tmpdir(), `nonexistent-pages-${Date.now()}`);
-  const result = await removePreviewDirectory({ repo: nonexistentDir, branch: 'gh-pages', previewRoot: 'pr-preview', prNumber: 42 });
+  const result = await removePreviewDirectory({
+    repo: nonexistentDir,
+    branch: 'gh-pages',
+    previewRoot: 'pr-preview',
+    prNumber: 42
+  });
   assert.equal(result.changed, false);
   assert.equal(result.skipped, true);
 });

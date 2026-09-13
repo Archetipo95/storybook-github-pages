@@ -10,10 +10,16 @@ export function run(command, args, cwd) {
     const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
-    child.stdout.on('data', data => { stdout += data; });
-    child.stderr.on('data', data => { stderr += data; });
+    child.stdout.on('data', data => {
+      stdout += data;
+    });
+    child.stderr.on('data', data => {
+      stderr += data;
+    });
     child.on('error', reject);
-    child.on('close', code => code === 0 ? resolve(stdout.trim()) : reject(new Error(`${command} ${args.join(' ')} failed: ${stderr.trim()}`)));
+    child.on('close', code =>
+      code === 0 ? resolve(stdout.trim()) : reject(new Error(`${command} ${args.join(' ')} failed: ${stderr.trim()}`))
+    );
   });
 }
 
@@ -37,7 +43,11 @@ export async function requestPagesRebuild({ token, repository }) {
   if (!token || !repository) return;
   const response = await fetch(`https://api.github.com/repos/${repository}/pages/builds`, {
     method: 'POST',
-    headers: { authorization: `token ${token}`, accept: 'application/vnd.github+json', 'content-type': 'application/json' }
+    headers: {
+      authorization: `token ${token}`,
+      accept: 'application/vnd.github+json',
+      'content-type': 'application/json'
+    }
   });
   if (!response.ok) {
     const text = await response.text().catch(() => '');
@@ -65,10 +75,21 @@ export async function withSerializedBranchWrite({ repo, branch, mutate, commitMe
         let committed = true;
         await run(
           'git',
-          ['-c', 'user.name=storybook-pages', '-c', 'user.email=storybook-pages@users.noreply.github.com', 'commit', '-m', commitMessage],
+          [
+            '-c',
+            'user.name=storybook-pages',
+            '-c',
+            'user.email=storybook-pages@users.noreply.github.com',
+            'commit',
+            '-m',
+            commitMessage
+          ],
           repo
         ).catch(error => {
-          if (error.message.includes('nothing to commit')) { committed = false; return; }
+          if (error.message.includes('nothing to commit')) {
+            committed = false;
+            return;
+          }
           throw error;
         });
         if (!committed) return { changed: false };

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { validateArtifactDirectory } from '../src/validate-artifact.js';
-import { buildPreviewMetadata, digestDirectory, resolvePreviewTarget } from '../src/preview-metadata.js';
+import { buildPreviewMetadata, digestDirectory } from '../src/preview-metadata.js';
 import { publishPreview } from '../src/preview-publish.js';
 import { removePreviewDirectory } from '../src/preview-cleanup.js';
 import { buildMarker } from '../src/preview-comment.js';
@@ -18,7 +18,9 @@ function makeTempDir(prefix) {
 }
 
 function git(cwd, ...args) {
-  return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
+  return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+    .toString()
+    .trim();
 }
 
 function initConsumerPagesRepo() {
@@ -53,9 +55,18 @@ test('external consumer full lifecycle: untrusted build, artifact transfer witho
   const prWorkspace = makeTempDir('consumer-pr-workspace-');
   const storybookStaticDir = path.join(prWorkspace, 'storybook-static');
   fs.mkdirSync(storybookStaticDir, { recursive: true });
-  fs.writeFileSync(path.join(storybookStaticDir, 'index.html'), '<!DOCTYPE html><html><body>Consumer Storybook PR 101</body></html>');
-  fs.writeFileSync(path.join(storybookStaticDir, 'iframe.html'), '<!DOCTYPE html><html><body>Stories Iframe</body></html>');
-  fs.writeFileSync(path.join(storybookStaticDir, 'stories.json'), '{"stories": {"button--primary": {"id": "button--primary"}}}');
+  fs.writeFileSync(
+    path.join(storybookStaticDir, 'index.html'),
+    '<!DOCTYPE html><html><body>Consumer Storybook PR 101</body></html>'
+  );
+  fs.writeFileSync(
+    path.join(storybookStaticDir, 'iframe.html'),
+    '<!DOCTYPE html><html><body>Stories Iframe</body></html>'
+  );
+  fs.writeFileSync(
+    path.join(storybookStaticDir, 'stories.json'),
+    '{"stories": {"button--primary": {"id": "button--primary"}}}'
+  );
 
   const validationResult = validateArtifactDirectory('storybook-static', prWorkspace);
   assert.equal(validationResult.valid, true);
@@ -84,7 +95,10 @@ test('external consumer full lifecycle: untrusted build, artifact transfer witho
   // In a trusted workflow_run job without checking out untrusted PR code,
   // the workspace or temp directory is NOT a git repository.
   const uncheckoutTempDir = makeTempDir('consumer-trusted-runner-temp-');
-  assert.ok(!fs.existsSync(path.join(uncheckoutTempDir, '.git')), 'trusted download directory must not require a git checkout');
+  assert.ok(
+    !fs.existsSync(path.join(uncheckoutTempDir, '.git')),
+    'trusted download directory must not require a git checkout'
+  );
 
   // Verify that running a simulated `gh` command without GH_REPO in a non-git dir fails with "not a git repository"
   const gitCheck = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd: uncheckoutTempDir, encoding: 'utf8' });
@@ -180,7 +194,10 @@ test('external consumer full lifecycle: untrusted build, artifact transfer witho
 
     assert.equal(cleanupResult.changed, true);
     assert.equal(cleanupResult.target, `pr-preview/pr-${prNumber}`);
-    assert.ok(!fs.existsSync(path.join(pagesRepo, 'pr-preview', `pr-${prNumber}`)), 'preview directory must be removed on close');
+    assert.ok(
+      !fs.existsSync(path.join(pagesRepo, 'pr-preview', `pr-${prNumber}`)),
+      'preview directory must be removed on close'
+    );
     assert.ok(fs.existsSync(path.join(pagesRepo, 'index.html')), 'production root must remain untouched after cleanup');
   } finally {
     global.fetch = originalFetch;
@@ -196,8 +213,14 @@ test('external consumer full lifecycle with repository-root layout (preview_root
   const prWorkspace = makeTempDir('consumer-root-workspace-');
   const storybookStaticDir = path.join(prWorkspace, 'storybook-static');
   fs.mkdirSync(storybookStaticDir, { recursive: true });
-  fs.writeFileSync(path.join(storybookStaticDir, 'index.html'), '<!DOCTYPE html><html><body>Root Layout Storybook PR 201</body></html>');
-  fs.writeFileSync(path.join(storybookStaticDir, 'iframe.html'), '<!DOCTYPE html><html><body>Stories Iframe</body></html>');
+  fs.writeFileSync(
+    path.join(storybookStaticDir, 'index.html'),
+    '<!DOCTYPE html><html><body>Root Layout Storybook PR 201</body></html>'
+  );
+  fs.writeFileSync(
+    path.join(storybookStaticDir, 'iframe.html'),
+    '<!DOCTYPE html><html><body>Stories Iframe</body></html>'
+  );
 
   const bundleDir = makeTempDir('consumer-root-bundle-');
   const metadata = buildPreviewMetadata({
@@ -220,7 +243,7 @@ test('external consumer full lifecycle with repository-root layout (preview_root
   const { cloneDir: pagesRepo } = initConsumerPagesRepo();
 
   const originalFetch = global.fetch;
-  global.fetch = async (url, options = {}) => {
+  global.fetch = async url => {
     if (url.includes('/comments')) return { ok: true, status: 201, json: async () => ({ id: 6001 }) };
     if (url.includes('/pages/builds')) return { ok: true, status: 201, json: async () => ({ status: 'queued' }) };
     if (url.includes('/pulls?state=open')) return { ok: true, status: 200, json: async () => [{ number: 999 }] }; // PR 201 is closed
@@ -268,7 +291,10 @@ test('external consumer full lifecycle with repository-root layout (preview_root
     });
 
     assert.equal(janitorResult.changed, true);
-    assert.deepEqual(janitorResult.removed.map(r => r.entry), [`pr-${prNumber}`]);
+    assert.deepEqual(
+      janitorResult.removed.map(r => r.entry),
+      [`pr-${prNumber}`]
+    );
     assert.ok(!fs.existsSync(path.join(pagesRepo, `pr-${prNumber}`)), 'janitor must prune root pr-201 directory');
     assert.ok(fs.existsSync(path.join(pagesRepo, 'index.html')), 'production root index.html must remain intact');
   } finally {

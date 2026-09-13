@@ -156,13 +156,13 @@ jobs:
 
 `storybook-github-pages` is designed and validated for the following support matrix:
 
-| Category | Supported Environments | Notes |
-|----------|------------------------|-------|
-| **Platform** | GitHub.com (Public & Private Repositories) | Uses native GitHub Pages API & OIDC JWTs |
-| **Runner OS** | GitHub-hosted Linux (`ubuntu-latest`) | Tested on `ubuntu-latest` with Node.js 20+ |
-| **Node.js Runtime** | Node.js 20+ | Zero external npm dependencies (uses native Node.js ES modules) |
-| **Package Managers** | Reusable workflow: `npm`, `yarn`, `pnpm`, `bun`; composite action: `npm`, `yarn`, `pnpm` | Bun is provisioned only in the reusable workflow's read-only build job |
-| **Tagging Strategy** | Immutable release tags (for example, `@v1.0.1`) | **Recommended for stable, reproducible use.** This Bun support change requires a new release tag after merge. Floating major tags (e.g. `@v1`) are optional and non-reproducible. |
+| Category             | Supported Environments                                                                   | Notes                                                                                                                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Platform**         | GitHub.com (Public & Private Repositories)                                               | Uses native GitHub Pages API & OIDC JWTs                                                                                                                                          |
+| **Runner OS**        | GitHub-hosted Linux (`ubuntu-latest`)                                                    | Tested on `ubuntu-latest` with Node.js 20+                                                                                                                                        |
+| **Node.js Runtime**  | Node.js 20+                                                                              | Zero external npm dependencies (uses native Node.js ES modules)                                                                                                                   |
+| **Package Managers** | Reusable workflow: `npm`, `yarn`, `pnpm`, `bun`; composite action: `npm`, `yarn`, `pnpm` | Bun is provisioned only in the reusable workflow's read-only build job                                                                                                            |
+| **Tagging Strategy** | Immutable release tags (for example, `@v1.0.1`)                                          | **Recommended for stable, reproducible use.** This Bun support change requires a new release tag after merge. Floating major tags (e.g. `@v1`) are optional and non-reproducible. |
 
 ---
 
@@ -170,33 +170,33 @@ jobs:
 
 ### Action / Workflow Inputs
 
-| Input | Type | Default | Description |
-|-------|------|---------|-------------|
-| `path` | `string` | `storybook-static` | Path to the directory containing built static Storybook files |
-| `package_manager` | `string` | `npm` | Reusable workflow: `npm`, `yarn`, `pnpm`, or `bun`; composite action: `npm`, `yarn`, or `pnpm` |
-| `checkout` | `string` | `'true'` | Whether to check out the repository automatically (Action only) |
-| `install_command` | `string` | `''` | Bitovi compatibility / custom dependency installation command |
-| `build_command` | `string` | `''` | Bitovi compatibility / custom Storybook build command |
-| `custom_install_command` | `string` | `''` | Alias for `install_command` |
-| `custom_build_command` | `string` | `''` | Alias for `build_command` |
-| `publish` | `string` | `'true'` | Whether to upload and deploy the Pages artifact |
-| `artifact_name` | `string` | `github-pages` | GitHub Pages artifact name |
-| `environment` | `string` | `github-pages` | GitHub Pages deployment environment name |
-| `mode` | `string` | `artifact` | `artifact` or trusted branch-backed `directory` |
-| `pages_branch` | `string` | `gh-pages` | Pages branch used by directory mode |
-| `target_directory` | `string` | `''` | Relative directory to replace; empty means the production root |
-| `site_url` | `string` | `''` | Canonical site URL used for deployment metadata |
-| `base_path` | `string` | `''` | URL base path; derived from `target_directory` when empty |
-| `preview_root` | `string` | `pr-preview` | Root directory (on the Pages branch) under which PR previews are published, as `<preview_root>/pr-<number>` |
-| `preview_retention_days` | `number` | `30` | Days an *open* PR's preview may remain before the janitor prunes it; closed-PR previews are always eligible for removal regardless of age |
+| Input                    | Type     | Default            | Description                                                                                                                               |
+| ------------------------ | -------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`                   | `string` | `storybook-static` | Path to the directory containing built static Storybook files                                                                             |
+| `package_manager`        | `string` | `npm`              | Reusable workflow: `npm`, `yarn`, `pnpm`, or `bun`; composite action: `npm`, `yarn`, or `pnpm`                                            |
+| `checkout`               | `string` | `'true'`           | Whether to check out the repository automatically (Action only)                                                                           |
+| `install_command`        | `string` | `''`               | Bitovi compatibility / custom dependency installation command                                                                             |
+| `build_command`          | `string` | `''`               | Bitovi compatibility / custom Storybook build command                                                                                     |
+| `custom_install_command` | `string` | `''`               | Alias for `install_command`                                                                                                               |
+| `custom_build_command`   | `string` | `''`               | Alias for `build_command`                                                                                                                 |
+| `publish`                | `string` | `'true'`           | Whether to upload and deploy the Pages artifact                                                                                           |
+| `artifact_name`          | `string` | `github-pages`     | GitHub Pages artifact name                                                                                                                |
+| `environment`            | `string` | `github-pages`     | GitHub Pages deployment environment name                                                                                                  |
+| `mode`                   | `string` | `artifact`         | `artifact` or trusted branch-backed `directory`                                                                                           |
+| `pages_branch`           | `string` | `gh-pages`         | Pages branch used by directory mode                                                                                                       |
+| `target_directory`       | `string` | `''`               | Relative directory to replace; empty means the production root                                                                            |
+| `site_url`               | `string` | `''`               | Canonical site URL used for deployment metadata                                                                                           |
+| `base_path`              | `string` | `''`               | URL base path; derived from `target_directory` when empty                                                                                 |
+| `preview_root`           | `string` | `pr-preview`       | Root directory (on the Pages branch) under which PR previews are published, as `<preview_root>/pr-<number>`                               |
+| `preview_retention_days` | `number` | `30`               | Days an _open_ PR's preview may remain before the janitor prunes it; closed-PR previews are always eligible for removal regardless of age |
 
 ### Outputs
 
-| Output | Description |
-|--------|-------------|
-| `page_url` | The URL of the published GitHub Pages site |
-| `status` | Status of the deployment (`success`, `skipped`, `failed`) |
-| `deployment_id` | The GitHub Pages deployment ID |
+| Output          | Description                                               |
+| --------------- | --------------------------------------------------------- |
+| `page_url`      | The URL of the published GitHub Pages site                |
+| `status`        | Status of the deployment (`success`, `skipped`, `failed`) |
+| `deployment_id` | The GitHub Pages deployment ID                            |
 
 ---
 
@@ -204,12 +204,12 @@ jobs:
 
 `storybook-github-pages` maintains input compatibility with `bitovi/github-actions-storybook-to-github-pages`:
 
-| Bitovi Input | `storybook-github-pages` Equivalent | Notes |
-|--------------|------------------------------------|-------|
-| `path` | `path` | Identical default (`storybook-static`) |
-| `checkout` | `checkout` | Identical boolean string behavior |
-| `install_command` | `install_command` / `custom_install_command` | Fully supported |
-| `build_command` | `build_command` / `custom_build_command` | Fully supported |
+| Bitovi Input      | `storybook-github-pages` Equivalent          | Notes                                  |
+| ----------------- | -------------------------------------------- | -------------------------------------- |
+| `path`            | `path`                                       | Identical default (`storybook-static`) |
+| `checkout`        | `checkout`                                   | Identical boolean string behavior      |
+| `install_command` | `install_command` / `custom_install_command` | Fully supported                        |
+| `build_command`   | `build_command` / `custom_build_command`     | Fully supported                        |
 
 **Migrating to `storybook-github-pages`:**
 Simply replace `bitovi/github-actions-storybook-to-github-pages@v1.0.3` with `Archetipo95/storybook-github-pages@v1.0.0` in your workflow.
@@ -264,7 +264,7 @@ build:
   build_command: npm run build-storybook
 ```
 
-*Note: Explicit workflow inputs override file configuration, which in turn overrides default values.*
+_Note: Explicit workflow inputs override file configuration, which in turn overrides default values._
 
 For Bun projects, use the reusable workflow and set `package_manager: bun`. It provisions Bun in its read-only build job; the deploy-capable composite action intentionally rejects Bun so installation never runs in a job with Pages, OIDC, or write privileges. When omitted, the commands default to `bun install --frozen-lockfile` and `bun run build-storybook`:
 
@@ -289,12 +289,12 @@ Four workflows implement a full pull-request preview lifecycle on top of directo
 
 ### Security model
 
-| Stage | Trigger | Trust level | What it can do |
-|-------|---------|-------------|----------------|
-| **Build** (`pr-preview-build.yml`) | `pull_request` (`opened`, `synchronize`, `reopened`) | Untrusted | `contents: read` only. No secrets, no `pages`/`pull-requests` permission, no cache shared across builds. Builds and validates the PR's actual code (including forks), then uploads a single artifact bundling the static output with signed-shape metadata (repository, run id, PR number, base ref, head repository, head SHA, artifact name, schema version, and the computed preview target, or `null` for forks). |
-| **Publish** (`pr-preview-publish.yml`) | `workflow_run` on completion of the build workflow | Trusted | Never checks out PR content. The `gate` job (read-only) accepts a run only if it succeeded, was triggered by `pull_request`, belongs to this repository, and - critically - has a non-empty `workflow_run.pull_requests[]` array. GitHub only populates that array for **same-repository** pull requests, so forked PRs are excluded by construction before any privileged job runs. The `publish` job then downloads the artifact by run id, derives the trusted target directory `<preview_root>/pr-<number>` from base/default configuration (ignoring any target altered in the PR branch), re-validates every metadata field against this trusted context, re-fetches the PR's *current* head SHA from the API, and only proceeds if it still matches the build's head SHA (an older completed run for an already-superseded commit is skipped, never published). Only then does it publish and post/update the PR comment. |
-| **Cleanup** (`pr-preview-cleanup.yml`) | `pull_request_target` (`closed`) | Trusted, metadata-only | Uses `pull_request_target` for a write-capable token even on forked PR closures, but only ever reads structured event fields (PR number) - it never checks out the pull request's head ref/SHA or executes any code from it. It checks out the default branch to resolve the trusted base `.storybook-pages.yml` configuration (computing `<preview_root>/pr-<number>`), checks out the trusted Pages branch, removes the directory if present (a no-op otherwise), and requests a Pages rebuild after a successful removal. |
-| **Janitor** (`pr-preview-janitor.yml`) | `workflow_dispatch` or daily `schedule` | Trusted | Lists live open PR numbers via the API and removes any `<preview_root>/pr-<number>` directory whose PR is no longer open, plus any still-open PR's preview older than `preview_retention_days`. Only entries matching the strict `pr-<number>` name are ever considered; everything else at the Pages branch root (production output, named environments, unrelated files) is left untouched. |
+| Stage                                  | Trigger                                              | Trust level            | What it can do                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------------- | ---------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Build** (`pr-preview-build.yml`)     | `pull_request` (`opened`, `synchronize`, `reopened`) | Untrusted              | `contents: read` only. No secrets, no `pages`/`pull-requests` permission, no cache shared across builds. Builds and validates the PR's actual code (including forks), then uploads a single artifact bundling the static output with signed-shape metadata (repository, run id, PR number, base ref, head repository, head SHA, artifact name, schema version, and the computed preview target, or `null` for forks).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **Publish** (`pr-preview-publish.yml`) | `workflow_run` on completion of the build workflow   | Trusted                | Never checks out PR content. The `gate` job (read-only) accepts a run only if it succeeded, was triggered by `pull_request`, belongs to this repository, and - critically - has a non-empty `workflow_run.pull_requests[]` array. GitHub only populates that array for **same-repository** pull requests, so forked PRs are excluded by construction before any privileged job runs. The `publish` job then downloads the artifact by run id, derives the trusted target directory `<preview_root>/pr-<number>` from base/default configuration (ignoring any target altered in the PR branch), re-validates every metadata field against this trusted context, re-fetches the PR's _current_ head SHA from the API, and only proceeds if it still matches the build's head SHA (an older completed run for an already-superseded commit is skipped, never published). Only then does it publish and post/update the PR comment. |
+| **Cleanup** (`pr-preview-cleanup.yml`) | `pull_request_target` (`closed`)                     | Trusted, metadata-only | Uses `pull_request_target` for a write-capable token even on forked PR closures, but only ever reads structured event fields (PR number) - it never checks out the pull request's head ref/SHA or executes any code from it. It checks out the default branch to resolve the trusted base `.storybook-pages.yml` configuration (computing `<preview_root>/pr-<number>`), checks out the trusted Pages branch, removes the directory if present (a no-op otherwise), and requests a Pages rebuild after a successful removal.                                                                                                                                                                                                                                                                                                                                                                                                     |
+| **Janitor** (`pr-preview-janitor.yml`) | `workflow_dispatch` or daily `schedule`              | Trusted                | Lists live open PR numbers via the API and removes any `<preview_root>/pr-<number>` directory whose PR is no longer open, plus any still-open PR's preview older than `preview_retention_days`. Only entries matching the strict `pr-<number>` name are ever considered; everything else at the Pages branch root (production output, named environments, unrelated files) is left untouched.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ### Fork PRs
 
@@ -317,13 +317,14 @@ The comment is idempotent: it is identified by a stable hidden marker (`<!-- sto
 Both are ordinary `.storybook-pages.yml` / workflow-input settings, validated the same way as `target_directory`:
 
 ```yaml
-preview_root: pr-preview          # default; set to '' in .storybook-pages.yml for repository-root layout (pr-<number>)
-preview_retention_days: 30        # default; 0 disables age-based pruning (closed-PR previews are still removed)
+preview_root: pr-preview # default; set to '' in .storybook-pages.yml for repository-root layout (pr-<number>)
+preview_retention_days: 30 # default; 0 disables age-based pruning (closed-PR previews are still removed)
 ```
 
 #### Repository-Root Preview Layout (`preview_root: ''`)
 
 When `preview_root` is set to `''` (empty string), previews are placed directly at the Pages branch root as `pr-<number>` (e.g. `pr-42`). The trusted publisher, cleanup, and janitor strictly target `pr-<number>` directories:
+
 - **Cleanup**: Removes only the exact `pr-<closed-pr-number>` directory on PR close.
 - **Janitor**: Scans the root and removes only entries matching `^pr-(\d+)$` whose PR is closed or exceeds retention; production root files (`index.html`, assets) and named environment directories (such as `staging/`) are never touched.
 
@@ -355,7 +356,7 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read     # the only permission this job ever needs
+  contents: read # the only permission this job ever needs
 
 jobs:
   build:
@@ -375,7 +376,7 @@ jobs:
       - name: Package and upload preview bundle
         uses: Archetipo95/storybook-github-pages/preview-build@v1.2.0
         with:
-          source_path: storybook-static   # your built static Storybook output directory
+          source_path: storybook-static # your built static Storybook output directory
 ```
 
 ```yaml
@@ -384,7 +385,7 @@ name: PR Preview Publish
 
 on:
   workflow_run:
-    workflows: ["PR Preview Build"]
+    workflows: ['PR Preview Build']
     types: [completed]
 
 permissions:
@@ -402,19 +403,19 @@ jobs:
 
 Required inputs/outputs and the artifact contract at a glance:
 
-| Input | Required | Default | Description |
-|-------|----------|---------|--------------|
-| `source_path` | Yes | — | Path to the already-built static Storybook output directory |
-| `preview_root` | No | `pr-preview` | Must match the trusted publisher's configured `preview_root` |
-| `upload` | No | `true` | Set `'false'` to stage the bundle without uploading it yourself |
-| `retention_days` | No | `7` | Artifact retention when `upload` is true |
+| Input            | Required | Default      | Description                                                     |
+| ---------------- | -------- | ------------ | --------------------------------------------------------------- |
+| `source_path`    | Yes      | —            | Path to the already-built static Storybook output directory     |
+| `preview_root`   | No       | `pr-preview` | Must match the trusted publisher's configured `preview_root`    |
+| `upload`         | No       | `true`       | Set `'false'` to stage the bundle without uploading it yourself |
+| `retention_days` | No       | `7`          | Artifact retention when `upload` is true                        |
 
-| Output | Description |
-|--------|--------------|
-| `artifact_name` | The deterministic `storybook-preview-pr-<PR>-run-<run>` artifact name used; there is no input to override it |
-| `bundle_dir` | Path to the staged `storybook/` + `preview-metadata.json` bundle |
-| `content_digest` | SHA-256 digest binding `storybook/` to `preview-metadata.json` |
-| `is_fork` | Whether the pull request head repository differs from the base repository |
+| Output           | Description                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ |
+| `artifact_name`  | The deterministic `storybook-preview-pr-<PR>-run-<run>` artifact name used; there is no input to override it |
+| `bundle_dir`     | Path to the staged `storybook/` + `preview-metadata.json` bundle                                             |
+| `content_digest` | SHA-256 digest binding `storybook/` to `preview-metadata.json`                                               |
+| `is_fork`        | Whether the pull request head repository differs from the base repository                                    |
 
 The artifact name is **not configurable**: it is always derived from the validated pull request number and run id available to the untrusted build job, so this action can never emit an artifact outside the exact `storybook-preview-pr-<PR>-run-<run>` namespace the trusted publisher expects, and cannot be used to redirect or spoof a different artifact name.
 
@@ -429,7 +430,7 @@ name: PR Preview Publish
 
 on:
   workflow_run:
-    workflows: ["PR Preview Build"]
+    workflows: ['PR Preview Build']
     types: [completed]
 
 permissions:
@@ -442,56 +443,56 @@ jobs:
   publish:
     uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-publish.yml@v1.0.0
     with:
-      preview_root: ''       # optional: override preview root; defaults to .storybook-pages.yml or 'pr-preview'
+      preview_root: '' # optional: override preview root; defaults to .storybook-pages.yml or 'pr-preview'
       pages_branch: 'gh-pages'
 ```
 
 Or call the composite action `preview-publisher` in a custom `workflow_run` job:
 
 ```yaml
-    steps:
-      - name: Fetch current PR head SHA
-        id: current
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
-        run: |
-          response=$(curl -sf -H "authorization: token $GITHUB_TOKEN" -H "accept: application/vnd.github+json" "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER")
-          sha=$(node -e 'console.log(JSON.parse(process.argv[1]).head.sha)' "$response")
-          echo "head_sha=$sha" >> "$GITHUB_OUTPUT"
+steps:
+  - name: Fetch current PR head SHA
+    id: current
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPOSITORY: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+    run: |
+      response=$(curl -sf -H "authorization: token $GITHUB_TOKEN" -H "accept: application/vnd.github+json" "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER")
+      sha=$(node -e 'console.log(JSON.parse(process.argv[1]).head.sha)' "$response")
+      echo "head_sha=$sha" >> "$GITHUB_OUTPUT"
 
-      - name: Download build artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: storybook-preview-pr-${{ github.event.workflow_run.pull_requests[0].number }}-run-${{ github.event.workflow_run.id }}
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ runner.temp }}/preview-bundle
+  - name: Download build artifact
+    uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+    with:
+      name: storybook-preview-pr-${{ github.event.workflow_run.pull_requests[0].number }}-run-${{ github.event.workflow_run.id }}
+      run-id: ${{ github.event.workflow_run.id }}
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+      path: ${{ runner.temp }}/preview-bundle
 
-      - name: Checkout Pages branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: gh-pages
-          path: pages-repo
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+  - name: Checkout Pages branch
+    uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    with:
+      ref: gh-pages
+      path: pages-repo
+      fetch-depth: 0
+      token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate provenance and publish preview
-        uses: Archetipo95/storybook-github-pages/preview-publisher@v1.0.0
-        with:
-          bundle_dir: ${{ runner.temp }}/preview-bundle
-          pages_repo: pages-repo
-          pages_branch: gh-pages
-          preview_root: ''
-          trusted_repository: ${{ github.repository }}
-          trusted_run_id: ${{ github.event.workflow_run.id }}
-          trusted_pr_number: ${{ github.event.workflow_run.pull_requests[0].number }}
-          trusted_head_sha: ${{ github.event.workflow_run.head_sha }}
-          trusted_head_repository: ${{ github.event.workflow_run.head_repository.full_name }}
-          trusted_base_ref: ${{ github.event.workflow_run.pull_requests[0].base.ref }}
-          expected_artifact_name: storybook-preview-pr-${{ github.event.workflow_run.pull_requests[0].number }}-run-${{ github.event.workflow_run.id }}
-          current_head_sha: ${{ steps.current.outputs.head_sha }}
+  - name: Validate provenance and publish preview
+    uses: Archetipo95/storybook-github-pages/preview-publisher@v1.0.0
+    with:
+      bundle_dir: ${{ runner.temp }}/preview-bundle
+      pages_repo: pages-repo
+      pages_branch: gh-pages
+      preview_root: ''
+      trusted_repository: ${{ github.repository }}
+      trusted_run_id: ${{ github.event.workflow_run.id }}
+      trusted_pr_number: ${{ github.event.workflow_run.pull_requests[0].number }}
+      trusted_head_sha: ${{ github.event.workflow_run.head_sha }}
+      trusted_head_repository: ${{ github.event.workflow_run.head_repository.full_name }}
+      trusted_base_ref: ${{ github.event.workflow_run.pull_requests[0].base.ref }}
+      expected_artifact_name: storybook-preview-pr-${{ github.event.workflow_run.pull_requests[0].number }}-run-${{ github.event.workflow_run.id }}
+      current_head_sha: ${{ steps.current.outputs.head_sha }}
 ```
 
 #### 2. Reusable Closed-PR Preview Cleanup
@@ -513,27 +514,27 @@ jobs:
   cleanup:
     uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-cleanup.yml@v1.0.0
     with:
-      preview_root: ''       # optional: override preview root; defaults to .storybook-pages.yml or 'pr-preview'
+      preview_root: '' # optional: override preview root; defaults to .storybook-pages.yml or 'pr-preview'
       pages_branch: 'gh-pages'
 ```
 
 Or call the composite action in a custom job:
 
 ```yaml
-    steps:
-      - name: Checkout Pages branch
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          ref: gh-pages
-          path: pages-repo
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Remove preview directory
-        uses: Archetipo95/storybook-github-pages/preview-cleanup@v1.0.0
-        with:
-          pages_repo: pages-repo
-          pages_branch: gh-pages
-          preview_root: ''
-          pr_number: ${{ github.event.pull_request.number }}
+steps:
+  - name: Checkout Pages branch
+    uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    with:
+      ref: gh-pages
+      path: pages-repo
+      token: ${{ secrets.GITHUB_TOKEN }}
+  - name: Remove preview directory
+    uses: Archetipo95/storybook-github-pages/preview-cleanup@v1.0.0
+    with:
+      pages_repo: pages-repo
+      pages_branch: gh-pages
+      preview_root: ''
+      pr_number: ${{ github.event.pull_request.number }}
 ```
 
 #### 3. Reusable Stale-Preview Janitor
@@ -565,20 +566,20 @@ jobs:
 Or use the composite action directly:
 
 ```yaml
-    steps:
-      - name: Checkout Pages branch
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          ref: gh-pages
-          path: pages-repo
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Prune stale previews
-        uses: Archetipo95/storybook-github-pages/preview-janitor@v1.0.0
-        with:
-          pages_repo: pages-repo
-          pages_branch: gh-pages
-          preview_root: ''
-          retention_days: '30'
+steps:
+  - name: Checkout Pages branch
+    uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    with:
+      ref: gh-pages
+      path: pages-repo
+      token: ${{ secrets.GITHUB_TOKEN }}
+  - name: Prune stale previews
+    uses: Archetipo95/storybook-github-pages/preview-janitor@v1.0.0
+    with:
+      pages_repo: pages-repo
+      pages_branch: gh-pages
+      preview_root: ''
+      retention_days: '30'
 ```
 
 ### Adapting the templates to another repository
@@ -595,36 +596,42 @@ This repository ships the four workflows above as a working reference implementa
 ## Troubleshooting Guide
 
 ### 1. GitHub Pages Deployment 404
-* **Symptom**: Deployment completes successfully, but accessing the site URL returns HTTP 404.
-* **Causes & Solutions**:
-  * **Build Directory**: Ensure your `path` input points to the directory containing the static output (e.g. `storybook-static` or `dist/storybook`). The output must contain an `index.html` file.
-  * **GitHub Pages Source Setting**: Ensure repository settings have GitHub Pages enabled (`Settings > Pages > Source: GitHub Actions` for artifact mode, or `Deploy from a branch: gh-pages` for directory mode).
-  * **Subpath / Base Path**: If publishing to a subpath (e.g., directory mode target `staging` or `pr-preview/pr-12`), ensure your Storybook build is configured with matching asset relative paths (`--base-path` or relative URL resolution).
+
+- **Symptom**: Deployment completes successfully, but accessing the site URL returns HTTP 404.
+- **Causes & Solutions**:
+  - **Build Directory**: Ensure your `path` input points to the directory containing the static output (e.g. `storybook-static` or `dist/storybook`). The output must contain an `index.html` file.
+  - **GitHub Pages Source Setting**: Ensure repository settings have GitHub Pages enabled (`Settings > Pages > Source: GitHub Actions` for artifact mode, or `Deploy from a branch: gh-pages` for directory mode).
+  - **Subpath / Base Path**: If publishing to a subpath (e.g., directory mode target `staging` or `pr-preview/pr-12`), ensure your Storybook build is configured with matching asset relative paths (`--base-path` or relative URL resolution).
 
 ### 2. Permission Denied Errors in GitHub Actions
-* **Symptom**: Workflow fails with `403 Forbidden` or `Resource not accessible by integration`.
-* **Causes & Solutions**:
-  * **Artifact Mode**: The calling workflow job requires `pages: write` and `id-token: write` permissions.
-  * **Directory Mode**: The calling workflow job requires `contents: write` and `pages: write` permissions.
-  * **Repository Settings**: Verify `Settings > Actions > General > Workflow permissions` is configured to allow workflows to read/write as appropriate.
+
+- **Symptom**: Workflow fails with `403 Forbidden` or `Resource not accessible by integration`.
+- **Causes & Solutions**:
+  - **Artifact Mode**: The calling workflow job requires `pages: write` and `id-token: write` permissions.
+  - **Directory Mode**: The calling workflow job requires `contents: write` and `pages: write` permissions.
+  - **Repository Settings**: Verify `Settings > Actions > General > Workflow permissions` is configured to allow workflows to read/write as appropriate.
 
 ### 3. PR Preview Publish Gate Skipped for Fork PRs
-* **Symptom**: `pr-preview-publish.yml` workflow run shows as skipped for a pull request from an external fork.
-* **Explanation**: This is intentional security behavior. External forks execute build code in an unprivileged runner (`contents: read`). For security, the trusted `workflow_run` publisher gates on `workflow_run.pull_requests[0] != null`, which GitHub populates only for same-repository PRs. Fork PRs produce build artifacts but are never permitted to publish or comment.
+
+- **Symptom**: `pr-preview-publish.yml` workflow run shows as skipped for a pull request from an external fork.
+- **Explanation**: This is intentional security behavior. External forks execute build code in an unprivileged runner (`contents: read`). For security, the trusted `workflow_run` publisher gates on `workflow_run.pull_requests[0] != null`, which GitHub populates only for same-repository PRs. Fork PRs produce build artifacts but are never permitted to publish or comment.
 
 ### 4. Stale Run Skipped (`skip-stale`)
-* **Symptom**: `pr-preview-publish.yml` outputs `status: skipped` with a stale run notice.
-* **Explanation**: The publisher live-checks the pull request's current head SHA against the build artifact's head SHA. If a newer commit was pushed while an older run was building, the older run skips publishing to avoid overwriting newer code.
+
+- **Symptom**: `pr-preview-publish.yml` outputs `status: skipped` with a stale run notice.
+- **Explanation**: The publisher live-checks the pull request's current head SHA against the build artifact's head SHA. If a newer commit was pushed while an older run was building, the older run skips publishing to avoid overwriting newer code.
 
 ### 5. Artifact Validation Failures
-* **Symptom**: `validate-artifact.js` fails with `Path escapes workspace root` or `No static content found`.
-* **Causes & Solutions**:
-  * **Path Escape**: Ensure `path` is relative to the workspace root and contains no `../` traversal or external symlinks.
-  * **Empty Output**: Verify that your build command actually produced files in the specified `path` directory before validation runs.
+
+- **Symptom**: `validate-artifact.js` fails with `Path escapes workspace root` or `No static content found`.
+- **Causes & Solutions**:
+  - **Path Escape**: Ensure `path` is relative to the workspace root and contains no `../` traversal or external symlinks.
+  - **Empty Output**: Verify that your build command actually produced files in the specified `path` directory before validation runs.
 
 ### 6. Missing Pages Branch (`gh-pages`)
-* **Symptom**: Directory mode or PR preview workflows fail when attempting to check out `gh-pages`.
-* **Solution**: Create the `gh-pages` branch if it does not yet exist in your repository:
+
+- **Symptom**: Directory mode or PR preview workflows fail when attempting to check out `gh-pages`.
+- **Solution**: Create the `gh-pages` branch if it does not yet exist in your repository:
   ```bash
   git checkout --orphan gh-pages
   git rm -rf .
@@ -636,10 +643,11 @@ This repository ships the four workflows above as a working reference implementa
   ```
 
 ### 7. Preview Artifact Download in Trusted Workflows (`fatal: not a git repository`)
-* **Symptom**: In a trusted `workflow_run` preview publisher workflow that does not check out PR-controlled code, artifact download fails with `fatal: not a git repository`.
-* **Causes & Solutions**:
-  * **CLI Git Discovery**: When running `gh run download <run-id> --name <artifact>` in a runner environment without a Git checkout, `gh` defaults to querying local Git remotes in the working directory. Provide repository context via environment `env: GH_REPO: ${{ github.repository }}` (or `--repo ${{ github.repository }}`) and `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` so `gh` operates without requiring a local Git checkout.
-  * **Actions download-artifact (Recommended)**: Use `actions/download-artifact@v4` with explicit `run-id: ${{ github.event.workflow_run.id }}` and `github-token: ${{ secrets.GITHUB_TOKEN }}`. This downloads the artifact directly via GitHub Actions APIs without executing untrusted code or requiring a local checkout.
+
+- **Symptom**: In a trusted `workflow_run` preview publisher workflow that does not check out PR-controlled code, artifact download fails with `fatal: not a git repository`.
+- **Causes & Solutions**:
+  - **CLI Git Discovery**: When running `gh run download <run-id> --name <artifact>` in a runner environment without a Git checkout, `gh` defaults to querying local Git remotes in the working directory. Provide repository context via environment `env: GH_REPO: ${{ github.repository }}` (or `--repo ${{ github.repository }}`) and `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` so `gh` operates without requiring a local Git checkout.
+  - **Actions download-artifact (Recommended)**: Use `actions/download-artifact@v4` with explicit `run-id: ${{ github.event.workflow_run.id }}` and `github-token: ${{ secrets.GITHUB_TOKEN }}`. This downloads the artifact directly via GitHub Actions APIs without executing untrusted code or requiring a local checkout.
 
 ---
 

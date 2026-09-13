@@ -53,7 +53,10 @@ test('resolveConfiguration - applies Bun defaults after explicit and file comman
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-bun-'));
   const configPath = path.join(tmpDir, '.storybook-pages.yml');
-  fs.writeFileSync(configPath, 'package_manager: bun\nbuild:\n  install_command: bun install\n  build_command: bun run build\n');
+  fs.writeFileSync(
+    configPath,
+    'package_manager: bun\nbuild:\n  install_command: bun install\n  build_command: bun run build\n'
+  );
   const fromFile = resolveConfiguration({ inputs: {}, configFilePath: configPath });
   assert.deepEqual(fromFile.build, { install_command: 'bun install', build_command: 'bun run build' });
 
@@ -70,11 +73,12 @@ test('resolveConfiguration - applies Bun defaults after explicit and file comman
 
 test('resolveConfiguration - rejects Bun from the deploy-capable composite action', () => {
   assert.throws(
-    () => resolveConfiguration({
-      inputs: { package_manager: 'bun' },
-      configFilePath: path.join(os.tmpdir(), 'sb-config-bun-composite.yml'),
-      allowedPackageManagers: COMPOSITE_PACKAGE_MANAGERS
-    }),
+    () =>
+      resolveConfiguration({
+        inputs: { package_manager: 'bun' },
+        configFilePath: path.join(os.tmpdir(), 'sb-config-bun-composite.yml'),
+        allowedPackageManagers: COMPOSITE_PACKAGE_MANAGERS
+      }),
     /Unsupported package_manager: "bun"\. Allowed options: npm, yarn, pnpm\./
   );
 });
@@ -93,28 +97,39 @@ test('validateConfig - accepts directory mode and rejects protected targets', ()
 
 test('validateConfig - accepts a safe preview_root and rejects an unsafe one', () => {
   assert.equal(validateConfig({ preview_root: 'pr-preview' }), true);
-  assert.equal(validateConfig({ preview_root: '' }), true, 'empty preview_root must be accepted for repository-root layout');
+  assert.equal(
+    validateConfig({ preview_root: '' }),
+    true,
+    'empty preview_root must be accepted for repository-root layout'
+  );
   assert.throws(() => validateConfig({ preview_root: '../outside' }), /preview_root/);
   assert.throws(() => validateConfig({ preview_root: '.git' }), /preview_root/);
 });
 
 test('validateConfig - accepts 0 or positive preview_retention_days and rejects invalid values', () => {
   assert.equal(validateConfig({ preview_retention_days: 14 }), true);
-  assert.equal(validateConfig({ preview_retention_days: 0 }), true, 'retention 0 must be accepted to disable age-based pruning');
+  assert.equal(
+    validateConfig({ preview_retention_days: 0 }),
+    true,
+    'retention 0 must be accepted to disable age-based pruning'
+  );
   assert.throws(() => validateConfig({ preview_retention_days: -1 }), /preview_retention_days/);
   assert.throws(() => validateConfig({ preview_retention_days: 'many' }), /preview_retention_days/);
 });
 
 test('resolveDeploymentTarget - derives URL metadata for named environments', () => {
-  assert.deepEqual(resolveDeploymentTarget({
-    mode: 'directory',
-    target_directory: 'staging',
-    site_url: 'https://example.github.io/storybook'
-  }), {
-    directory: 'staging',
-    basePath: '/staging',
-    url: 'https://example.github.io/storybook/staging'
-  });
+  assert.deepEqual(
+    resolveDeploymentTarget({
+      mode: 'directory',
+      target_directory: 'staging',
+      site_url: 'https://example.github.io/storybook'
+    }),
+    {
+      directory: 'staging',
+      basePath: '/staging',
+      url: 'https://example.github.io/storybook/staging'
+    }
+  );
   assert.equal(resolveDeploymentTarget({ mode: 'artifact' }).directory, null);
 });
 
@@ -145,12 +160,15 @@ test('resolveConfiguration - merges inputs over config file and defaults', () =>
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-test-'));
   const configPath = path.join(tmpDir, '.storybook-pages.yml');
 
-  fs.writeFileSync(configPath, `
+  fs.writeFileSync(
+    configPath,
+    `
 version: 1
 mode: artifact
 path: custom-static
 package_manager: yarn
-`);
+`
+  );
 
   const resolved = resolveConfiguration({
     inputs: { path: 'override-static' },
@@ -168,7 +186,10 @@ test('resolveConfiguration - empty workflow inputs do not mask file settings', (
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-precedence-'));
   const configPath = path.join(tmpDir, '.storybook-pages.yml');
   fs.writeFileSync(configPath, 'mode: directory\npath: docs\npages_branch: pages\ntarget_directory: staging\n');
-  const resolved = resolveConfiguration({ inputs: { mode: '', path: '', pages_branch: '', target_directory: '' }, configFilePath: configPath });
+  const resolved = resolveConfiguration({
+    inputs: { mode: '', path: '', pages_branch: '', target_directory: '' },
+    configFilePath: configPath
+  });
   assert.equal(resolved.mode, 'directory');
   assert.equal(resolved.path, 'docs');
   assert.equal(resolved.pages_branch, 'pages');
@@ -177,7 +198,10 @@ test('resolveConfiguration - empty workflow inputs do not mask file settings', (
 });
 
 test('resolveConfiguration - defaults preview_root and preview_retention_days, and honors file overrides', () => {
-  const defaults = resolveConfiguration({ inputs: {}, configFilePath: path.join(os.tmpdir(), 'sb-config-nonexistent.yml') });
+  const defaults = resolveConfiguration({
+    inputs: {},
+    configFilePath: path.join(os.tmpdir(), 'sb-config-nonexistent.yml')
+  });
   assert.equal(defaults.preview_root, 'pr-preview');
   assert.equal(defaults.preview_retention_days, 30);
 

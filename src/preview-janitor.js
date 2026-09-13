@@ -40,7 +40,12 @@ export function classifyPreviewEntries({ entries, openPrNumbers, retentionMs, no
       continue;
     }
     const lastModifiedMs = getLastModifiedMs ? getLastModifiedMs(entry) : null;
-    if (Number.isFinite(retentionMs) && retentionMs > 0 && typeof lastModifiedMs === 'number' && (now - lastModifiedMs) > retentionMs) {
+    if (
+      Number.isFinite(retentionMs) &&
+      retentionMs > 0 &&
+      typeof lastModifiedMs === 'number' &&
+      now - lastModifiedMs > retentionMs
+    ) {
       remove.push({ entry, prNumber, reason: 'stale-retention' });
       continue;
     }
@@ -75,9 +80,12 @@ async function fetchOpenPullRequestNumbers({ token, repository }) {
   const open = new Set();
   let page = 1;
   while (page <= 50) {
-    const response = await fetch(`https://api.github.com/repos/${repository}/pulls?state=open&per_page=100&page=${page}`, {
-      headers: { authorization: `token ${token}`, accept: 'application/vnd.github+json' }
-    });
+    const response = await fetch(
+      `https://api.github.com/repos/${repository}/pulls?state=open&per_page=100&page=${page}`,
+      {
+        headers: { authorization: `token ${token}`, accept: 'application/vnd.github+json' }
+      }
+    );
     if (!response.ok) {
       const text = await response.text().catch(() => '');
       throw new Error(`Listing open pull requests failed (${response.status}): ${text}`);
@@ -99,8 +107,15 @@ async function fetchOpenPullRequestNumbers({ token, repository }) {
  * `pr-<number>` naming scheme (this protects production/environment
  * directories and any manually managed content).
  */
-export async function runJanitor({ repo, branch = 'gh-pages', previewRoot = 'pr-preview', retentionDays = 30, token, repository }) {
-  const normalizedRoot = (previewRoot === '.' || previewRoot === './') ? '' : previewRoot;
+export async function runJanitor({
+  repo,
+  branch = 'gh-pages',
+  previewRoot = 'pr-preview',
+  retentionDays = 30,
+  token,
+  repository
+}) {
+  const normalizedRoot = previewRoot === '.' || previewRoot === './' ? '' : previewRoot;
   validateRelativeDirectory(normalizedRoot, 'preview_root', { allowEmpty: true });
   const retentionMs = Number(retentionDays) > 0 ? Number(retentionDays) * 24 * 60 * 60 * 1000 : 0;
   const openPrNumbers = await fetchOpenPullRequestNumbers({ token, repository });
@@ -160,23 +175,32 @@ if (process.argv[1] && process.argv[1].endsWith('preview-janitor.js')) {
     retentionDays: config.preview_retention_days,
     token: process.env.GITHUB_TOKEN,
     repository: process.env.GITHUB_REPOSITORY
-  }).then(async result => {
-    console.log(JSON.stringify({
-      removed: result.removed.map(item => item.entry),
-      kept: result.keep,
-      ignored: result.ignored
-    }, null, 2));
-    if (result.changed) {
-      await requestPagesRebuild({ token: process.env.GITHUB_TOKEN, repository: process.env.GITHUB_REPOSITORY });
-    }
-    if (process.env.GITHUB_STEP_SUMMARY) {
-      const summary = result.removed.length > 0
-        ? `### Storybook preview janitor\n\nRemoved ${result.removed.length} stale preview director${result.removed.length === 1 ? 'y' : 'ies'}: ${result.removed.map(item => `\`${item.entry}\` (${item.reason})`).join(', ')}\n`
-        : '### Storybook preview janitor\n\nNo stale preview directories found.\n';
-      await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, summary);
-    }
-  }).catch(error => {
-    console.error(error.message);
-    process.exit(1);
-  });
+  })
+    .then(async result => {
+      console.log(
+        JSON.stringify(
+          {
+            removed: result.removed.map(item => item.entry),
+            kept: result.keep,
+            ignored: result.ignored
+          },
+          null,
+          2
+        )
+      );
+      if (result.changed) {
+        await requestPagesRebuild({ token: process.env.GITHUB_TOKEN, repository: process.env.GITHUB_REPOSITORY });
+      }
+      if (process.env.GITHUB_STEP_SUMMARY) {
+        const summary =
+          result.removed.length > 0
+            ? `### Storybook preview janitor\n\nRemoved ${result.removed.length} stale preview director${result.removed.length === 1 ? 'y' : 'ies'}: ${result.removed.map(item => `\`${item.entry}\` (${item.reason})`).join(', ')}\n`
+            : '### Storybook preview janitor\n\nNo stale preview directories found.\n';
+        await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, summary);
+      }
+    })
+    .catch(error => {
+      console.error(error.message);
+      process.exit(1);
+    });
 }

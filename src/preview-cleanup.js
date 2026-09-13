@@ -52,21 +52,23 @@ if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
     branch: config.pages_branch || process.env.PAGES_BRANCH || 'gh-pages',
     previewRoot: config.preview_root,
     prNumber: process.env.PR_NUMBER
-  }).then(async result => {
-    console.log(JSON.stringify(result));
-    if (result.changed && process.env.GITHUB_TOKEN && process.env.GITHUB_REPOSITORY) {
-      await requestPagesRebuild({ token: process.env.GITHUB_TOKEN, repository: process.env.GITHUB_REPOSITORY });
-    }
-    if (process.env.GITHUB_STEP_SUMMARY) {
-      const message = result.changed
-        ? `### Storybook preview cleanup\n\nRemoved \`${result.target}\` for the closed pull request.\n`
-        : (result.skipped
-          ? `### Storybook preview cleanup\n\nPages repository does not exist; skipped preview cleanup.\n`
-          : `### Storybook preview cleanup\n\nNo preview directory existed at \`${result.target}\`; nothing to remove.\n`);
-      await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, message);
-    }
-  }).catch(error => {
-    console.error(error.message);
-    process.exit(1);
-  });
+  })
+    .then(async result => {
+      console.log(JSON.stringify(result));
+      if (result.changed && process.env.GITHUB_TOKEN && process.env.GITHUB_REPOSITORY) {
+        await requestPagesRebuild({ token: process.env.GITHUB_TOKEN, repository: process.env.GITHUB_REPOSITORY });
+      }
+      if (process.env.GITHUB_STEP_SUMMARY) {
+        const message = result.changed
+          ? `### Storybook preview cleanup\n\nRemoved \`${result.target}\` for the closed pull request.\n`
+          : result.skipped
+            ? `### Storybook preview cleanup\n\nPages repository does not exist; skipped preview cleanup.\n`
+            : `### Storybook preview cleanup\n\nNo preview directory existed at \`${result.target}\`; nothing to remove.\n`;
+        await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, message);
+      }
+    })
+    .catch(error => {
+      console.error(error.message);
+      process.exit(1);
+    });
 }

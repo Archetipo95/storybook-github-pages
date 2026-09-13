@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+- **ESLint & Prettier Tooling**: Added ESLint 10 with flat config (`eslint.config.js`) and Prettier 3 (`.prettierrc`, `.prettierignore`) with `npm run lint`, `npm run format`, and `npm run format:fix` scripts, integrated into CI (`ci.yml`).
+- **Node.js Engine Specification**: Defined `"engines": { "node": ">=20.0.0" }` in `package.json` for explicit runtime version compatibility.
 - **Reusable Untrusted PR Preview Bundle Action (`preview-build/action.yml`)**: Public, supported composite action for the unprivileged `pull_request` build job. Accepts an already-built static Storybook directory and the job's own pull request event context, validates the output with `validate-artifact.js`, and stages/uploads the deterministic `storybook-preview-pr-<PR>-run-<run>` artifact (`storybook/` + `preview-metadata.json` with SHA-256 digest binding) via `preview-metadata.js` - reusing the same internals the trusted publisher independently re-validates, so consumers never need to copy or reimplement metadata-generation logic. The artifact name is **not configurable**: it is always derived from the validated pull request number and run id, so this untrusted action can never emit outside the exact namespace the trusted publisher expects. Requires only the default `contents: read` build-job permission; never references secrets/tokens, never checks out or writes to the Pages branch, and cannot be repurposed as a trusted publisher component. All nested actions (`actions/upload-artifact`) are pinned to full commit SHAs. The repository's own reference `pr-preview-build.yml` workflow now dogfoods this action instead of calling `src/preview-metadata.js` inline.
 - **Reusable Trusted PR Preview Publisher Workflow and Action (`.github/workflows/pr-preview-publish.yml` & `preview-publisher/action.yml`)**: Expose reusable workflow (`workflow_call`) and supported composite action (`preview-publisher`) for trusted `workflow_run` preview publishing with complete provenance validation (workflow identity, completed success event, repository, same-repo PR association, base ref, current live head SHA, artifact name/schema, metadata/digest binding, and trusted target resolution) without requiring consumers to check out PR-controlled source or duplicate internal publishing orchestration.
 - **Bun Package-Manager Support**: The reusable deployment workflow accepts `package_manager: bun`, defaults to `bun install --frozen-lockfile` and `bun run build-storybook`, and provisions SHA-pinned `oven-sh/setup-bun` only in its read-only build job. The deploy-capable composite action intentionally excludes Bun.
@@ -19,17 +22,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **External Consumer Lifecycle Regression Suite (`test/preview-consumer-lifecycle.test.js`)**: End-to-end regression tests verifying untrusted build artifact creation, trusted artifact transfer in non-git environments, provenance validation, idempotent bot comments, stale-run skipping, PR close cleanup, and root layout lifecycle.
 
 ### Fixed
+
 - **Stale `preview-publisher` Internal Release Pin (#35)**: `.github/workflows/pr-preview-publish.yml` invoked `Archetipo95/storybook-github-pages/preview-publisher@6fdc8e3...` (v1.1.0), a commit that predates the `preview-publisher` action's introduction, causing every trusted preview publication to fail at action resolution (`Can't find action.yml`) before any provenance gates or Pages writes ran. Repinned to the current compatible commit (`d46e4b2...`, `v1.3.0`) which contains `preview-publisher/action.yml` and the `src/preview-publish.js` it depends on. Audited all other internal `Archetipo95/storybook-github-pages/<subaction>@<sha>` pins (`publisher`, `preview-cleanup`, `preview-janitor`) and confirmed they already resolve correctly. Added `test/action-pin-integrity.test.js`, which `git show`s every pinned commit locally to assert the referenced action path actually exists there, so an internal stale pin cannot silently pass CI again; `ci.yml` now checks out full history (`fetch-depth: 0`) so this validation has the commit objects it needs.
 - **PR Preview Artifact Download Without Git Checkout**: Clarified and documented artifact download requirements for trusted `workflow_run` preview publishers. When downloading untrusted build artifacts without a local Git checkout (to preserve security invariants), `actions/download-artifact@v4` with `run-id` and `github-token` or `gh run download` with `GH_REPO` / `--repo` prevents `fatal: not a git repository` errors.
 - **PR Preview Cleanup Missing Branch Graceful Skip**: When a repository has not initialized or configured a Pages branch, PR preview close cleanup (`pr-preview-cleanup.yml`) safely and noiselessly skips without failing the workflow.
 
 ### Documentation
+
 - **Directory Mode Integration via Dedicated Publisher Action**: Investigated generic `startup_failure` runs when external consumers invoke multi-job reusable workflows in directory mode (#24). Documented the GitHub Actions platform limitation where caller permission validation evaluates all jobs in a reusable workflow graph at startup, causing runs to be rejected when callers only grant mode-specific permissions (`contents: write`, `pages: write`). Clarified and documented the supported two-job architecture for directory deployments using `publisher@v1.0.1` directly.
+
 ---
 
 ## [1.0.0] - 2026-09-12
 
 ### Added
+
 - **Reusable Workflow (`.github/workflows/deploy-storybook.yml`)**: Turnkey pipeline for building, validating, and deploying static Storybook builds to GitHub Pages with minimal caller setup.
 - **Composite Action (`action.yml`)**: Flexible composite action for existing CI/CD workflows, fully supporting artifact deployment and validation.
 - **Trusted Directory Mode (`mode: directory`)**: Atomically updates specific directories on a branch-backed GitHub Pages repository (e.g., `gh-pages`) with locking, retry logic, and preserved sibling directories.

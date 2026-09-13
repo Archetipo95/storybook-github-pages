@@ -37,8 +37,14 @@ export function validateRelativeDirectory(value, field = 'target_directory', { a
     throw new Error(`${field} must be a non-empty relative directory`);
   }
   const normalized = path.posix.normalize(value.replaceAll('\\', '/'));
-  if (normalized === '.' || normalized.startsWith('../') || normalized.includes('/../') ||
-      normalized.startsWith('/') || normalized.includes(':') || PROTECTED_DIRECTORIES.has(normalized.split('/')[0])) {
+  if (
+    normalized === '.' ||
+    normalized.startsWith('../') ||
+    normalized.includes('/../') ||
+    normalized.startsWith('/') ||
+    normalized.includes(':') ||
+    PROTECTED_DIRECTORIES.has(normalized.split('/')[0])
+  ) {
     throw new Error(`${field} "${value}" is unsafe. It must remain within the Pages branch.`);
   }
   return true;
@@ -63,7 +69,9 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
 
   if (config.package_manager !== undefined) {
     if (!allowedPackageManagers.has(config.package_manager)) {
-      throw new Error(`Unsupported package_manager: "${config.package_manager}". Allowed options: ${[...allowedPackageManagers].join(', ')}.`);
+      throw new Error(
+        `Unsupported package_manager: "${config.package_manager}". Allowed options: ${[...allowedPackageManagers].join(', ')}.`
+      );
     }
   }
 
@@ -74,26 +82,38 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
 
     const normalized = path.normalize(config.path);
     if (normalized.startsWith('..') || path.isAbsolute(normalized)) {
-      throw new Error(`Config path "${config.path}" is unsafe. Path must be relative and contained within the repository root.`);
+      throw new Error(
+        `Config path "${config.path}" is unsafe. Path must be relative and contained within the repository root.`
+      );
     }
-
   }
 
   if (config.pages_branch !== undefined) {
-    if (typeof config.pages_branch !== 'string' || !/^[A-Za-z0-9._/-]+$/.test(config.pages_branch) ||
-        config.pages_branch.startsWith('/') || config.pages_branch.includes('..')) {
+    if (
+      typeof config.pages_branch !== 'string' ||
+      !/^[A-Za-z0-9._/-]+$/.test(config.pages_branch) ||
+      config.pages_branch.startsWith('/') ||
+      config.pages_branch.includes('..')
+    ) {
       throw new Error(`Invalid pages_branch: "${config.pages_branch}"`);
     }
   }
-  if (config.target_directory !== undefined) validateRelativeDirectory(config.target_directory, 'target_directory', { allowEmpty: true });
-  if (config.environment !== undefined) validateRelativeDirectory(config.environment, 'environment', { allowEmpty: true });
+  if (config.target_directory !== undefined)
+    validateRelativeDirectory(config.target_directory, 'target_directory', { allowEmpty: true });
+  if (config.environment !== undefined)
+    validateRelativeDirectory(config.environment, 'environment', { allowEmpty: true });
   for (const field of ['site_url', 'base_path']) {
     if (config[field] !== undefined && typeof config[field] !== 'string') {
       throw new Error(`Config ${field} must be a string`);
     }
   }
   if (config.managed_directories !== undefined) {
-    const values = Array.isArray(config.managed_directories) ? config.managed_directories : String(config.managed_directories).split(',').map(value => value.trim()).filter(Boolean);
+    const values = Array.isArray(config.managed_directories)
+      ? config.managed_directories
+      : String(config.managed_directories)
+          .split(',')
+          .map(value => value.trim())
+          .filter(Boolean);
     values.forEach(value => validateRelativeDirectory(value, 'managed_directories'));
   }
 
@@ -104,7 +124,9 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
   if (config.preview_retention_days !== undefined) {
     const days = Number(config.preview_retention_days);
     if (!Number.isInteger(days) || days < 0) {
-      throw new Error(`Config preview_retention_days must be a non-negative integer, got "${config.preview_retention_days}"`);
+      throw new Error(
+        `Config preview_retention_days must be a non-negative integer, got "${config.preview_retention_days}"`
+      );
     }
   }
 
@@ -210,23 +232,37 @@ export function resolveConfiguration({
     site_url: inputs.site_url || fileConfig?.site_url || DEFAULT_CONFIG.site_url,
     base_path: inputs.base_path || fileConfig?.base_path || DEFAULT_CONFIG.base_path,
     artifact_name: inputs.artifact_name || fileConfig?.artifact_name || DEFAULT_CONFIG.artifact_name,
-    managed_directories: inputs.managed_directories || fileConfig?.managed_directories || DEFAULT_CONFIG.managed_directories,
+    managed_directories:
+      inputs.managed_directories || fileConfig?.managed_directories || DEFAULT_CONFIG.managed_directories,
     package_manager: packageManager,
-    preview_root: (inputs.preview_root !== undefined && inputs.preview_root !== '')
-      ? (inputs.preview_root === '.' || inputs.preview_root === './' ? '' : inputs.preview_root)
-      : (fileConfig?.preview_root !== undefined
-        ? (fileConfig.preview_root === '.' || fileConfig.preview_root === './' ? '' : fileConfig.preview_root)
-        : DEFAULT_CONFIG.preview_root),
+    preview_root:
+      inputs.preview_root !== undefined && inputs.preview_root !== ''
+        ? inputs.preview_root === '.' || inputs.preview_root === './'
+          ? ''
+          : inputs.preview_root
+        : fileConfig?.preview_root !== undefined
+          ? fileConfig.preview_root === '.' || fileConfig.preview_root === './'
+            ? ''
+            : fileConfig.preview_root
+          : DEFAULT_CONFIG.preview_root,
     preview_retention_days: Number(
-      (inputs.preview_retention_days !== undefined && inputs.preview_retention_days !== '')
+      inputs.preview_retention_days !== undefined && inputs.preview_retention_days !== ''
         ? inputs.preview_retention_days
-        : (fileConfig?.preview_retention_days !== undefined && fileConfig?.preview_retention_days !== '')
+        : fileConfig?.preview_retention_days !== undefined && fileConfig?.preview_retention_days !== ''
           ? fileConfig.preview_retention_days
           : DEFAULT_CONFIG.preview_retention_days
     ),
     build: {
-      install_command: inputs.install_command || inputs.custom_install_command || fileConfig?.build?.install_command || defaultBuild.install_command,
-      build_command: inputs.build_command || inputs.custom_build_command || fileConfig?.build?.build_command || defaultBuild.build_command
+      install_command:
+        inputs.install_command ||
+        inputs.custom_install_command ||
+        fileConfig?.build?.install_command ||
+        defaultBuild.install_command,
+      build_command:
+        inputs.build_command ||
+        inputs.custom_build_command ||
+        fileConfig?.build?.build_command ||
+        defaultBuild.build_command
     }
   };
 
@@ -236,7 +272,8 @@ export function resolveConfiguration({
 
 export function resolveDeploymentTarget(config) {
   validateConfig(config);
-  if (config.mode !== 'directory') return { directory: null, basePath: config.base_path || '/', url: config.site_url || '' };
+  if (config.mode !== 'directory')
+    return { directory: null, basePath: config.base_path || '/', url: config.site_url || '' };
   const directory = config.target_directory || config.environment || '';
   validateRelativeDirectory(directory, 'deployment target directory', { allowEmpty: true });
   const basePath = config.base_path || (directory ? `/${directory}` : '/');

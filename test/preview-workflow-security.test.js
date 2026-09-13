@@ -29,7 +29,7 @@ test('pr-preview-build workflow is unprivileged: contents:read only, no secrets,
 test('pr-preview-publish workflow gates on success/event/repository and requires a matching same-repo pull request', () => {
   const content = read('.github/workflows/pr-preview-publish.yml');
 
-  assert.match(content, /workflow_run:\s*\n\s*workflows: \["PR Preview Build"\]/);
+  assert.match(content, /workflow_run:\s*\n\s*workflows:\s*\[['"]PR Preview Build['"]\]/);
   assert.match(content, /workflow_call:/, 'publish must support reusable workflow_call trigger');
   assert.match(content, /workflow_run_id:/, 'publish must support workflow_run_id input');
   assert.match(content, /preview_root:/, 'publish must support preview_root input');
@@ -42,13 +42,25 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
   assert.match(gateJob, /github\.event\.workflow_run\.conclusion == 'success'/);
   assert.match(gateJob, /github\.event\.workflow_run\.event == 'pull_request'/);
   assert.match(gateJob, /github\.event\.workflow_run\.repository\.full_name == github\.repository/);
-  assert.match(gateJob, /github\.event\.workflow_run\.pull_requests\[0\] != null/, 'fork PRs (empty pull_requests[]) must be excluded by the gate condition');
+  assert.match(
+    gateJob,
+    /github\.event\.workflow_run\.pull_requests\[0\] != null/,
+    'fork PRs (empty pull_requests[]) must be excluded by the gate condition'
+  );
   assert.match(gateJob, /contents:\s*read/, 'the gate job must grant contents: read');
-  assert.match(gateJob, /pull-requests:\s*read/, 'the gate job must grant pull-requests: read to fetch current PR head SHA');
+  assert.match(
+    gateJob,
+    /pull-requests:\s*read/,
+    'the gate job must grant pull-requests: read to fetch current PR head SHA'
+  );
   assert.match(gateJob, /actions:\s*read/, 'the gate job must grant actions: read to fetch workflow run context');
   assert.doesNotMatch(gateJob, /contents:\s*write/, 'the read-only gate job must not hold write permissions');
   assert.doesNotMatch(gateJob, /pages:\s*write/, 'the read-only gate job must not hold pages write permissions');
-  assert.doesNotMatch(gateJob, /pull-requests:\s*write/, 'the read-only gate job must not hold pull-requests write permissions');
+  assert.doesNotMatch(
+    gateJob,
+    /pull-requests:\s*write/,
+    'the read-only gate job must not hold pull-requests write permissions'
+  );
 
   const publishJob = extractJobBlock(content, 'publish');
   assert.match(publishJob, /contents:\s*write/);
@@ -57,8 +69,16 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
   assert.match(publishJob, /actions:\s*read/);
   assert.match(publishJob, /run-id: \$\{\{ needs\.gate\.outputs\.run_id \}\}/);
   assert.match(publishJob, /github-token: \$\{\{ secrets\.GITHUB_TOKEN \}\}/);
-  assert.match(publishJob, /git ls-remote --exit-code --heads origin/, 'publish must check if Pages branch exists remotely before attempting checkout');
-  assert.match(publishJob, /steps\.branch_check\.outputs\.exists == 'true'/, 'checkout and publish steps must be guarded by Pages branch existence');
+  assert.match(
+    publishJob,
+    /git ls-remote --exit-code --heads origin/,
+    'publish must check if Pages branch exists remotely before attempting checkout'
+  );
+  assert.match(
+    publishJob,
+    /steps\.branch_check\.outputs\.exists == 'true'/,
+    'checkout and publish steps must be guarded by Pages branch existence'
+  );
 });
 
 test('pr-preview-cleanup workflow never checks out the pull request head and stays metadata-only', () => {
@@ -69,13 +89,29 @@ test('pr-preview-cleanup workflow never checks out the pull request head and sta
   assert.match(content, /preview_root:/, 'cleanup must support preview_root input');
   assert.match(content, /pages_branch:/, 'cleanup must support pages_branch input');
   assert.match(content, /pr_number:/, 'cleanup must support pr_number input');
-  assert.doesNotMatch(content, /ref: \$\{\{ github\.event\.pull_request\.head/, 'cleanup must never check out the PR head ref/sha');
-  assert.doesNotMatch(content, /pull-requests:\s*write/, 'cleanup does not need PR write access; it only touches the Pages branch');
+  assert.doesNotMatch(
+    content,
+    /ref: \$\{\{ github\.event\.pull_request\.head/,
+    'cleanup must never check out the PR head ref/sha'
+  );
+  assert.doesNotMatch(
+    content,
+    /pull-requests:\s*write/,
+    'cleanup does not need PR write access; it only touches the Pages branch'
+  );
   const cleanupJob = extractJobBlock(content, 'cleanup');
   assert.match(cleanupJob, /contents:\s*write/);
   assert.match(cleanupJob, /pages:\s*write/);
-  assert.match(cleanupJob, /git ls-remote --exit-code --heads origin/, 'cleanup must check if Pages branch exists remotely before attempting checkout');
-  assert.match(cleanupJob, /steps\.branch_check\.outputs\.exists == 'true'/, 'checkout and removal steps must be guarded by Pages branch existence');
+  assert.match(
+    cleanupJob,
+    /git ls-remote --exit-code --heads origin/,
+    'cleanup must check if Pages branch exists remotely before attempting checkout'
+  );
+  assert.match(
+    cleanupJob,
+    /steps\.branch_check\.outputs\.exists == 'true'/,
+    'checkout and removal steps must be guarded by Pages branch existence'
+  );
 });
 
 test('pr-preview-janitor workflow supports manual dispatch and schedule, never checks out a pull request head', () => {
@@ -92,8 +128,16 @@ test('pr-preview-janitor workflow supports manual dispatch and schedule, never c
   assert.match(janitorJob, /contents:\s*write/);
   assert.match(janitorJob, /pages:\s*write/);
   assert.match(janitorJob, /pull-requests:\s*read/);
-  assert.match(janitorJob, /git ls-remote --exit-code --heads origin/, 'janitor must check if Pages branch exists remotely before attempting checkout');
-  assert.match(janitorJob, /steps\.branch_check\.outputs\.exists == 'true'/, 'checkout and prune steps must be guarded by Pages branch existence');
+  assert.match(
+    janitorJob,
+    /git ls-remote --exit-code --heads origin/,
+    'janitor must check if Pages branch exists remotely before attempting checkout'
+  );
+  assert.match(
+    janitorJob,
+    /steps\.branch_check\.outputs\.exists == 'true'/,
+    'checkout and prune steps must be guarded by Pages branch existence'
+  );
 });
 
 test('all trusted write workflows share the same Pages-branch concurrency group to serialize writers', () => {
@@ -103,7 +147,11 @@ test('all trusted write workflows share the same Pages-branch concurrency group 
   const deploy = read('.github/workflows/deploy-storybook.yml');
 
   const group = 'storybook-pages-${{ github.repository }}';
-  for (const [name, content] of [['publish', publish], ['cleanup', cleanup], ['janitor', janitor]]) {
+  for (const [name, content] of [
+    ['publish', publish],
+    ['cleanup', cleanup],
+    ['janitor', janitor]
+  ]) {
     assert.ok(content.includes(`group: ${group}`), `${name} workflow must share the Pages concurrency group`);
   }
   assert.ok(deploy.includes('group: storybook-pages-${{ github.repository }}'));
@@ -119,7 +167,11 @@ test('preview target resolution and metadata modules are wired into the workflow
   const cleanupAction = read('preview-cleanup/action.yml');
   const janitorAction = read('preview-janitor/action.yml');
 
-  assert.match(build, /uses:\s*\.\/preview-build/, 'the reference build workflow must dogfood the public preview-build action');
+  assert.match(
+    build,
+    /uses:\s*\.\/preview-build/,
+    'the reference build workflow must dogfood the public preview-build action'
+  );
   assert.match(buildAction, /preview-metadata\.js/);
   assert.match(buildAction, /validate-artifact\.js/);
   assert.match(publish, /preview-publisher@/);

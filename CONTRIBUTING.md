@@ -22,7 +22,7 @@ cd storybook-github-pages
 npm test
 ```
 
-*Note: This repository has zero runtime npm dependencies. All runtime logic uses native Node.js ES modules (`node:fs`, `node:path`, `node:test`, `node:assert`, etc.).*
+_Note: This repository has zero runtime npm dependencies. All runtime logic uses native Node.js ES modules (`node:fs`, `node:path`, `node:test`, `node:assert`, etc.)._
 
 ---
 

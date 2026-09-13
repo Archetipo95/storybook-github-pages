@@ -5,8 +5,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { buildPreviewMetadata, digestDirectory } from '../src/preview-metadata.js';
-import { buildMarker } from '../src/preview-comment.js';
-import { parseSimpleYaml } from '../src/config.js';
 
 const SHA_VALID = 'c'.repeat(40);
 const SHA_STALE = 'd'.repeat(40);
@@ -16,7 +14,9 @@ function makeTempDir(prefix) {
 }
 
 function git(cwd, ...args) {
-  return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
+  return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+    .toString()
+    .trim();
 }
 
 function initBarePagesRepo() {
@@ -295,7 +295,10 @@ test('preview-publisher supports repository-root layout preview_root: ""', () =>
   assert.equal(run.status, 0, `Process failed: ${run.stderr}`);
 
   // Preview published at pr-54 directly under root
-  assert.ok(fs.existsSync(path.join(pagesRepo, 'pr-54', 'index.html')), 'preview must be published at root pr-54/index.html');
+  assert.ok(
+    fs.existsSync(path.join(pagesRepo, 'pr-54', 'index.html')),
+    'preview must be published at root pr-54/index.html'
+  );
   assert.ok(fs.existsSync(path.join(pagesRepo, 'index.html')), 'root index.html must remain intact');
   assert.match(fs.readFileSync(path.join(pagesRepo, 'index.html'), 'utf8'), /root production/);
 
@@ -366,6 +369,9 @@ test('external workflow resolution: default empty input falls back to config fil
   assert.equal(res5.preview_root, '');
 
   // 6. Explicit input preview_root: "explicit-root" -> overrides config file
-  const res6 = resolveExternalConfig({ inputPreviewRoot: 'explicit-root', configYamlContent: 'preview_root: custom-dir\n' });
+  const res6 = resolveExternalConfig({
+    inputPreviewRoot: 'explicit-root',
+    configYamlContent: 'preview_root: custom-dir\n'
+  });
   assert.equal(res6.preview_root, 'explicit-root');
 });

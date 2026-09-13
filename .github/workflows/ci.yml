@@ -2,9 +2,9 @@ name: CI & Action Validation
 
 on:
   push:
-    branches: [ main, 'archetipo95-*', 'bootstrap-*' ]
+    branches: [main, 'archetipo95-*', 'bootstrap-*']
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 permissions:
   contents: read
@@ -30,6 +30,11 @@ jobs:
 
       - name: Run unit test suite
         run: npm test
+
+      - name: Check code formatting and linting
+        run: |
+          npm run format
+          npm run lint
 
       - name: Validate fixture artifact directory
         run: node src/validate-artifact.js "test/fixtures/sample-storybook" "${{ github.workspace }}"

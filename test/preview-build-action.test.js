@@ -20,7 +20,9 @@ function makeStorybookSource() {
 
 function extractConfigStepScript() {
   const content = fs.readFileSync(path.join(process.cwd(), 'preview-build/action.yml'), 'utf8');
-  const stepMatch = content.match(/- name: Resolve bundle configuration[\s\S]*?run: \|\n([\s\S]*?)\n\n    - name: Validate static Storybook output/);
+  const stepMatch = content.match(
+    /- name: Resolve bundle configuration[\s\S]*?run: \|\n([\s\S]*?)\n\n    - name: Validate static Storybook output/
+  );
   assert.ok(stepMatch, 'could not locate the "Resolve bundle configuration" step script in preview-build/action.yml');
   return stepMatch[1];
 }
@@ -36,7 +38,6 @@ function runConfigStep(env) {
   return { ...result, outputFile, output: fs.existsSync(outputFile) ? fs.readFileSync(outputFile, 'utf8') : '' };
 }
 
-
 const SHA_VALID = 'e'.repeat(40);
 
 test('preview-build action.yml is a read-only, untrusted-job-scoped composite action', () => {
@@ -51,9 +52,15 @@ test('preview-build action.yml is a read-only, untrusted-job-scoped composite ac
   assert.match(content, /source_path:\s*\n\s*description:.*\n\s*required:\s*true/);
 
   // Event-context inputs default to the pull_request context available in an untrusted build job
-  assert.match(content, /pr_number:\s*\n\s*description:.*\n\s*required:\s*false\s*\n\s*default:\s*\$\{\{ github\.event\.pull_request\.number \}\}/);
+  assert.match(
+    content,
+    /pr_number:\s*\n\s*description:.*\n\s*required:\s*false\s*\n\s*default:\s*\$\{\{ github\.event\.pull_request\.number \}\}/
+  );
   assert.match(content, /base_ref:[\s\S]*?default:\s*\$\{\{ github\.event\.pull_request\.base\.ref \}\}/);
-  assert.match(content, /head_repository:[\s\S]*?default:\s*\$\{\{ github\.event\.pull_request\.head\.repo\.full_name \}\}/);
+  assert.match(
+    content,
+    /head_repository:[\s\S]*?default:\s*\$\{\{ github\.event\.pull_request\.head\.repo\.full_name \}\}/
+  );
   assert.match(content, /head_sha:[\s\S]*?default:\s*\$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
   assert.match(content, /repository:[\s\S]*?default:\s*\$\{\{ github\.repository \}\}/);
   assert.match(content, /run_id:[\s\S]*?default:\s*\$\{\{ github\.run_id \}\}/);
@@ -65,8 +72,16 @@ test('preview-build action.yml is a read-only, untrusted-job-scoped composite ac
   // Never references secrets, tokens, or write/publish targets - this must stay usable only
   // as the untrusted build-side of the contract, never as a trusted publisher component.
   assert.doesNotMatch(content, /secrets\./, 'the untrusted preview-build action must never reference secrets');
-  assert.doesNotMatch(content, /github\.token/, 'the untrusted preview-build action must never reference the job token');
-  assert.doesNotMatch(content, /pages_repo|pages_branch|trusted_/, 'preview-build must never accept publisher-side trust/target inputs');
+  assert.doesNotMatch(
+    content,
+    /github\.token/,
+    'the untrusted preview-build action must never reference the job token'
+  );
+  assert.doesNotMatch(
+    content,
+    /pages_repo|pages_branch|trusted_/,
+    'preview-build must never accept publisher-side trust/target inputs'
+  );
 
   // Nested third-party action is pinned to a full commit SHA
   assert.match(content, /uses:\s*actions\/upload-artifact@[a-f0-9]{40}/);
@@ -79,8 +94,16 @@ test('preview-build action.yml is a read-only, untrusted-job-scoped composite ac
   // Never accepts a caller-supplied artifact name override - the deterministic
   // storybook-preview-pr-<PR>-run-<run> namespace the trusted publisher expects
   // must never be spoofable or redirectable by this untrusted build-job action.
-  assert.doesNotMatch(content, /artifact_name:\s*\n\s*description:.*\n\s*required:\s*false/, 'preview-build must not expose an artifact_name input');
-  assert.doesNotMatch(content, /ARTIFACT_NAME_INPUT/, 'preview-build must never accept an artifact name override from the caller');
+  assert.doesNotMatch(
+    content,
+    /artifact_name:\s*\n\s*description:.*\n\s*required:\s*false/,
+    'preview-build must not expose an artifact_name input'
+  );
+  assert.doesNotMatch(
+    content,
+    /ARTIFACT_NAME_INPUT/,
+    'preview-build must never accept an artifact name override from the caller'
+  );
 
   // Outputs expose the artifact contract for callers that disable upload
   assert.match(content, /artifact_name:\s*\n\s*description:/);
@@ -93,7 +116,11 @@ test('preview-build reference workflow dogfoods the public action instead of inl
   const content = fs.readFileSync(path.join(process.cwd(), '.github/workflows/pr-preview-build.yml'), 'utf8');
   assert.match(content, /uses:\s*\.\/preview-build/);
   assert.match(content, /source_path:\s*'test\/fixtures\/sample-storybook'/);
-  assert.doesNotMatch(content, /node src\/preview-metadata\.js/, 'the workflow must delegate to the composite action, not call the script inline');
+  assert.doesNotMatch(
+    content,
+    /node src\/preview-metadata\.js/,
+    'the workflow must delegate to the composite action, not call the script inline'
+  );
 });
 
 test('preview-metadata CLI emits the artifact contract fields to $GITHUB_OUTPUT for the composite action', () => {
@@ -198,7 +225,10 @@ test('preview-metadata CLI fails closed on an empty or non-directory source path
 
   const run = spawnSync('node', [scriptPath, outputDir], { env, encoding: 'utf8' });
   assert.notEqual(run.status, 0);
-  assert.ok(!fs.existsSync(path.join(outputDir, PREVIEW_METADATA_FILENAME)), 'no metadata must be written when the digest/copy step fails');
+  assert.ok(
+    !fs.existsSync(path.join(outputDir, PREVIEW_METADATA_FILENAME)),
+    'no metadata must be written when the digest/copy step fails'
+  );
 });
 
 test('preview-metadata CLI rejects an invalid PR number even when a source directory is valid', () => {
@@ -226,9 +256,17 @@ test('preview-metadata CLI rejects an invalid PR number even when a source direc
 
 test('preview-build config step guard executes and rejects non-pull_request invocation even with a spoofed pr_number', () => {
   const nonPullRequest = runConfigStep({ EVENT_NAME: 'workflow_dispatch', PR_NUMBER: '999', RUN_ID: '1' });
-  assert.notEqual(nonPullRequest.status, 0, 'the guard must reject a non-pull_request event even when pr_number is supplied');
+  assert.notEqual(
+    nonPullRequest.status,
+    0,
+    'the guard must reject a non-pull_request event even when pr_number is supplied'
+  );
   assert.match(nonPullRequest.stderr, /must run in a job triggered by the pull_request event/);
-  assert.equal(nonPullRequest.output, '', 'no artifact_name/bundle_dir output must be produced when the event guard rejects the invocation');
+  assert.equal(
+    nonPullRequest.output,
+    '',
+    'no artifact_name/bundle_dir output must be produced when the event guard rejects the invocation'
+  );
 });
 
 test('preview-build config step guard rejects a pull_request event with an empty pr_number', () => {
@@ -262,9 +300,17 @@ test('preview-build config step guard always derives the deterministic artifact 
   // Even if a caller sets an ARTIFACT_NAME_INPUT-like environment variable (as the
   // removed input used to be wired), the script no longer reads it - the name is
   // always storybook-preview-pr-<PR>-run-<run>.
-  const attemptedOverride = runConfigStep({ EVENT_NAME: 'pull_request', PR_NUMBER: '42', RUN_ID: '555', ARTIFACT_NAME_INPUT: 'attacker-controlled-name' });
+  const attemptedOverride = runConfigStep({
+    EVENT_NAME: 'pull_request',
+    PR_NUMBER: '42',
+    RUN_ID: '555',
+    ARTIFACT_NAME_INPUT: 'attacker-controlled-name'
+  });
   assert.equal(attemptedOverride.status, 0, `config step failed: ${attemptedOverride.stderr}`);
   assert.match(attemptedOverride.output, /artifact_name=storybook-preview-pr-42-run-555/);
-  assert.doesNotMatch(attemptedOverride.output, /attacker-controlled-name/, 'artifact_name must never reflect a caller-supplied override');
+  assert.doesNotMatch(
+    attemptedOverride.output,
+    /attacker-controlled-name/,
+    'artifact_name must never reflect a caller-supplied override'
+  );
 });
-

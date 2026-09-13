@@ -64,7 +64,7 @@ export function digestDirectory(directory) {
 export function resolvePreviewTarget({ previewRoot = 'pr-preview', prNumber }) {
   const number = assertPositiveInteger(prNumber, 'prNumber');
   validateRelativeDirectory(previewRoot, 'preview_root', { allowEmpty: true });
-  const normalizedRoot = (previewRoot === '.' || previewRoot === './') ? '' : previewRoot;
+  const normalizedRoot = previewRoot === '.' || previewRoot === './' ? '' : previewRoot;
   const target = normalizedRoot ? path.posix.join(normalizedRoot, `pr-${number}`) : `pr-${number}`;
   validateRelativeDirectory(target, 'preview_target');
   return target;
@@ -168,8 +168,16 @@ export function validatePreviewMetadata(metadata, trustedContext) {
 
   if (trustedContext) {
     let expectedTarget = trustedContext.expectedTarget;
-    if (expectedTarget === undefined && !metadata.isFork && trustedContext.previewRoot !== undefined && trustedContext.prNumber !== undefined) {
-      expectedTarget = resolvePreviewTarget({ previewRoot: trustedContext.previewRoot, prNumber: trustedContext.prNumber });
+    if (
+      expectedTarget === undefined &&
+      !metadata.isFork &&
+      trustedContext.previewRoot !== undefined &&
+      trustedContext.prNumber !== undefined
+    ) {
+      expectedTarget = resolvePreviewTarget({
+        previewRoot: trustedContext.previewRoot,
+        prNumber: trustedContext.prNumber
+      });
     }
 
     const checks = [
@@ -188,7 +196,9 @@ export function validatePreviewMetadata(metadata, trustedContext) {
       .filter(([, expected, actual]) => normalize(expected) !== normalize(actual))
       .map(([field]) => field);
     if (mismatches.length > 0) {
-      throw new Error(`Preview metadata does not match trusted workflow_run context for field(s): ${mismatches.join(', ')}`);
+      throw new Error(
+        `Preview metadata does not match trusted workflow_run context for field(s): ${mismatches.join(', ')}`
+      );
     }
   }
 
@@ -211,7 +221,11 @@ export function decidePreviewAction({ metadata, trustedContext, currentHeadSha }
   validatePreviewMetadata(metadata, trustedContext);
 
   if (metadata.isFork) {
-    return { action: 'skip-fork', reason: 'Pull request head repository differs from the base repository; forked PRs never receive a published preview.' };
+    return {
+      action: 'skip-fork',
+      reason:
+        'Pull request head repository differs from the base repository; forked PRs never receive a published preview.'
+    };
   }
 
   if (typeof currentHeadSha !== 'string' || !SHA_PATTERN.test(currentHeadSha)) {
@@ -254,10 +268,15 @@ if (process.argv[1] && process.argv[1].endsWith('preview-metadata.js')) {
 
     const sourcePath = process.env.SOURCE_PATH;
     if (sourcePath) {
-      fs.cpSync(sourcePath, path.join(outputDir, PREVIEW_CONTENT_DIRNAME), { recursive: true, preserveTimestamps: true });
+      fs.cpSync(sourcePath, path.join(outputDir, PREVIEW_CONTENT_DIRNAME), {
+        recursive: true,
+        preserveTimestamps: true
+      });
     }
 
-    console.log(`Preview metadata written for PR #${metadata.prNumber} (fork: ${metadata.isFork}, target: ${metadata.target ?? 'n/a'})`);
+    console.log(
+      `Preview metadata written for PR #${metadata.prNumber} (fork: ${metadata.isFork}, target: ${metadata.target ?? 'n/a'})`
+    );
 
     const outputPath = process.env.GITHUB_OUTPUT;
     if (outputPath) {

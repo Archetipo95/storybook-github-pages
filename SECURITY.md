@@ -33,12 +33,14 @@ Job permissions are explicitly set to the absolute minimum required for each tas
 Pull requests from external forks execute user-supplied build scripts in an unprivileged runner environment (`contents: read`, no secrets).
 
 The trusted publisher (`pr-preview-publish.yml`) enforces a hard gate:
+
 - `workflow_run.pull_requests[0]` must be non-empty (GitHub populates this array **only for same-repository pull requests**).
 - Forked PRs are excluded at the gate before any privileged step executes. Fork builds produce signed-shape artifact metadata, but never gain access to write tokens, Pages deployments, or PR comments.
 
 ### 3. Provenance & Stale-Run Verification
 
 Before publishing any preview:
+
 - Metadata from the build run is re-validated against the trusted GitHub Actions context (repository, run ID, event type).
 - The target head SHA is checked against the live pull request's current head SHA via the GitHub REST API.
 - If a newer commit has been pushed to the PR, older build runs are skipped (`skip-stale`) to prevent out-of-order race conditions.
@@ -46,6 +48,7 @@ Before publishing any preview:
 ### 4. Input & Artifact Validation
 
 All user-supplied paths, directory inputs, and built artifacts undergo rigorous path-containment validation:
+
 - Rejects path traversal attempts (e.g. `../`, absolute paths outside workspace).
 - Prevents symlinks pointing outside the workspace root.
 - Rejects target directories containing nested `.git` or `.github` folders.
