@@ -186,7 +186,7 @@ export function renderHandDrawnChartSvg({
 
   // Hand-drawn grid lines
   const gridPaths = yTicks.slice(1).map(tick => ({
-    d: roughLine(padding.left, tick.y, padding.left + plotWidth, { roughness: 0.6, overshoot: 0, random }),
+    d: roughLine(padding.left, tick.y, padding.left + plotWidth, tick.y, { roughness: 0.6, overshoot: 0, random }),
     value: tick.value,
     y: tick.y
   }));
@@ -308,17 +308,17 @@ export function renderHandDrawnChartSvg({
 
   <!-- Y Tick Labels -->
   <g id="y-labels">
-    ${yTicks.map(t => `<text x="${padding.left - 12}" y="${t.y + 4}" class="label-text" text-anchor="end">${t.value}</text>`).join('\n    ')}
-    <text x="${padding.left - 48}" y="${padding.top + plotHeight / 2}" class="axis-label" transform="rotate(-90 ${padding.left - 48} ${padding.top + plotHeight / 2})">Count</text>
+    ${yTicks.map(t => `<text x="${padding.left - 12}" y="${(t.y + 4).toFixed(1)}" class="label-text" text-anchor="end">${t.value}</text>`).join('\n    ')}
+    <text x="${padding.left - 48}" y="${(padding.top + plotHeight / 2).toFixed(1)}" class="axis-label" transform="rotate(-90 ${padding.left - 48} ${(padding.top + plotHeight / 2).toFixed(1)})">Count</text>
   </g>
 
   <!-- X Tick Labels -->
   <g id="x-labels">
     ${xTicks.map(t => `
       <path d="${t.tickD}" class="axis" />
-      <text x="${t.x}" y="${padding.top + plotHeight + 24}" class="label-text" text-anchor="middle">${escapeXml(t.label)}</text>
+      <text x="${t.x.toFixed(1)}" y="${(padding.top + plotHeight + 24).toFixed(1)}" class="label-text" text-anchor="middle">${escapeXml(t.label)}</text>
     `).join('')}
-    <text x="${padding.left + plotWidth / 2}" y="${height - 14}" class="axis-label">Date</text>
+    <text x="${(padding.left + plotWidth / 2).toFixed(1)}" y="${height - 14}" class="axis-label">Date</text>
   </g>
 
   <!-- Series Curves -->
@@ -335,10 +335,10 @@ export function renderHandDrawnChartSvg({
   <!-- Data Point Markers -->
   <g id="data-points">
     ${componentsPoints.map(p => `
-      <circle cx="${p.x}" cy="${p.y}" r="4.5" fill="var(--components-color)" stroke="var(--bg-color)" stroke-width="1.5" />
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="var(--components-color)" stroke="var(--bg-color)" stroke-width="1.5" />
     `).join('')}
     ${storiesPoints.map(p => `
-      <circle cx="${p.x}" cy="${p.y}" r="4.5" fill="var(--stories-color)" stroke="var(--bg-color)" stroke-width="1.5" />
+      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="var(--stories-color)" stroke="var(--bg-color)" stroke-width="1.5" />
     `).join('')}
   </g>
 
