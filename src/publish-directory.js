@@ -144,15 +144,26 @@ export async function publishDirectory({
       });
       if (!response.ok) throw new Error(`Pages rebuild request failed (${response.status}) after successful push`);
     }
+    const resolvedTarget = resolveDeploymentTarget({
+      mode: 'directory',
+      target_directory: targetDirectory,
+      site_url: siteUrl,
+      base_path: basePath
+    });
+    let finalUrl = resolvedTarget.url;
+    if (!finalUrl && repository) {
+      const [owner, repoName] = repository.split('/');
+      if (owner && repoName) {
+        const isUserPage = repoName.toLowerCase() === `${owner.toLowerCase()}.github.io`;
+        const baseSiteUrl = isUserPage ? `https://${owner}.github.io` : `https://${owner}.github.io/${repoName}`;
+        finalUrl = `${baseSiteUrl}${resolvedTarget.basePath === '/' ? '' : resolvedTarget.basePath}`;
+      }
+    }
     return {
       branch,
       directory: targetDirectory,
-      ...resolveDeploymentTarget({
-        mode: 'directory',
-        target_directory: targetDirectory,
-        site_url: siteUrl,
-        base_path: basePath
-      })
+      ...resolvedTarget,
+      url: finalUrl
     };
   } finally {
     await release();

@@ -80,9 +80,20 @@ export async function publishPreview({
   let commentError = null;
   if (token && repository) {
     try {
+      const previewUrl =
+        publishResult.url ||
+        (() => {
+          const [owner, repoName] = repository.split('/');
+          if (!owner || !repoName) return '';
+          const isUserPage = repoName.toLowerCase() === `${owner.toLowerCase()}.github.io`;
+          const baseSiteUrl = isUserPage ? `https://${owner}.github.io` : `https://${owner}.github.io/${repoName}`;
+          const targetPath = metadata.target ? `/${metadata.target}` : '';
+          return `${baseSiteUrl}${targetPath}`;
+        })();
+
       const body = buildCommentBody({
         prNumber: metadata.prNumber,
-        previewUrl: publishResult.url,
+        previewUrl,
         headSha: metadata.headSha,
         runId: metadata.runId,
         repository: metadata.repository
