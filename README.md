@@ -5,7 +5,7 @@
 
 Security-hardened GitHub Action and reusable workflows for building, validating, and deploying static Storybook builds to GitHub Pages.
 
-> 💡 **Demo & Example Repository:** See [Archetipo95/storybook-vue-demo](https://github.com/Archetipo95/storybook-vue-demo) for a live Vue 3 + Storybook 8 example.
+> 💡 **Demo & Example Repository:** See [Archetipo95/storybook-vue-demo](https://github.com/Archetipo95/storybook-vue-demo) for a live Vue 3 + Storybook 10 example.
 
 ---
 
