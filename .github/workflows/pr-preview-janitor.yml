@@ -55,7 +55,15 @@ jobs:
       - name: Checkout repository (default branch, trusted)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          # Credentials must persist here because "Resolve preview
+          # configuration" / the Pages-branch-existence check below runs
+          # `git ls-remote` against `origin`; without a stored token that
+          # call fails with an auth error on private repositories
+          # (indistinguishable from a real "missing branch" result), silently
+          # skipping the rest of the janitor sweep while the job still
+          # reports success.
+          persist-credentials: true
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Resolve preview configuration
         id: config
