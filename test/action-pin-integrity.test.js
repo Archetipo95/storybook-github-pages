@@ -82,9 +82,7 @@ function filesToScan() {
     '.github/workflows/pr-preview-cleanup.yml',
     '.github/workflows/pr-preview-janitor.yml'
   ];
-  return candidates
-    .map((file) => path.join(repoRoot, file))
-    .filter((file) => fs.existsSync(file));
+  return candidates.map(file => path.join(repoRoot, file)).filter(file => fs.existsSync(file));
 }
 
 test('internal action pins reference a commit that actually contains that action', () => {

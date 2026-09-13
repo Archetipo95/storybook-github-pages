@@ -65,11 +65,13 @@ export async function findExistingComment({ token, repository, prNumber, marker 
       { token }
     );
     const marked = comments.filter(comment => typeof comment.body === 'string' && comment.body.includes(marker));
-    const conflicting = marked.find(comment =>
-      comment.user?.login !== PREVIEW_COMMENT_AUTHOR || comment.user?.type !== 'Bot'
+    const conflicting = marked.find(
+      comment => comment.user?.login !== PREVIEW_COMMENT_AUTHOR || comment.user?.type !== 'Bot'
     );
     if (conflicting) {
-      throw new Error(`Refusing to update comment ${conflicting.id}: preview marker is owned by a non-${PREVIEW_COMMENT_AUTHOR} account`);
+      throw new Error(
+        `Refusing to update comment ${conflicting.id}: preview marker is owned by a non-${PREVIEW_COMMENT_AUTHOR} account`
+      );
     }
     if (marked.length > 0) return marked[0];
     if (comments.length < 100) return null;

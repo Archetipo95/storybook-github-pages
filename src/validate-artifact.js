@@ -18,7 +18,9 @@ export function validateArtifactDirectory(targetPath, workspaceRoot = process.cw
 
   // 2. Existence and Directory check
   if (!fs.existsSync(targetAbs)) {
-    throw new Error(`Artifact validation failed: Directory "${targetPath}" does not exist at resolved path "${targetAbs}".`);
+    throw new Error(
+      `Artifact validation failed: Directory "${targetPath}" does not exist at resolved path "${targetAbs}".`
+    );
   }
 
   const targetReal = fs.realpathSync(targetAbs);
@@ -26,7 +28,9 @@ export function validateArtifactDirectory(targetPath, workspaceRoot = process.cw
   // 3. Realpath Containment check: target realpath must not escape workspace realpath (protects against symlinks pointing outside workspace)
   const relativeReal = path.relative(rootReal, targetReal);
   if (relativeReal.startsWith('..') || path.isAbsolute(relativeReal)) {
-    throw new Error(`Artifact validation failed: Path "${targetPath}" resolves to "${targetReal}" which escapes workspace root "${rootReal}".`);
+    throw new Error(
+      `Artifact validation failed: Path "${targetPath}" resolves to "${targetReal}" which escapes workspace root "${rootReal}".`
+    );
   }
 
   const stat = fs.statSync(targetReal);
@@ -50,11 +54,20 @@ export function validateArtifactDirectory(targetPath, workspaceRoot = process.cw
   const hasIndexOrStatic = files.some(file => {
     const ext = path.extname(file).toLowerCase();
     const name = path.basename(file).toLowerCase();
-    return name === 'index.html' || name === 'iframe.html' || ext === '.html' || ext === '.js' || ext === '.json' || ext === '.css';
+    return (
+      name === 'index.html' ||
+      name === 'iframe.html' ||
+      ext === '.html' ||
+      ext === '.js' ||
+      ext === '.json' ||
+      ext === '.css'
+    );
   });
 
   if (!hasIndexOrStatic) {
-    throw new Error(`Artifact validation failed: Directory "${targetPath}" does not appear to contain valid static web content.`);
+    throw new Error(
+      `Artifact validation failed: Directory "${targetPath}" does not appear to contain valid static web content.`
+    );
   }
 
   // 6. Symlink safety check (no symlinks pointing outside targetReal)
@@ -65,7 +78,9 @@ export function validateArtifactDirectory(targetPath, workspaceRoot = process.cw
       const realPath = fs.realpathSync(fullPath);
       const relToTarget = path.relative(targetReal, realPath);
       if (relToTarget.startsWith('..') || path.isAbsolute(relToTarget)) {
-        throw new Error(`Artifact validation failed: Symlink "${relFile}" points outside target directory ("${realPath}").`);
+        throw new Error(
+          `Artifact validation failed: Symlink "${relFile}" points outside target directory ("${realPath}").`
+        );
       }
     }
   }

@@ -13,7 +13,9 @@ function makeTempDir(prefix) {
 }
 
 function git(cwd, ...args) {
-  return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
+  return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+    .toString()
+    .trim();
 }
 
 test('parsePreviewDirName only matches the strict pr-<number> naming scheme', () => {
@@ -33,7 +35,10 @@ test('classifyPreviewEntries removes previews for pull requests that are no long
     getLastModifiedMs: () => Date.now()
   });
   assert.deepEqual(keep, ['pr-1']);
-  assert.deepEqual(remove.map(r => r.entry), ['pr-2']);
+  assert.deepEqual(
+    remove.map(r => r.entry),
+    ['pr-2']
+  );
   assert.equal(remove[0].reason, 'pr-not-open');
   assert.deepEqual(ignored, []);
 });
@@ -45,10 +50,13 @@ test('classifyPreviewEntries removes open-PR previews that exceed the retention 
     openPrNumbers: new Set([1, 2]),
     retentionMs: 7 * DAY_MS,
     now,
-    getLastModifiedMs: entry => (entry === 'pr-1' ? now - (1 * DAY_MS) : now - (30 * DAY_MS))
+    getLastModifiedMs: entry => (entry === 'pr-1' ? now - 1 * DAY_MS : now - 30 * DAY_MS)
   });
   assert.deepEqual(keep, ['pr-1']);
-  assert.deepEqual(remove.map(r => r.entry), ['pr-2']);
+  assert.deepEqual(
+    remove.map(r => r.entry),
+    ['pr-2']
+  );
   assert.equal(remove[0].reason, 'stale-retention');
 });
 
@@ -59,7 +67,7 @@ test('classifyPreviewEntries never considers retention when retentionMs is 0 (di
     openPrNumbers: new Set([1]),
     retentionMs: 0,
     now,
-    getLastModifiedMs: () => now - (365 * DAY_MS)
+    getLastModifiedMs: () => now - 365 * DAY_MS
   });
   assert.deepEqual(keep, ['pr-1']);
   assert.deepEqual(remove, []);
@@ -73,7 +81,10 @@ test('classifyPreviewEntries ignores entries outside the pr-<number> naming sche
     getLastModifiedMs: () => Date.now()
   });
   assert.deepEqual(ignored, ['staging', 'production', 'assets']);
-  assert.deepEqual(remove.map(r => r.entry), ['pr-3']);
+  assert.deepEqual(
+    remove.map(r => r.entry),
+    ['pr-3']
+  );
   assert.deepEqual(keep, []);
 });
 
@@ -115,12 +126,25 @@ test('runJanitor removes closed-PR previews and preserves production/environment
   };
 
   try {
-    const result = await runJanitor({ repo: cloneDir, branch: 'gh-pages', previewRoot: 'pr-preview', retentionDays: 0, token: 't', repository: 'octo/widgets' });
+    const result = await runJanitor({
+      repo: cloneDir,
+      branch: 'gh-pages',
+      previewRoot: 'pr-preview',
+      retentionDays: 0,
+      token: 't',
+      repository: 'octo/widgets'
+    });
     assert.equal(result.changed, true);
-    assert.deepEqual(result.removed.map(r => r.entry), ['pr-2']);
+    assert.deepEqual(
+      result.removed.map(r => r.entry),
+      ['pr-2']
+    );
     assert.ok(!fs.existsSync(path.join(cloneDir, 'pr-preview', 'pr-2')));
     assert.ok(fs.existsSync(path.join(cloneDir, 'pr-preview', 'pr-1')));
-    assert.ok(fs.existsSync(path.join(cloneDir, 'staging', 'index.html')), 'named environment directory must never be touched');
+    assert.ok(
+      fs.existsSync(path.join(cloneDir, 'staging', 'index.html')),
+      'named environment directory must never be touched'
+    );
     assert.ok(fs.existsSync(path.join(cloneDir, 'index.html')), 'production root must never be touched');
   } finally {
     global.fetch = originalFetch;
@@ -137,7 +161,14 @@ test('runJanitor is a no-op (and requests no rebuild) when nothing qualifies for
   };
 
   try {
-    const result = await runJanitor({ repo: cloneDir, branch: 'gh-pages', previewRoot: 'pr-preview', retentionDays: 0, token: 't', repository: 'octo/widgets' });
+    const result = await runJanitor({
+      repo: cloneDir,
+      branch: 'gh-pages',
+      previewRoot: 'pr-preview',
+      retentionDays: 0,
+      token: 't',
+      repository: 'octo/widgets'
+    });
     assert.equal(result.changed, false);
     assert.deepEqual(result.removed, []);
     assert.equal(git(cloneDir, 'rev-parse', 'HEAD'), beforeHead);
@@ -182,15 +213,28 @@ test('runJanitor supports repository-root layout: removes only closed-PR pr-<num
   };
 
   try {
-    const result = await runJanitor({ repo: cloneDir, branch: 'gh-pages', previewRoot: '', retentionDays: 0, token: 't', repository: 'octo/widgets' });
+    const result = await runJanitor({
+      repo: cloneDir,
+      branch: 'gh-pages',
+      previewRoot: '',
+      retentionDays: 0,
+      token: 't',
+      repository: 'octo/widgets'
+    });
     assert.equal(result.changed, true);
-    assert.deepEqual(result.removed.map(r => r.entry), ['pr-2']);
+    assert.deepEqual(
+      result.removed.map(r => r.entry),
+      ['pr-2']
+    );
     assert.deepEqual(result.keep, ['pr-1']);
     assert.ok(result.ignored.includes('staging'));
     assert.ok(result.ignored.includes('assets'));
     assert.ok(!fs.existsSync(path.join(cloneDir, 'pr-2')), 'closed PR preview pr-2 must be removed');
     assert.ok(fs.existsSync(path.join(cloneDir, 'pr-1', 'index.html')), 'open PR preview pr-1 must be kept');
-    assert.ok(fs.existsSync(path.join(cloneDir, 'staging', 'index.html')), 'named environment staging must be preserved');
+    assert.ok(
+      fs.existsSync(path.join(cloneDir, 'staging', 'index.html')),
+      'named environment staging must be preserved'
+    );
     assert.ok(fs.existsSync(path.join(cloneDir, 'assets', 'style.css')), 'assets directory must be preserved');
     assert.ok(fs.existsSync(path.join(cloneDir, 'index.html')), 'production root index.html must be preserved');
   } finally {

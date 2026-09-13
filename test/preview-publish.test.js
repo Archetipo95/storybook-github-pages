@@ -16,7 +16,9 @@ function makeTempDir(prefix) {
 }
 
 function git(cwd, ...args) {
-  return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
+  return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+    .toString()
+    .trim();
 }
 
 function initBarePagesRepo() {
@@ -118,21 +120,27 @@ test('publishPreview rejects a provenance mismatch or malicious metadata target'
   const { bundleDir, metadata } = makeBundle();
   const pagesRepo = initBarePagesRepo();
 
-  await assert.rejects(publishPreview({
-    bundleDir,
-    pagesRepo,
-    trustedContext: { ...trustedContextFor(metadata), repository: 'someone-else/widgets' },
-    currentHeadSha: SHA_A
-  }), /does not match trusted workflow_run context/);
+  await assert.rejects(
+    publishPreview({
+      bundleDir,
+      pagesRepo,
+      trustedContext: { ...trustedContextFor(metadata), repository: 'someone-else/widgets' },
+      currentHeadSha: SHA_A
+    }),
+    /does not match trusted workflow_run context/
+  );
 
   // Test malicious metadata target attempting root/production overwrite
   const malicious = makeBundle({ target: 'production-root-overwrite' });
-  await assert.rejects(publishPreview({
-    bundleDir: malicious.bundleDir,
-    pagesRepo,
-    trustedContext: { ...trustedContextFor(malicious.metadata), previewRoot: 'pr-preview' },
-    currentHeadSha: SHA_A
-  }), /does not match trusted workflow_run context for field\(s\): target/);
+  await assert.rejects(
+    publishPreview({
+      bundleDir: malicious.bundleDir,
+      pagesRepo,
+      trustedContext: { ...trustedContextFor(malicious.metadata), previewRoot: 'pr-preview' },
+      currentHeadSha: SHA_A
+    }),
+    /does not match trusted workflow_run context for field\(s\): target/
+  );
 });
 
 test('publishPreview publishes a same-repo, current-head preview and posts an idempotent comment', async () => {

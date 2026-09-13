@@ -21,7 +21,7 @@ name: PR Preview Publish
 
 on:
   workflow_run:
-    workflows: ["PR Preview Build"]
+    workflows: ['PR Preview Build']
     types: [completed]
   workflow_call:
     inputs:

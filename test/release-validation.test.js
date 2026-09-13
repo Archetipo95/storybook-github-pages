@@ -12,6 +12,7 @@ test('release validation - package.json runtime dependency cleanliness', () => {
     !pkg.dependencies || Object.keys(pkg.dependencies).length === 0,
     'storybook-github-pages must have zero runtime npm dependencies for maximum reproducibility'
   );
+  assert.ok(pkg.engines && pkg.engines.node, 'package.json must specify engines.node');
 });
 
 test('release validation - version metadata consistency across files', () => {
@@ -119,8 +120,16 @@ test('release validation - package manager validation documents Bun workflow-onl
   const deployYml = fs.readFileSync(path.join(root, '.github/workflows/deploy-storybook.yml'), 'utf8');
 
   assert.match(readme, /\bpackage_manager\b.*bun/, 'README must document bun as a package manager');
-  assert.match(actionYml, /package_manager:\s*\n\s*description:.*Bun requires the reusable workflow/, 'action.yml must exclude Bun from the deploy-capable composite action');
-  assert.match(deployYml, /package_manager:\s*\n\s*description:.*bun/, 'deploy-storybook.yml must list bun as a package manager');
+  assert.match(
+    actionYml,
+    /package_manager:\s*\n\s*description:.*Bun requires the reusable workflow/,
+    'action.yml must exclude Bun from the deploy-capable composite action'
+  );
+  assert.match(
+    deployYml,
+    /package_manager:\s*\n\s*description:.*bun/,
+    'deploy-storybook.yml must list bun as a package manager'
+  );
 });
 
 test('release validation - directory mode integration documents dedicated publisher action', () => {
@@ -139,7 +148,6 @@ test('release validation - directory mode integration documents dedicated publis
     'README must explain GitHub Actions startup_failure behavior on reusable workflow caller permissions'
   );
 });
-
 
 test('release validation - no telemetry and strict GitHub API endpoints in src/', () => {
   const srcDir = path.join(process.cwd(), 'src');
@@ -179,6 +187,14 @@ test('release validation - no telemetry and strict GitHub API endpoints in src/'
 
   // Verify SECURITY.md accurately describes network behavior (no false 'zero external network calls' claim)
   const securityDoc = fs.readFileSync(path.join(process.cwd(), 'SECURITY.md'), 'utf8');
-  assert.doesNotMatch(securityDoc, /Zero external network calls/i, 'SECURITY.md must not falsely claim zero external network calls');
-  assert.match(securityDoc, /authenticated GitHub API/i, 'SECURITY.md must accurately mention authenticated GitHub API calls');
+  assert.doesNotMatch(
+    securityDoc,
+    /Zero external network calls/i,
+    'SECURITY.md must not falsely claim zero external network calls'
+  );
+  assert.match(
+    securityDoc,
+    /authenticated GitHub API/i,
+    'SECURITY.md must accurately mention authenticated GitHub API calls'
+  );
 });
