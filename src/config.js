@@ -15,6 +15,8 @@ export const DEFAULT_CONFIG = {
   package_manager: 'npm',
   preview_root: 'pr-preview',
   preview_retention_days: 30,
+  generate_badges: true,
+  badges_directory: 'badges',
   build: {
     install_command: null,
     build_command: null
@@ -128,6 +130,14 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
         `Config preview_retention_days must be a non-negative integer, got "${config.preview_retention_days}"`
       );
     }
+  }
+
+  if (config.generate_badges !== undefined && typeof config.generate_badges !== 'boolean') {
+    throw new Error('Config generate_badges must be a boolean');
+  }
+
+  if (config.badges_directory !== undefined) {
+    validateRelativeDirectory(config.badges_directory, 'badges_directory', { allowEmpty: false });
   }
 
   if (config.build !== undefined && config.build !== null) {
@@ -252,6 +262,13 @@ export function resolveConfiguration({
           ? fileConfig.preview_retention_days
           : DEFAULT_CONFIG.preview_retention_days
     ),
+    generate_badges:
+      inputs.generate_badges !== undefined && inputs.generate_badges !== ''
+        ? String(inputs.generate_badges) === 'true'
+        : fileConfig?.generate_badges !== undefined
+          ? Boolean(fileConfig.generate_badges)
+          : DEFAULT_CONFIG.generate_badges,
+    badges_directory: inputs.badges_directory || fileConfig?.badges_directory || DEFAULT_CONFIG.badges_directory,
     build: {
       install_command:
         inputs.install_command ||

@@ -63,6 +63,16 @@ on:
         required: false
         type: string
         default: ''
+      generate_badges:
+        description: 'Whether to auto-generate dynamic SVG badges for components and stories'
+        required: false
+        type: boolean
+        default: true
+      badges_directory:
+        description: 'Directory within the static build output to store generated badges'
+        required: false
+        type: string
+        default: 'badges'
     outputs:
       page_url:
         description: 'The URL of the deployed GitHub Pages site'
@@ -96,6 +106,8 @@ jobs:
       base_path: ${{ steps.config.outputs.base_path }}
       managed_directories: ${{ steps.config.outputs.managed_directories }}
       artifact_name: ${{ steps.config.outputs.artifact_name }}
+      generate_badges: ${{ steps.config.outputs.generate_badges }}
+      badges_directory: ${{ steps.config.outputs.badges_directory }}
 
     steps:
       - name: Checkout repository
@@ -138,6 +150,28 @@ jobs:
         env:
           BUILD_COMMAND: ${{ steps.config.outputs.build_command }}
         run: eval "$BUILD_COMMAND"
+
+      - name: Generate Storybook badges
+        if: ${{ steps.config.outputs.generate_badges == 'true' }}
+        run: |
+          node -e '
+            import("./src/generate-badges.js").then(m => {
+              m.generateBadges({
+                staticDir: process.env.TARGET_PATH,
+                workspaceRoot: process.env.WORKSPACE_ROOT,
+                badgesDirectory: process.env.BADGES_DIRECTORY,
+                siteUrl: process.env.SITE_URL,
+                basePath: process.env.BASE_PATH
+              });
+              console.log("Badge generation successful");
+            });
+          '
+        env:
+          TARGET_PATH: ${{ steps.config.outputs.path }}
+          WORKSPACE_ROOT: ${{ github.workspace }}
+          BADGES_DIRECTORY: ${{ steps.config.outputs.badges_directory }}
+          SITE_URL: ${{ steps.config.outputs.site_url }}
+          BASE_PATH: ${{ steps.config.outputs.base_path }}
 
       - name: Validate static artifact
         run: |

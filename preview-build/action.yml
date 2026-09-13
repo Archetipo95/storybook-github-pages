@@ -55,6 +55,14 @@ inputs:
     description: 'Triggering event name (must be pull_request; do not override)'
     required: false
     default: ${{ github.event_name }}
+  generate_badges:
+    description: 'Whether to auto-generate dynamic SVG badges for components and stories'
+    required: false
+    default: 'true'
+  badges_directory:
+    description: 'Directory within the static build output to store generated badges'
+    required: false
+    default: 'badges'
 
 outputs:
   artifact_name:
@@ -111,6 +119,15 @@ runs:
         SOURCE_PATH: ${{ inputs.source_path }}
         WORKSPACE_ROOT: ${{ github.workspace }}
       run: node "${{ github.action_path }}/../src/validate-artifact.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
+
+    - name: Generate Storybook badges
+      if: ${{ inputs.generate_badges != 'false' }}
+      shell: bash
+      env:
+        SOURCE_PATH: ${{ inputs.source_path }}
+        SB_BADGES_DIRECTORY: ${{ inputs.badges_directory || 'badges' }}
+        WORKSPACE_ROOT: ${{ github.workspace }}
+      run: node "${{ github.action_path }}/../src/generate-badges.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
 
     - name: Stage preview bundle (metadata + content digest)
       id: bundle

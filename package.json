@@ -10,7 +10,8 @@
     "format": "prettier --check \"**/*.{js,json,yml,yaml,md}\"",
     "format:fix": "prettier --write \"**/*.{js,json,yml,yaml,md}\"",
     "validate-artifact": "node src/validate-artifact.js",
-    "validate-config": "node src/config.js"
+    "validate-config": "node src/config.js",
+    "generate-badges": "node src/generate-badges.js"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -259,3 +259,37 @@ test('resolveConfiguration - supports repository-root layout preview_root: "" an
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
+
+test('validateConfig - accepts valid generate_badges and badges_directory', () => {
+  assert.equal(validateConfig({ generate_badges: true, badges_directory: 'badges' }), true);
+  assert.equal(validateConfig({ generate_badges: false, badges_directory: 'assets/badges' }), true);
+  assert.throws(() => validateConfig({ generate_badges: 'yes' }), /generate_badges must be a boolean/);
+  assert.throws(() => validateConfig({ badges_directory: '../outside' }), /badges_directory/);
+  assert.throws(() => validateConfig({ badges_directory: '.git' }), /badges_directory/);
+});
+
+test('resolveConfiguration - defaults generate_badges and badges_directory, and honors overrides', () => {
+  const defaults = resolveConfiguration({
+    inputs: {},
+    configFilePath: path.join(os.tmpdir(), 'sb-config-nonexistent-badges.yml')
+  });
+  assert.equal(defaults.generate_badges, true);
+  assert.equal(defaults.badges_directory, 'badges');
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-badges-'));
+  const configPath = path.join(tmpDir, '.storybook-pages.yml');
+  fs.writeFileSync(configPath, 'generate_badges: false\nbadges_directory: custom-badges\n');
+
+  const fromFile = resolveConfiguration({ inputs: {}, configFilePath: configPath });
+  assert.equal(fromFile.generate_badges, false);
+  assert.equal(fromFile.badges_directory, 'custom-badges');
+
+  const fromInput = resolveConfiguration({
+    inputs: { generate_badges: 'true', badges_directory: 'doc-badges' },
+    configFilePath: configPath
+  });
+  assert.equal(fromInput.generate_badges, true);
+  assert.equal(fromInput.badges_directory, 'doc-badges');
+
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
