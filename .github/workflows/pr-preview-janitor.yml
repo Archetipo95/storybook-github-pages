@@ -77,30 +77,42 @@ jobs:
                 console.log(`pages_branch=${c.pages_branch}`);
                 console.log(`retention_days=${c.preview_retention_days}`);
               } else {
-                let preview_root = process.env.INPUT_PREVIEW_ROOT || "";
-                let pages_branch = process.env.INPUT_PAGES_BRANCH || "";
-                let retention_days = process.env.INPUT_RETENTION_DAYS || "";
+                let file_preview_root = undefined;
+                let file_pages_branch = undefined;
+                let file_retention_days = undefined;
                 if (existsSync(".storybook-pages.yml")) {
                   const {readFileSync} = await import("node:fs");
                   const content = readFileSync(".storybook-pages.yml", "utf8");
                   for (const line of content.split("\n")) {
                     const trimmed = line.trim();
-                    if (!preview_root && trimmed.startsWith("preview_root:")) {
-                      preview_root = trimmed.slice("preview_root:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    if (file_preview_root === undefined && trimmed.startsWith("preview_root:")) {
+                      file_preview_root = trimmed.slice("preview_root:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
                     }
-                    if (!pages_branch && trimmed.startsWith("pages_branch:")) {
-                      pages_branch = trimmed.slice("pages_branch:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    if (file_pages_branch === undefined && trimmed.startsWith("pages_branch:")) {
+                      file_pages_branch = trimmed.slice("pages_branch:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
                     }
-                    if (retention_days === "" && trimmed.startsWith("preview_retention_days:")) {
-                      retention_days = trimmed.slice("preview_retention_days:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    if (file_retention_days === undefined && trimmed.startsWith("preview_retention_days:")) {
+                      file_retention_days = trimmed.slice("preview_retention_days:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
                     }
                   }
                 }
-                if (preview_root === "" && process.env.INPUT_PREVIEW_ROOT === undefined) {
+                const rawPreviewRoot = process.env.INPUT_PREVIEW_ROOT;
+                let preview_root;
+                if (rawPreviewRoot !== undefined && rawPreviewRoot !== "") {
+                  preview_root = (rawPreviewRoot === "." || rawPreviewRoot === "./") ? "" : rawPreviewRoot;
+                } else if (file_preview_root !== undefined) {
+                  preview_root = (file_preview_root === "." || file_preview_root === "./") ? "" : file_preview_root;
+                } else {
                   preview_root = "pr-preview";
                 }
-                if (!pages_branch) pages_branch = "gh-pages";
-                if (retention_days === "") retention_days = "30";
+                const rawPagesBranch = process.env.INPUT_PAGES_BRANCH;
+                const pages_branch = (rawPagesBranch !== undefined && rawPagesBranch !== "")
+                  ? rawPagesBranch
+                  : (file_pages_branch !== undefined ? file_pages_branch : "gh-pages");
+                const rawRetentionDays = process.env.INPUT_RETENTION_DAYS;
+                const retention_days = (rawRetentionDays !== undefined && rawRetentionDays !== "")
+                  ? rawRetentionDays
+                  : (file_retention_days !== undefined ? file_retention_days : "30");
                 console.log(`preview_root=${preview_root}`);
                 console.log(`pages_branch=${pages_branch}`);
                 console.log(`retention_days=${retention_days}`);

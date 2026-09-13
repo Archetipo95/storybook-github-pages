@@ -43,7 +43,12 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
   assert.match(gateJob, /github\.event\.workflow_run\.event == 'pull_request'/);
   assert.match(gateJob, /github\.event\.workflow_run\.repository\.full_name == github\.repository/);
   assert.match(gateJob, /github\.event\.workflow_run\.pull_requests\[0\] != null/, 'fork PRs (empty pull_requests[]) must be excluded by the gate condition');
+  assert.match(gateJob, /contents:\s*read/, 'the gate job must grant contents: read');
+  assert.match(gateJob, /pull-requests:\s*read/, 'the gate job must grant pull-requests: read to fetch current PR head SHA');
+  assert.match(gateJob, /actions:\s*read/, 'the gate job must grant actions: read to fetch workflow run context');
   assert.doesNotMatch(gateJob, /contents:\s*write/, 'the read-only gate job must not hold write permissions');
+  assert.doesNotMatch(gateJob, /pages:\s*write/, 'the read-only gate job must not hold pages write permissions');
+  assert.doesNotMatch(gateJob, /pull-requests:\s*write/, 'the read-only gate job must not hold pull-requests write permissions');
 
   const publishJob = extractJobBlock(content, 'publish');
   assert.match(publishJob, /contents:\s*write/);

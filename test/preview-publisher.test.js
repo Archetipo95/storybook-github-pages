@@ -302,3 +302,70 @@ test('preview-publisher supports repository-root layout preview_root: ""', () =>
   const outputContent = fs.readFileSync(outputFilePath, 'utf8');
   assert.match(outputContent, /page_url=https:\/\/acme\.github\.io\/design-system\/pr-54/);
 });
+
+test('external workflow resolution: default empty input falls back to config file then pr-preview', () => {
+  // Test the exact external inline script logic executed in pr-preview-publish.yml config step
+  function resolveExternalConfig({ inputPreviewRoot, configYamlContent }) {
+    const tempDir = makeTempDir('ext-consumer-');
+    if (configYamlContent !== undefined) {
+      fs.writeFileSync(path.join(tempDir, '.storybook-pages.yml'), configYamlContent);
+    }
+    const script = `
+      import("node:fs").then(async ({existsSync, readFileSync}) => {
+        let file_preview_root = undefined;
+        let file_pages_branch = undefined;
+        if (existsSync(".storybook-pages.yml")) {
+          const content = readFileSync(".storybook-pages.yml", "utf8");
+          for (const line of content.split("\\n")) {
+            const trimmed = line.trim();
+            if (file_preview_root === undefined && trimmed.startsWith("preview_root:")) {
+              file_preview_root = trimmed.slice("preview_root:".length).trim().replace(/^["']|["']$/g, "");
+            }
+            if (file_pages_branch === undefined && trimmed.startsWith("pages_branch:")) {
+              file_pages_branch = trimmed.slice("pages_branch:".length).trim().replace(/^["']|["']$/g, "");
+            }
+          }
+        }
+        const rawPreviewRoot = process.env.INPUT_PREVIEW_ROOT;
+        let preview_root;
+        if (rawPreviewRoot !== undefined && rawPreviewRoot !== "") {
+          preview_root = (rawPreviewRoot === "." || rawPreviewRoot === "./") ? "" : rawPreviewRoot;
+        } else if (file_preview_root !== undefined) {
+          preview_root = (file_preview_root === "." || file_preview_root === "./") ? "" : file_preview_root;
+        } else {
+          preview_root = "pr-preview";
+        }
+        console.log(JSON.stringify({ preview_root }));
+      });
+    `;
+    const env = { ...process.env, INPUT_PREVIEW_ROOT: inputPreviewRoot ?? '' };
+    const res = spawnSync('node', ['--input-type=module', '-e', script], { cwd: tempDir, env, encoding: 'utf8' });
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    assert.equal(res.status, 0);
+    return JSON.parse(res.stdout.trim());
+  }
+
+  // 1. Default workflow_call (INPUT_PREVIEW_ROOT="") with no .storybook-pages.yml -> defaults to pr-preview
+  const res1 = resolveExternalConfig({ inputPreviewRoot: '' });
+  assert.equal(res1.preview_root, 'pr-preview');
+
+  // 2. Default workflow_call (INPUT_PREVIEW_ROOT="") with config file preview_root: "" -> resolves to root layout ""
+  const res2 = resolveExternalConfig({ inputPreviewRoot: '', configYamlContent: 'preview_root: ""\n' });
+  assert.equal(res2.preview_root, '');
+
+  // 3. Default workflow_call (INPUT_PREVIEW_ROOT="") with config file preview_root: "." -> resolves to root layout ""
+  const res3 = resolveExternalConfig({ inputPreviewRoot: '', configYamlContent: 'preview_root: "."\n' });
+  assert.equal(res3.preview_root, '');
+
+  // 4. Default workflow_call (INPUT_PREVIEW_ROOT="") with config file preview_root: "custom-dir" -> resolves to "custom-dir"
+  const res4 = resolveExternalConfig({ inputPreviewRoot: '', configYamlContent: 'preview_root: custom-dir\n' });
+  assert.equal(res4.preview_root, 'custom-dir');
+
+  // 5. Explicit input preview_root: "." -> overrides to root layout ""
+  const res5 = resolveExternalConfig({ inputPreviewRoot: '.', configYamlContent: 'preview_root: custom-dir\n' });
+  assert.equal(res5.preview_root, '');
+
+  // 6. Explicit input preview_root: "explicit-root" -> overrides config file
+  const res6 = resolveExternalConfig({ inputPreviewRoot: 'explicit-root', configYamlContent: 'preview_root: custom-dir\n' });
+  assert.equal(res6.preview_root, 'explicit-root');
+});

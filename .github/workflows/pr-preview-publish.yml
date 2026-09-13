@@ -88,6 +88,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: read
+      actions: read
     outputs:
       run_id: ${{ steps.context.outputs.run_id }}
       pr_number: ${{ steps.context.outputs.pr_number }}
@@ -231,37 +233,58 @@ jobs:
                 console.log(`base_path=${c.base_path}`);
                 console.log(`managed_directories=${Array.isArray(c.managed_directories) ? c.managed_directories.join(",") : c.managed_directories || ""}`);
               } else {
-                let preview_root = process.env.INPUT_PREVIEW_ROOT || "";
-                let pages_branch = process.env.INPUT_PAGES_BRANCH || "";
-                let site_url = process.env.INPUT_SITE_URL || "";
-                let base_path = process.env.INPUT_BASE_PATH || "";
-                let managed_directories = process.env.INPUT_MANAGED_DIRECTORIES || "";
+                let file_preview_root = undefined;
+                let file_pages_branch = undefined;
+                let file_site_url = undefined;
+                let file_base_path = undefined;
+                let file_managed_directories = undefined;
                 if (existsSync(".storybook-pages.yml")) {
                   const {readFileSync} = await import("node:fs");
                   const content = readFileSync(".storybook-pages.yml", "utf8");
                   for (const line of content.split("\n")) {
                     const trimmed = line.trim();
-                    if (!preview_root && trimmed.startsWith("preview_root:")) {
-                      preview_root = trimmed.slice("preview_root:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    if (file_preview_root === undefined && trimmed.startsWith("preview_root:")) {
+                      file_preview_root = trimmed.slice("preview_root:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
                     }
-                    if (!pages_branch && trimmed.startsWith("pages_branch:")) {
-                      pages_branch = trimmed.slice("pages_branch:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    if (file_pages_branch === undefined && trimmed.startsWith("pages_branch:")) {
+                      file_pages_branch = trimmed.slice("pages_branch:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
                     }
-                    if (!site_url && trimmed.startsWith("site_url:")) {
-                      site_url = trimmed.slice("site_url:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    if (file_site_url === undefined && trimmed.startsWith("site_url:")) {
+                      file_site_url = trimmed.slice("site_url:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
                     }
-                    if (!base_path && trimmed.startsWith("base_path:")) {
-                      base_path = trimmed.slice("base_path:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    if (file_base_path === undefined && trimmed.startsWith("base_path:")) {
+                      file_base_path = trimmed.slice("base_path:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
                     }
-                    if (!managed_directories && trimmed.startsWith("managed_directories:")) {
-                      managed_directories = trimmed.slice("managed_directories:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    if (file_managed_directories === undefined && trimmed.startsWith("managed_directories:")) {
+                      file_managed_directories = trimmed.slice("managed_directories:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
                     }
                   }
                 }
-                if (preview_root === "" && process.env.INPUT_PREVIEW_ROOT === undefined) {
+                const rawPreviewRoot = process.env.INPUT_PREVIEW_ROOT;
+                let preview_root;
+                if (rawPreviewRoot !== undefined && rawPreviewRoot !== "") {
+                  preview_root = (rawPreviewRoot === "." || rawPreviewRoot === "./") ? "" : rawPreviewRoot;
+                } else if (file_preview_root !== undefined) {
+                  preview_root = (file_preview_root === "." || file_preview_root === "./") ? "" : file_preview_root;
+                } else {
                   preview_root = "pr-preview";
                 }
-                if (!pages_branch) pages_branch = "gh-pages";
+                const rawPagesBranch = process.env.INPUT_PAGES_BRANCH;
+                const pages_branch = (rawPagesBranch !== undefined && rawPagesBranch !== "")
+                  ? rawPagesBranch
+                  : (file_pages_branch !== undefined ? file_pages_branch : "gh-pages");
+                const rawSiteUrl = process.env.INPUT_SITE_URL;
+                const site_url = (rawSiteUrl !== undefined && rawSiteUrl !== "")
+                  ? rawSiteUrl
+                  : (file_site_url !== undefined ? file_site_url : "");
+                const rawBasePath = process.env.INPUT_BASE_PATH;
+                const base_path = (rawBasePath !== undefined && rawBasePath !== "")
+                  ? rawBasePath
+                  : (file_base_path !== undefined ? file_base_path : "");
+                const rawManagedDirs = process.env.INPUT_MANAGED_DIRECTORIES;
+                const managed_directories = (rawManagedDirs !== undefined && rawManagedDirs !== "")
+                  ? rawManagedDirs
+                  : (file_managed_directories !== undefined ? file_managed_directories : "");
                 console.log(`preview_root=${preview_root}`);
                 console.log(`pages_branch=${pages_branch}`);
                 console.log(`site_url=${site_url}`);

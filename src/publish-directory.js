@@ -96,7 +96,11 @@ export async function publishDirectory({ repo, source, branch = 'gh-pages', targ
     if (token && repository) {
       const response = await fetch(`https://api.github.com/repos/${repository}/pages/builds`, {
         method: 'POST',
-        headers: { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'content-type': 'application/json' }
+        headers: {
+          authorization: `token ${token}`,
+          accept: "application/vnd.github+json",
+          "content-type": "application/json"
+        }
       });
       if (!response.ok) throw new Error(`Pages rebuild request failed (${response.status}) after successful push`);
     }
