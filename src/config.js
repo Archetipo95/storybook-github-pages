@@ -22,9 +22,14 @@ export const DEFAULT_CONFIG = {
 };
 
 export const ALLOWED_PACKAGE_MANAGERS = new Set(['npm', 'yarn', 'pnpm', 'bun']);
+export const COMPOSITE_PACKAGE_MANAGERS = new Set(['npm', 'yarn', 'pnpm']);
 export const ALLOWED_MODES = new Set(['artifact', 'directory']);
 
 const PROTECTED_DIRECTORIES = new Set(['.git', '.github']);
+const BUN_DEFAULT_BUILD = {
+  install_command: 'bun install --frozen-lockfile',
+  build_command: 'bun run build-storybook'
+};
 
 export function validateRelativeDirectory(value, field = 'target_directory', { allowEmpty = false } = {}) {
   if (allowEmpty && (value === undefined || value === '' || value === '.' || value === './')) return true;
@@ -39,7 +44,7 @@ export function validateRelativeDirectory(value, field = 'target_directory', { a
   return true;
 }
 
-export function validateConfig(config) {
+export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAGE_MANAGERS } = {}) {
   if (typeof config !== 'object' || config === null) {
     throw new Error('Configuration must be a non-null object');
   }
@@ -57,8 +62,8 @@ export function validateConfig(config) {
   }
 
   if (config.package_manager !== undefined) {
-    if (!ALLOWED_PACKAGE_MANAGERS.has(config.package_manager)) {
-      throw new Error(`Unsupported package_manager: "${config.package_manager}". Allowed options: npm, yarn, pnpm, bun.`);
+    if (!allowedPackageManagers.has(config.package_manager)) {
+      throw new Error(`Unsupported package_manager: "${config.package_manager}". Allowed options: ${[...allowedPackageManagers].join(', ')}.`);
     }
   }
 
@@ -183,12 +188,18 @@ export function loadConfigFile(filePath) {
   return parsed;
 }
 
-export function resolveConfiguration({ inputs = {}, configFilePath = '.storybook-pages.yml' } = {}) {
+export function resolveConfiguration({
+  inputs = {},
+  configFilePath = '.storybook-pages.yml',
+  allowedPackageManagers = ALLOWED_PACKAGE_MANAGERS
+} = {}) {
   let fileConfig = null;
   if (fs.existsSync(configFilePath)) {
     fileConfig = loadConfigFile(configFilePath);
   }
 
+  const packageManager = inputs.package_manager || fileConfig?.package_manager || DEFAULT_CONFIG.package_manager;
+  const defaultBuild = packageManager === 'bun' ? BUN_DEFAULT_BUILD : DEFAULT_CONFIG.build;
   const merged = {
     version: fileConfig?.version ?? DEFAULT_CONFIG.version,
     mode: inputs.mode || fileConfig?.mode || DEFAULT_CONFIG.mode,
@@ -200,7 +211,7 @@ export function resolveConfiguration({ inputs = {}, configFilePath = '.storybook
     base_path: inputs.base_path || fileConfig?.base_path || DEFAULT_CONFIG.base_path,
     artifact_name: inputs.artifact_name || fileConfig?.artifact_name || DEFAULT_CONFIG.artifact_name,
     managed_directories: inputs.managed_directories || fileConfig?.managed_directories || DEFAULT_CONFIG.managed_directories,
-    package_manager: inputs.package_manager || fileConfig?.package_manager || DEFAULT_CONFIG.package_manager,
+    package_manager: packageManager,
     preview_root: (inputs.preview_root !== undefined && inputs.preview_root !== '')
       ? (inputs.preview_root === '.' || inputs.preview_root === './' ? '' : inputs.preview_root)
       : (fileConfig?.preview_root !== undefined
@@ -214,12 +225,12 @@ export function resolveConfiguration({ inputs = {}, configFilePath = '.storybook
           : DEFAULT_CONFIG.preview_retention_days
     ),
     build: {
-      install_command: inputs.install_command || inputs.custom_install_command || fileConfig?.build?.install_command || DEFAULT_CONFIG.build.install_command,
-      build_command: inputs.build_command || inputs.custom_build_command || fileConfig?.build?.build_command || DEFAULT_CONFIG.build.build_command
+      install_command: inputs.install_command || inputs.custom_install_command || fileConfig?.build?.install_command || defaultBuild.install_command,
+      build_command: inputs.build_command || inputs.custom_build_command || fileConfig?.build?.build_command || defaultBuild.build_command
     }
   };
 
-  validateConfig(merged);
+  validateConfig(merged, { allowedPackageManagers });
   return merged;
 }
 

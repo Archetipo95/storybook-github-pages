@@ -78,15 +78,19 @@ test('workflow resolves configuration before setup and uses resolved deployment 
   assert.doesNotMatch(content, /TARGET_DIRECTORY: \$\{\{ inputs\.target_directory \}\}/);
 });
 
-test('Bun setup is SHA-pinned and restricted to build contexts', () => {
+test('Bun setup is SHA-pinned and restricted to the read-only reusable build job', () => {
   const action = fs.readFileSync(path.join(process.cwd(), 'action.yml'), 'utf8');
   const workflow = fs.readFileSync(path.join(process.cwd(), '.github/workflows/deploy-storybook.yml'), 'utf8');
+  const previewBuild = fs.readFileSync(path.join(process.cwd(), '.github/workflows/pr-preview-build.yml'), 'utf8');
   const bunSetup = /oven-sh\/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2\.2\.0/;
 
-  assert.match(action, bunSetup);
-  assert.match(action, /if: \$\{\{ env\.SB_PACKAGE_MANAGER == 'bun' \}\}/);
+  assert.doesNotMatch(action, /oven-sh\/setup-bun/);
+  assert.match(action, /COMPOSITE_PACKAGE_MANAGERS/);
+  assert.match(action, /Bun requires the reusable workflow/);
   assert.match(workflow, bunSetup);
   assert.match(workflow, /if: \$\{\{ steps\.config\.outputs\.package_manager == 'bun' \}\}/);
+  assert.match(previewBuild, bunSetup);
+  assert.match(previewBuild, /if: \$\{\{ steps\.config\.outputs\.package_manager == 'bun' \}\}/);
 
   for (const file of [
     '.github/workflows/pr-preview-publish.yml',
