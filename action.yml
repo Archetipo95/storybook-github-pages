@@ -75,6 +75,14 @@ inputs:
     description: 'Directory within the static build output to store generated badges'
     required: false
     default: 'badges'
+  generate_stats_graph:
+    description: 'Whether to auto-generate hand-drawn growth chart (history.svg) and update metrics ledger (history.json)'
+    required: false
+    default: 'true'
+  stats_directory:
+    description: 'Directory within the static build output to store stats graph and ledger'
+    required: false
+    default: 'stats'
 
 outputs:
   page_url:
@@ -108,6 +116,7 @@ runs:
             `SB_INSTALL_COMMAND=${c.build.install_command || ""}`, `SB_BUILD_COMMAND=${c.build.build_command || ""}`,
             `SB_PUBLISH=${process.env.PUBLISH_INPUT || "true"}`, `SB_ARTIFACT_NAME=${process.env.ARTIFACT_NAME_INPUT || "github-pages"}`,
             `SB_GENERATE_BADGES=${c.generate_badges}`, `SB_BADGES_DIRECTORY=${c.badges_directory || "badges"}`,
+            `SB_GENERATE_STATS_GRAPH=${c.generate_stats_graph}`, `SB_STATS_DIRECTORY=${c.stats_directory || "stats"}`,
             `SB_SITE_URL=${c.site_url || ""}`, `SB_BASE_PATH=${c.base_path || ""}`
           ];
           const {appendFileSync} = await import("node:fs");
@@ -145,7 +154,20 @@ runs:
         SB_SITE_URL: ${{ env.SB_SITE_URL }}
         SB_BASE_PATH: ${{ env.SB_BASE_PATH }}
         WORKSPACE_ROOT: ${{ github.workspace }}
+        GITHUB_SHA: ${{ github.sha }}
       run: node "${{ github.action_path }}/src/generate-badges.js" "$SB_PATH" "$WORKSPACE_ROOT"
+
+    - name: Generate Storybook growth graph
+      if: ${{ env.SB_GENERATE_STATS_GRAPH == 'true' }}
+      shell: bash
+      env:
+        SB_PATH: ${{ env.SB_PATH }}
+        SB_STATS_DIRECTORY: ${{ env.SB_STATS_DIRECTORY }}
+        SB_SITE_URL: ${{ env.SB_SITE_URL }}
+        SB_BASE_PATH: ${{ env.SB_BASE_PATH }}
+        WORKSPACE_ROOT: ${{ github.workspace }}
+        GITHUB_SHA: ${{ github.sha }}
+      run: node "${{ github.action_path }}/src/generate-stats.js" "$SB_PATH" "$WORKSPACE_ROOT"
 
     - name: Validate static artifact
       shell: bash

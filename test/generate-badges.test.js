@@ -163,7 +163,8 @@ test('generateBadges creates SVG badges and Shields.io JSON endpoints', () => {
     staticDir: tmpDir,
     workspaceRoot: tmpDir,
     badgesDirectory: 'badges',
-    siteUrl: 'https://example.github.io/test-project'
+    siteUrl: 'https://example.github.io/test-project',
+    commitSha: 'a1b2c3d4e5f6'
   });
 
   assert.equal(result.metrics.storiesCount, 2);
@@ -174,10 +175,15 @@ test('generateBadges creates SVG badges and Shields.io JSON endpoints', () => {
   assert.ok(fs.existsSync(path.join(badgesDir, 'stories.svg')));
   assert.ok(fs.existsSync(path.join(badgesDir, 'components.svg')));
   assert.ok(fs.existsSync(path.join(badgesDir, 'status.svg')));
+  assert.ok(fs.existsSync(path.join(badgesDir, 'build.svg')));
+  assert.ok(fs.existsSync(path.join(badgesDir, 'coverage.svg')));
 
   // Check JSON endpoints
   assert.ok(fs.existsSync(path.join(badgesDir, 'stories.json')));
   assert.ok(fs.existsSync(path.join(badgesDir, 'components.json')));
+  assert.ok(fs.existsSync(path.join(badgesDir, 'coverage.json')));
+  assert.ok(fs.existsSync(path.join(badgesDir, 'status.json')));
+  assert.ok(fs.existsSync(path.join(badgesDir, 'build.json')));
   assert.ok(fs.existsSync(path.join(badgesDir, 'storybook.json')));
   assert.ok(fs.existsSync(path.join(badgesDir, 'overview.json')));
 
@@ -185,6 +191,16 @@ test('generateBadges creates SVG badges and Shields.io JSON endpoints', () => {
   assert.equal(storiesJson.schemaVersion, 1);
   assert.equal(storiesJson.label, 'stories');
   assert.equal(storiesJson.message, '2');
+
+  const statusJson = JSON.parse(fs.readFileSync(path.join(badgesDir, 'status.json'), 'utf8'));
+  assert.equal(statusJson.schemaVersion, 1);
+  assert.equal(statusJson.label, 'storybook');
+  assert.equal(statusJson.message, 'published • a1b2c3d');
+
+  const buildJson = JSON.parse(fs.readFileSync(path.join(badgesDir, 'build.json'), 'utf8'));
+  assert.equal(buildJson.schemaVersion, 1);
+  assert.equal(buildJson.label, 'build');
+  assert.equal(buildJson.message, 'passed • a1b2c3d');
 
   const componentsJson = JSON.parse(fs.readFileSync(path.join(badgesDir, 'components.json'), 'utf8'));
   assert.equal(componentsJson.schemaVersion, 1);
@@ -194,6 +210,60 @@ test('generateBadges creates SVG badges and Shields.io JSON endpoints', () => {
   const overviewJson = JSON.parse(fs.readFileSync(path.join(badgesDir, 'overview.json'), 'utf8'));
   assert.equal(overviewJson.storiesCount, 2);
   assert.equal(overviewJson.componentsCount, 2);
+  assert.equal(overviewJson.status, 'published • a1b2c3d');
+  assert.equal(overviewJson.commit, 'a1b2c3d');
+
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test('generateBadges renders building state with yellow color', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-badge-building-'));
+  const storiesData = {
+    v: 3,
+    stories: {
+      'button--primary': { id: 'button--primary', title: 'Components/Button' }
+    }
+  };
+  fs.writeFileSync(path.join(tmpDir, 'stories.json'), JSON.stringify(storiesData));
+
+  const _result = generateBadges({
+    staticDir: tmpDir,
+    workspaceRoot: tmpDir,
+    badgesDirectory: 'badges',
+    commitSha: 'fedcba987654',
+    buildState: 'building'
+  });
+
+  const badgesDir = path.join(tmpDir, 'badges');
+  const statusSvg = fs.readFileSync(path.join(badgesDir, 'status.svg'), 'utf8');
+  assert.match(statusSvg, /building • fedcba9/);
+  assert.match(statusSvg, /#dfb317/);
+
+  const buildJson = JSON.parse(fs.readFileSync(path.join(badgesDir, 'build.json'), 'utf8'));
+  assert.equal(buildJson.message, 'building • fedcba9');
+  assert.equal(buildJson.color, 'dfb317');
+
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test('generateBadges renders failed state with red color', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-badge-failed-'));
+  const _result = generateBadges({
+    staticDir: tmpDir,
+    workspaceRoot: tmpDir,
+    badgesDirectory: 'badges',
+    commitSha: 'fedcba987654',
+    buildState: 'failed'
+  });
+
+  const badgesDir = path.join(tmpDir, 'badges');
+  const statusSvg = fs.readFileSync(path.join(badgesDir, 'status.svg'), 'utf8');
+  assert.match(statusSvg, /failed • fedcba9/);
+  assert.match(statusSvg, /#e05d44/);
+
+  const buildJson = JSON.parse(fs.readFileSync(path.join(badgesDir, 'build.json'), 'utf8'));
+  assert.equal(buildJson.message, 'failed • fedcba9');
+  assert.equal(buildJson.color, 'e05d44');
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });

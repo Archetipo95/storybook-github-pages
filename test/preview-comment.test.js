@@ -48,6 +48,39 @@ test('buildCommentBody includes the marker, preview URL, and short SHA', () => {
   assert.match(body, new RegExp(SHA.slice(0, 7)));
 });
 
+test('buildCommentBody renders badges, coverage delta, and growth chart when available', () => {
+  const body = buildCommentBody({
+    prNumber: 42,
+    previewUrl: 'https://octo.github.io/widgets/pr-preview/pr-42',
+    headSha: SHA,
+    runId: 100,
+    repository: 'octo/widgets',
+    metrics: {
+      storiesCount: 25,
+      componentsCount: 6,
+      totalComponents: 6,
+      coveragePercent: 100
+    },
+    baseMetrics: {
+      storiesCount: 20,
+      componentsCount: 4,
+      totalComponents: 6,
+      coveragePercent: 67
+    },
+    hasBadges: true,
+    hasStatsGraph: true
+  });
+
+  assert.ok(body.includes('badges/coverage.svg'));
+  assert.ok(body.includes('badges/stories.svg'));
+  assert.ok(body.includes('badges/components.svg'));
+  assert.ok(body.includes('badges/status.svg'));
+  assert.ok(body.includes('| 🎯 **Component Coverage** | `67% (4/6)` | `100% (6/6)` | **+33%** 🟢 |'));
+  assert.ok(body.includes('| 📚 **Stories** | 20 | 25 | +5 📈 |'));
+  assert.ok(body.includes('| 🧩 **Documented Components** | 4 | 6 | +2 📈 |'));
+  assert.ok(body.includes('stats/history.svg'));
+});
+
 test('upsertPreviewComment creates a new comment when none exists yet', async () => {
   const mock = mockFetchSequence([
     url => {

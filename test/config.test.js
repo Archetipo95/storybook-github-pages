@@ -293,3 +293,37 @@ test('resolveConfiguration - defaults generate_badges and badges_directory, and 
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
+
+test('validateConfig - accepts valid generate_stats_graph and stats_directory', () => {
+  assert.equal(validateConfig({ generate_stats_graph: true, stats_directory: 'stats' }), true);
+  assert.equal(validateConfig({ generate_stats_graph: false, stats_directory: 'assets/stats' }), true);
+  assert.throws(() => validateConfig({ generate_stats_graph: 'yes' }), /generate_stats_graph must be a boolean/);
+  assert.throws(() => validateConfig({ stats_directory: '../outside' }), /stats_directory/);
+  assert.throws(() => validateConfig({ stats_directory: '.git' }), /stats_directory/);
+});
+
+test('resolveConfiguration - defaults generate_stats_graph and stats_directory, and honors overrides', () => {
+  const defaults = resolveConfiguration({
+    inputs: {},
+    configFilePath: path.join(os.tmpdir(), 'sb-config-nonexistent-stats.yml')
+  });
+  assert.equal(defaults.generate_stats_graph, true);
+  assert.equal(defaults.stats_directory, 'stats');
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-stats-'));
+  const configPath = path.join(tmpDir, '.storybook-pages.yml');
+  fs.writeFileSync(configPath, 'generate_stats_graph: false\nstats_directory: custom-stats\n');
+
+  const fromFile = resolveConfiguration({ inputs: {}, configFilePath: configPath });
+  assert.equal(fromFile.generate_stats_graph, false);
+  assert.equal(fromFile.stats_directory, 'custom-stats');
+
+  const fromInput = resolveConfiguration({
+    inputs: { generate_stats_graph: 'true', stats_directory: 'doc-stats' },
+    configFilePath: configPath
+  });
+  assert.equal(fromInput.generate_stats_graph, true);
+  assert.equal(fromInput.stats_directory, 'doc-stats');
+
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});

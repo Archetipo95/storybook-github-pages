@@ -125,6 +125,69 @@ export function extractStorybookVersion(workspaceRoot = process.cwd()) {
   return 'deployed';
 }
 
+const IGNORED_DIRS = new Set([
+  'node_modules',
+  '.git',
+  '.github',
+  'storybook-static',
+  'dist',
+  'build',
+  '.next',
+  '.nuxt',
+  '.output',
+  'coverage',
+  '.playwright',
+  '.playwright-mcp',
+  '.cache'
+]);
+
+const COMPONENT_EXTENSIONS = new Set(['.vue', '.jsx', '.tsx', '.svelte']);
+
+/**
+ * Counts total framework component files in workspace to compare against covered components.
+ */
+export function countWorkspaceComponents(workspaceRoot = process.cwd(), maxDepth = 6) {
+  if (!workspaceRoot || !fs.existsSync(workspaceRoot)) return 0;
+  let count = 0;
+
+  function scan(dir, depth) {
+    if (depth > maxDepth) return;
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') && entry.isDirectory()) continue;
+      if (IGNORED_DIRS.has(entry.name)) continue;
+
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        scan(fullPath, depth + 1);
+      } else if (entry.isFile()) {
+        const ext = path.extname(entry.name).toLowerCase();
+        if (COMPONENT_EXTENSIONS.has(ext)) {
+          const lowerName = entry.name.toLowerCase();
+          if (
+            !lowerName.includes('.stories.') &&
+            !lowerName.includes('.story.') &&
+            !lowerName.includes('.test.') &&
+            !lowerName.includes('.spec.') &&
+            !lowerName.endsWith('.d.ts')
+          ) {
+            count++;
+          }
+        }
+      }
+    }
+  }
+
+  scan(path.resolve(workspaceRoot), 0);
+  return count;
+}
+
 /**
  * Extracts story counts and component counts from static Storybook output.
  */
@@ -188,10 +251,16 @@ export function extractStorybookMetrics(staticDir, workspaceRoot = process.cwd()
   }
 
   const storybookVersion = extractStorybookVersion(workspaceRoot);
+  const workspaceTotal = countWorkspaceComponents(workspaceRoot);
+  const totalComponents = Math.max(componentsCount, workspaceTotal);
+  const coveragePercent =
+    totalComponents > 0 ? Math.min(100, Math.round((componentsCount / totalComponents) * 100)) : 100;
 
   return {
     storiesCount,
     componentsCount,
+    totalComponents,
+    coveragePercent,
     docsCount,
     storybookVersion,
     hasStoriesData
@@ -207,9 +276,29 @@ export function buildBadgeMarkdown({ badgesUrl, siteUrl }) {
 
   return [
     `[![Storybook](${cleanBadgesUrl}/storybook.svg)](${cleanSiteUrl})`,
+    `[![Status](${cleanBadgesUrl}/status.svg)](${cleanSiteUrl})`,
+    `[![Coverage](${cleanBadgesUrl}/coverage.svg)](${cleanSiteUrl})`,
     `[![Stories](${cleanBadgesUrl}/stories.svg)](${cleanSiteUrl})`,
     `[![Components](${cleanBadgesUrl}/components.svg)](${cleanSiteUrl})`
   ].join(' ');
+}
+
+/**
+ * Resolves color for status/build messages based on state keyword.
+ */
+export function resolveBadgeStateColor(messageOrState, defaultColor = '4caf50') {
+  if (!messageOrState) return defaultColor;
+  const str = String(messageOrState).toLowerCase();
+  if (str.includes('building') || str.includes('in progress') || str.includes('pending')) {
+    return 'dfb317';
+  }
+  if (str.includes('fail') || str.includes('error')) {
+    return 'e05d44';
+  }
+  if (str.includes('pass') || str.includes('published') || str.includes('success')) {
+    return '4caf50';
+  }
+  return defaultColor;
 }
 
 /**
@@ -220,7 +309,12 @@ export function generateBadges({
   workspaceRoot = process.cwd(),
   badgesDirectory = 'badges',
   siteUrl = '',
-  basePath = ''
+  basePath = '',
+  commitSha = process.env.GITHUB_SHA || '',
+  statusMessage = '',
+  buildMessage = '',
+  buildState = '',
+  statusState = ''
 } = {}) {
   if (!staticDir || typeof staticDir !== 'string') {
     throw new Error('generateBadges requires a valid staticDir');
@@ -244,9 +338,36 @@ export function generateBadges({
 
   const metrics = extractStorybookMetrics(staticAbs, workspaceRoot);
 
+  const shortSha = commitSha ? commitSha.slice(0, 7) : '';
   const storybookMsg = metrics.storybookVersion || 'deployed';
   const storiesMsg = metrics.hasStoriesData ? String(metrics.storiesCount) : 'active';
   const componentsMsg = metrics.hasStoriesData ? String(metrics.componentsCount) : 'active';
+
+  // Determine status & build messages and colors
+  let statusMsg = statusMessage;
+  if (!statusMsg) {
+    if (statusState === 'building' || buildState === 'building') {
+      statusMsg = shortSha ? `building • ${shortSha}` : 'building';
+    } else if (statusState === 'failed' || buildState === 'failed') {
+      statusMsg = shortSha ? `failed • ${shortSha}` : 'failed';
+    } else {
+      statusMsg = shortSha ? `published • ${shortSha}` : 'published';
+    }
+  }
+
+  let buildMsg = buildMessage;
+  if (!buildMsg) {
+    if (buildState === 'building' || statusState === 'building') {
+      buildMsg = shortSha ? `building • ${shortSha}` : 'building';
+    } else if (buildState === 'failed' || statusState === 'failed') {
+      buildMsg = shortSha ? `failed • ${shortSha}` : 'failed';
+    } else {
+      buildMsg = shortSha ? `passed • ${shortSha}` : 'passed';
+    }
+  }
+
+  const statusColor = resolveBadgeStateColor(statusMsg, '4caf50');
+  const buildColor = resolveBadgeStateColor(buildMsg, '4caf50');
 
   // 1. Generate standard SVGs
   const svgStorybook = renderBadgeSvg({
@@ -272,15 +393,31 @@ export function generateBadges({
 
   const svgStatus = renderBadgeSvg({
     label: 'storybook',
-    message: 'deployed',
+    message: statusMsg,
     labelColor: '#555555',
-    messageColor: '#4caf50'
+    messageColor: normalizeColor(statusColor)
+  });
+
+  const svgBuild = renderBadgeSvg({
+    label: 'build',
+    message: buildMsg,
+    labelColor: '#555555',
+    messageColor: normalizeColor(buildColor)
+  });
+
+  const svgCoverage = renderBadgeSvg({
+    label: 'coverage',
+    message: `${metrics.coveragePercent}% (${metrics.componentsCount}/${metrics.totalComponents})`,
+    labelColor: '#555555',
+    messageColor: metrics.coveragePercent >= 100 ? '#4caf50' : metrics.coveragePercent >= 75 ? '#0288d1' : '#ff9800'
   });
 
   fs.writeFileSync(path.join(outDir, 'storybook.svg'), svgStorybook, 'utf8');
   fs.writeFileSync(path.join(outDir, 'stories.svg'), svgStories, 'utf8');
   fs.writeFileSync(path.join(outDir, 'components.svg'), svgComponents, 'utf8');
   fs.writeFileSync(path.join(outDir, 'status.svg'), svgStatus, 'utf8');
+  fs.writeFileSync(path.join(outDir, 'build.svg'), svgBuild, 'utf8');
+  fs.writeFileSync(path.join(outDir, 'coverage.svg'), svgCoverage, 'utf8');
 
   // 2. Generate Shields.io-compatible JSON endpoints
   const jsonStories = {
@@ -297,6 +434,27 @@ export function generateBadges({
     color: '4caf50'
   };
 
+  const jsonCoverage = {
+    schemaVersion: 1,
+    label: 'coverage',
+    message: `${metrics.coveragePercent}%`,
+    color: metrics.coveragePercent >= 100 ? '4caf50' : metrics.coveragePercent >= 75 ? '0288d1' : 'ff9800'
+  };
+
+  const jsonStatus = {
+    schemaVersion: 1,
+    label: 'storybook',
+    message: statusMsg,
+    color: statusColor
+  };
+
+  const jsonBuild = {
+    schemaVersion: 1,
+    label: 'build',
+    message: buildMsg,
+    color: buildColor
+  };
+
   const jsonStorybook = {
     schemaVersion: 1,
     label: 'storybook',
@@ -306,9 +464,14 @@ export function generateBadges({
 
   const jsonOverview = {
     schemaVersion: 1,
+    status: statusMsg,
+    build: buildMsg,
+    commit: shortSha,
     storybookVersion: storybookMsg,
     storiesCount: metrics.storiesCount,
     componentsCount: metrics.componentsCount,
+    totalComponents: metrics.totalComponents,
+    coveragePercent: metrics.coveragePercent,
     docsCount: metrics.docsCount,
     hasStoriesData: metrics.hasStoriesData,
     generatedAt: new Date().toISOString()
@@ -316,6 +479,9 @@ export function generateBadges({
 
   fs.writeFileSync(path.join(outDir, 'stories.json'), JSON.stringify(jsonStories, null, 2), 'utf8');
   fs.writeFileSync(path.join(outDir, 'components.json'), JSON.stringify(jsonComponents, null, 2), 'utf8');
+  fs.writeFileSync(path.join(outDir, 'coverage.json'), JSON.stringify(jsonCoverage, null, 2), 'utf8');
+  fs.writeFileSync(path.join(outDir, 'status.json'), JSON.stringify(jsonStatus, null, 2), 'utf8');
+  fs.writeFileSync(path.join(outDir, 'build.json'), JSON.stringify(jsonBuild, null, 2), 'utf8');
   fs.writeFileSync(path.join(outDir, 'storybook.json'), JSON.stringify(jsonStorybook, null, 2), 'utf8');
   fs.writeFileSync(path.join(outDir, 'overview.json'), JSON.stringify(jsonOverview, null, 2), 'utf8');
 
@@ -345,8 +511,13 @@ export function generateBadges({
       'stories.svg',
       'components.svg',
       'status.svg',
+      'build.svg',
+      'coverage.svg',
       'stories.json',
       'components.json',
+      'coverage.json',
+      'status.json',
+      'build.json',
       'storybook.json',
       'overview.json'
     ]
@@ -359,6 +530,11 @@ if (process.argv[1] && process.argv[1].endsWith('generate-badges.js')) {
   const badgesDir = process.env.SB_BADGES_DIRECTORY || 'badges';
   const siteUrl = process.env.SB_SITE_URL || '';
   const basePath = process.env.SB_BASE_PATH || '';
+  const commitSha = process.env.GITHUB_SHA || '';
+  const statusMessage = process.env.SB_STATUS_MESSAGE || '';
+  const buildMessage = process.env.SB_BUILD_MESSAGE || '';
+  const buildState = process.env.SB_BUILD_STATE || '';
+  const statusState = process.env.SB_STATUS_STATE || '';
 
   try {
     const result = generateBadges({
@@ -366,12 +542,19 @@ if (process.argv[1] && process.argv[1].endsWith('generate-badges.js')) {
       workspaceRoot,
       badgesDirectory: badgesDir,
       siteUrl,
-      basePath
+      basePath,
+      commitSha,
+      statusMessage,
+      buildMessage,
+      buildState,
+      statusState
     });
 
     console.log(`✅ Storybook badges generated in "${result.outDir}":`);
     console.log(`   • Stories: ${result.metrics.storiesCount}`);
     console.log(`   • Components: ${result.metrics.componentsCount}`);
+    console.log(`   • Total Components: ${result.metrics.totalComponents}`);
+    console.log(`   • Coverage: ${result.metrics.coveragePercent}%`);
     console.log(`   • Storybook: ${result.metrics.storybookVersion}`);
     console.log('');
     console.log('Markdown snippets:');
