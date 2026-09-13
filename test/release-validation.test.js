@@ -114,6 +114,24 @@ test('release validation - package manager validation strictly excludes bun', ()
   assert.doesNotMatch(deployYml, /\bpackage_manager\b.*bun/, 'deploy-storybook.yml must not list bun as a package manager');
 });
 
+test('release validation - directory mode integration documents dedicated publisher action', () => {
+  const root = process.cwd();
+  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+
+  // Directory mode requires publisher action
+  assert.match(
+    readme,
+    /uses:\s*Archetipo95\/storybook-github-pages\/publisher@v1\.0\.1/,
+    'README Option 3 directory mode pipeline must use publisher@v1.0.1'
+  );
+  assert.match(
+    readme,
+    /Platform Note on Reusable Workflows vs Directory Mode/,
+    'README must explain GitHub Actions startup_failure behavior on reusable workflow caller permissions'
+  );
+});
+
+
 test('release validation - no telemetry and strict GitHub API endpoints in src/', () => {
   const srcDir = path.join(process.cwd(), 'src');
   const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.js'));
