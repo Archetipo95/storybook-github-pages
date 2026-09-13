@@ -283,6 +283,24 @@ export function buildBadgeMarkdown({ badgesUrl, siteUrl }) {
 }
 
 /**
+ * Resolves color for status/build messages based on state keyword.
+ */
+export function resolveBadgeStateColor(messageOrState, defaultColor = '4caf50') {
+  if (!messageOrState) return defaultColor;
+  const str = String(messageOrState).toLowerCase();
+  if (str.includes('building') || str.includes('in progress') || str.includes('pending')) {
+    return 'dfb317';
+  }
+  if (str.includes('fail') || str.includes('error')) {
+    return 'e05d44';
+  }
+  if (str.includes('pass') || str.includes('published') || str.includes('success')) {
+    return '4caf50';
+  }
+  return defaultColor;
+}
+
+/**
  * Generates badge SVG files and JSON endpoint files inside the static output directory.
  */
 export function generateBadges({
@@ -292,7 +310,10 @@ export function generateBadges({
   siteUrl = '',
   basePath = '',
   commitSha = process.env.GITHUB_SHA || '',
-  statusMessage = ''
+  statusMessage = '',
+  buildMessage = '',
+  buildState = '',
+  statusState = ''
 } = {}) {
   if (!staticDir || typeof staticDir !== 'string') {
     throw new Error('generateBadges requires a valid staticDir');
@@ -320,8 +341,32 @@ export function generateBadges({
   const storybookMsg = metrics.storybookVersion || 'deployed';
   const storiesMsg = metrics.hasStoriesData ? String(metrics.storiesCount) : 'active';
   const componentsMsg = metrics.hasStoriesData ? String(metrics.componentsCount) : 'active';
-  const statusMsg = statusMessage || (shortSha ? `published • ${shortSha}` : 'published');
-  const buildMsg = shortSha ? `passed • ${shortSha}` : 'passed';
+
+  // Determine status & build messages and colors
+  let statusMsg = statusMessage;
+  if (!statusMsg) {
+    if (statusState === 'building' || buildState === 'building') {
+      statusMsg = shortSha ? `building • ${shortSha}` : 'building';
+    } else if (statusState === 'failed' || buildState === 'failed') {
+      statusMsg = shortSha ? `failed • ${shortSha}` : 'failed';
+    } else {
+      statusMsg = shortSha ? `published • ${shortSha}` : 'published';
+    }
+  }
+
+  let buildMsg = buildMessage;
+  if (!buildMsg) {
+    if (buildState === 'building' || statusState === 'building') {
+      buildMsg = shortSha ? `building • ${shortSha}` : 'building';
+    } else if (buildState === 'failed' || statusState === 'failed') {
+      buildMsg = shortSha ? `failed • ${shortSha}` : 'failed';
+    } else {
+      buildMsg = shortSha ? `passed • ${shortSha}` : 'passed';
+    }
+  }
+
+  const statusColor = resolveBadgeStateColor(statusMsg, '4caf50');
+  const buildColor = resolveBadgeStateColor(buildMsg, '4caf50');
 
   // 1. Generate standard SVGs
   const svgStorybook = renderBadgeSvg({
@@ -349,14 +394,14 @@ export function generateBadges({
     label: 'storybook',
     message: statusMsg,
     labelColor: '#555555',
-    messageColor: '#4caf50'
+    messageColor: normalizeColor(statusColor)
   });
 
   const svgBuild = renderBadgeSvg({
     label: 'build',
     message: buildMsg,
     labelColor: '#555555',
-    messageColor: '#4caf50'
+    messageColor: normalizeColor(buildColor)
   });
 
   const svgCoverage = renderBadgeSvg({
@@ -399,14 +444,14 @@ export function generateBadges({
     schemaVersion: 1,
     label: 'storybook',
     message: statusMsg,
-    color: '4caf50'
+    color: statusColor
   };
 
   const jsonBuild = {
     schemaVersion: 1,
     label: 'build',
     message: buildMsg,
-    color: '4caf50'
+    color: buildColor
   };
 
   const jsonStorybook = {
@@ -486,6 +531,9 @@ if (process.argv[1] && process.argv[1].endsWith('generate-badges.js')) {
   const basePath = process.env.SB_BASE_PATH || '';
   const commitSha = process.env.GITHUB_SHA || '';
   const statusMessage = process.env.SB_STATUS_MESSAGE || '';
+  const buildMessage = process.env.SB_BUILD_MESSAGE || '';
+  const buildState = process.env.SB_BUILD_STATE || '';
+  const statusState = process.env.SB_STATUS_STATE || '';
 
   try {
     const result = generateBadges({
@@ -495,7 +543,10 @@ if (process.argv[1] && process.argv[1].endsWith('generate-badges.js')) {
       siteUrl,
       basePath,
       commitSha,
-      statusMessage
+      statusMessage,
+      buildMessage,
+      buildState,
+      statusState
     });
 
     console.log(`✅ Storybook badges generated in "${result.outDir}":`);
