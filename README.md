@@ -2,8 +2,13 @@
 
 [![CI](https://github.com/Archetipo95/storybook-github-pages/actions/workflows/ci.yml/badge.svg)](https://github.com/Archetipo95/storybook-github-pages/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Demo Storybook](https://archetipo95.github.io/storybook-vue-demo/badges/storybook.svg)](https://archetipo95.github.io/storybook-vue-demo/)
+[![Demo Stories](https://archetipo95.github.io/storybook-vue-demo/badges/stories.svg)](https://archetipo95.github.io/storybook-vue-demo/)
+[![Demo Components](https://archetipo95.github.io/storybook-vue-demo/badges/components.svg)](https://archetipo95.github.io/storybook-vue-demo/)
 
 Security-hardened GitHub Action and reusable workflows for building, validating, and deploying static Storybook builds to GitHub Pages.
+
+🚀 **Live Demo & Test Repository:** [https://archetipo95.github.io/storybook-vue-demo/](https://archetipo95.github.io/storybook-vue-demo/) (Source: [Archetipo95/storybook-vue-demo](https://github.com/Archetipo95/storybook-vue-demo))
 
 ---
 
@@ -220,6 +225,12 @@ You can embed these badges directly into your `README.md`:
 [![Stories](https://<owner>.github.io/<repo>/badges/stories.svg)](https://<owner>.github.io/<repo>)
 [![Components](https://<owner>.github.io/<repo>/badges/components.svg)](https://<owner>.github.io/<repo>)
 ```
+
+**Live example from our [Vue 3 Demo](https://archetipo95.github.io/storybook-vue-demo/):**
+
+[![Storybook](https://archetipo95.github.io/storybook-vue-demo/badges/storybook.svg)](https://archetipo95.github.io/storybook-vue-demo/)
+[![Stories](https://archetipo95.github.io/storybook-vue-demo/badges/stories.svg)](https://archetipo95.github.io/storybook-vue-demo/)
+[![Components](https://archetipo95.github.io/storybook-vue-demo/badges/components.svg)](https://archetipo95.github.io/storybook-vue-demo/)
 
 ---
 
