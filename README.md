@@ -674,6 +674,21 @@ This repository ships the four workflows above as a working reference implementa
   - **CLI Git Discovery**: When running `gh run download <run-id> --name <artifact>` in a runner environment without a Git checkout, `gh` defaults to querying local Git remotes in the working directory. Provide repository context via environment `env: GH_REPO: ${{ github.repository }}` (or `--repo ${{ github.repository }}`) and `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` so `gh` operates without requiring a local Git checkout.
   - **Actions download-artifact (Recommended)**: Use `actions/download-artifact@v4` with explicit `run-id: ${{ github.event.workflow_run.id }}` and `github-token: ${{ secrets.GITHUB_TOKEN }}`. This downloads the artifact directly via GitHub Actions APIs without executing untrusted code or requiring a local checkout.
 
+### 8. Reusable Workflow Permissions & Concurrency Constraints
+
+- **Symptom**: Workflow fails to trigger, encounters `403 Resource not accessible by integration`, or fails with workflow syntax errors when calling reusable workflows (`workflow_call`).
+- **Causes & Solutions**:
+  - **Top-Level Concurrency**: GitHub Actions rejects top-level `concurrency:` on reusable workflows (`workflow_call`). Concurrency is managed at the job level inside our reusable workflows. Caller workflows should not declare workflow-level concurrency on caller files that invoke `workflow_call`.
+  - **Required Caller Permissions**: When invoking `pr-preview-publish.yml` via `workflow_call`, ensure your caller workflow grants the required permissions:
+    ```yaml
+    permissions:
+      contents: write # to update gh-pages branch
+      pages: write # to request GitHub Pages build triggers
+      pull-requests: write # to post/update the preview comment
+      actions: read # to download the untrusted build artifact
+    ```
+  - **Canonical Site URL Auto-Detection**: `site_url` is optional. If omitted in `.storybook-pages.yml` or workflow inputs, the action automatically derives the standard GitHub Pages URL `https://<owner>.github.io/<repo>` (or `https://<owner>.github.io` for user/organization pages repositories).
+
 ---
 
 ## License & Attribution
