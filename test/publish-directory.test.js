@@ -19,6 +19,7 @@ test('replaceDirectory replaces only the selected target and preserves siblings'
   assert.equal(await fs.readFile(path.join(repo, 'staging', 'index.html'), 'utf8'), 'new');
   await assert.rejects(fs.readFile(path.join(repo, 'staging', 'old.html')));
   assert.equal(await fs.readFile(path.join(repo, 'other', 'keep.html'), 'utf8'), 'keep');
+  assert.equal(await fs.readFile(path.join(repo, '.nojekyll'), 'utf8'), '');
   await fs.rm(repo, { recursive: true, force: true });
   await fs.rm(source, { recursive: true, force: true });
 });

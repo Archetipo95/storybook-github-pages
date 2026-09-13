@@ -54,7 +54,16 @@ export async function replaceDirectory(repo, targetDirectory, sourceDirectory, m
       await fs.rename(path.join(staging, entry), path.join(repo, entry));
     }
     await fs.rm(staging, { recursive: true, force: true });
+    // Ensure .nojekyll exists at root so GitHub Pages doesn't ignore underscore files (_plugin-vue...)
+    await fs.writeFile(path.join(repo, '.nojekyll'), '', 'utf8');
     return;
+  }
+  // When deploying to a subdirectory (like pr-preview/pr-1), ensure root .nojekyll exists
+  const rootNoJekyll = path.join(repo, '.nojekyll');
+  try {
+    await fs.access(rootNoJekyll);
+  } catch {
+    await fs.writeFile(rootNoJekyll, '', 'utf8');
   }
   const target = path.join(repo, targetDirectory);
   const staging = `${target}.staging-${process.pid}`;
@@ -108,7 +117,7 @@ export async function publishDirectory({
         await run('git', ['fetch', 'origin', branch], repo);
         await run('git', ['checkout', '-B', branch, `origin/${branch}`], repo);
         await replaceDirectory(repo, targetDirectory, source, managedDirectories);
-        await run('git', ['add', '-A', '--', targetDirectory || '.'], repo);
+        await run('git', ['add', '-A'], repo);
         await run(
           'git',
           [
