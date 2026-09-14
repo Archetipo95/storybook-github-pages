@@ -87,6 +87,18 @@ inputs:
     description: 'Directory within the static build output to store stats graph and ledger'
     required: false
     default: 'stats'
+  enable_passcode_gate:
+    description: 'Whether to inject a client-side passcode gate into the published Storybook'
+    required: false
+    default: 'false'
+  passcode_hash:
+    description: 'SHA-256 hash of the passcode; keep this value in a workflow secret'
+    required: false
+    default: ''
+  passcode_session_hours:
+    description: 'Hours before the browser session expires'
+    required: false
+    default: '24'
 
 outputs:
   page_url:
@@ -122,6 +134,7 @@ runs:
             `SB_GENERATE_BADGES=${c.generate_badges}`, `SB_BADGES_DIRECTORY=${c.badges_directory || "badges"}`,
             `SB_TEST_RESULTS_PATH=${c.test_results_path || ""}`,
             `SB_GENERATE_STATS_GRAPH=${c.generate_stats_graph}`, `SB_STATS_DIRECTORY=${c.stats_directory || "stats"}`,
+            `SB_ENABLE_PASSCODE_GATE=${c.enable_passcode_gate}`, `SB_PASSCODE_SESSION_HOURS=${c.passcode_session_hours}`,
             `SB_SITE_URL=${c.site_url || ""}`, `SB_BASE_PATH=${c.base_path || ""}`
           ];
           const {appendFileSync} = await import("node:fs");
@@ -181,6 +194,15 @@ runs:
         SB_PATH: ${{ env.SB_PATH }}
         WORKSPACE_ROOT: ${{ github.workspace }}
       run: node "${{ github.action_path }}/src/validate-artifact.js" "$SB_PATH" "$WORKSPACE_ROOT"
+
+    - name: Inject Storybook passcode gate
+      if: ${{ env.SB_ENABLE_PASSCODE_GATE == 'true' }}
+      shell: bash
+      env:
+        SB_PATH: ${{ env.SB_PATH }}
+        PASSCODE_HASH: ${{ inputs.passcode_hash }}
+        PASSCODE_SESSION_HOURS: ${{ env.SB_PASSCODE_SESSION_HOURS }}
+      run: node "${{ github.action_path }}/src/inject-auth-gate.js" "$SB_PATH"
 
     - name: Ensure .nojekyll exists
       shell: bash

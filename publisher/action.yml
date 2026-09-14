@@ -39,6 +39,18 @@ inputs:
     description: 'Directory within the static build output to store stats graph and ledger'
     required: false
     default: 'stats'
+  enable_passcode_gate:
+    description: 'Whether to inject a client-side passcode gate into the published Storybook'
+    required: false
+    default: 'false'
+  passcode_hash:
+    description: 'SHA-256 hash of the passcode; keep this value in a workflow secret'
+    required: false
+    default: ''
+  passcode_session_hours:
+    description: 'Hours before the browser session expires'
+    required: false
+    default: '24'
 runs:
   using: composite
   steps:
@@ -66,6 +78,15 @@ runs:
         WORKSPACE_ROOT: ${{ github.workspace }}
         GITHUB_SHA: ${{ github.sha }}
       run: node "${{ github.action_path }}/../src/generate-stats.js" "$SOURCE_PATH" "$WORKSPACE_ROOT" "$PAGES_REPO"
+
+    - name: Inject Storybook passcode gate
+      if: ${{ inputs.enable_passcode_gate == 'true' }}
+      shell: bash
+      env:
+        SB_PATH: ${{ inputs.source_directory }}
+        PASSCODE_HASH: ${{ inputs.passcode_hash }}
+        PASSCODE_SESSION_HOURS: ${{ inputs.passcode_session_hours }}
+      run: node "${{ github.action_path }}/../src/inject-auth-gate.js" "$SB_PATH"
 
     - shell: bash
       env:
