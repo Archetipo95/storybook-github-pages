@@ -70,6 +70,7 @@ export async function publishPreview({
   managedDirectories = [],
   siteUrl = '',
   basePath = '',
+  triggerPagesRebuild = false,
   token,
   repository
 }) {
@@ -95,6 +96,7 @@ export async function publishPreview({
     managedDirectories,
     siteUrl,
     basePath,
+    triggerPagesRebuild,
     token,
     repository
   });
@@ -202,6 +204,7 @@ if (process.argv[1] && process.argv[1].endsWith('preview-publish.js')) {
       : [],
     siteUrl: process.env.SITE_URL || '',
     basePath: process.env.BASE_PATH || '',
+    triggerPagesRebuild: process.env.TRIGGER_PAGES_REBUILD === 'true',
     token: process.env.GITHUB_TOKEN,
     repository: process.env.GITHUB_REPOSITORY
   })

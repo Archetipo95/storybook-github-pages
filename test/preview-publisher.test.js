@@ -99,6 +99,7 @@ test('preview-publisher action.yml schema, inputs, and outputs are well-formed',
   assert.match(content, /trusted_base_ref:/);
   assert.match(content, /expected_artifact_name:/);
   assert.match(content, /current_head_sha:/);
+  assert.match(content, /TRIGGER_PAGES_REBUILD: \$\{\{ inputs\.trigger_pages_rebuild \}\}/);
 
   // Outputs
   assert.match(content, /page_url:/);
@@ -106,6 +107,10 @@ test('preview-publisher action.yml schema, inputs, and outputs are well-formed',
 
   // Implementation wiring
   assert.match(content, /node "\$\{\{ github\.action_path \}\}\/\.\.\/src\/preview-publish\.js"/);
+  assert.match(
+    fs.readFileSync(path.join(process.cwd(), 'src/preview-publish.js'), 'utf8'),
+    /triggerPagesRebuild: process\.env\.TRIGGER_PAGES_REBUILD === 'true'/
+  );
 });
 
 test('preview-publisher CLI invocation publishes preview, writes output, and preserves unrelated files', () => {

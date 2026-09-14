@@ -19,6 +19,10 @@ inputs:
   base_path:
     required: false
     default: ''
+  trigger_pages_rebuild:
+    description: 'Whether to explicitly request a Pages rebuild after pushing (normally unnecessary for branch-based Pages)'
+    required: false
+    default: 'false'
   generate_badges:
     description: 'Whether to auto-generate dynamic SVG badges for components and stories'
     required: false
@@ -72,6 +76,7 @@ runs:
         MANAGED_DIRECTORIES: ${{ inputs.managed_directories }}
         SITE_URL: ${{ inputs.site_url }}
         BASE_PATH: ${{ inputs.base_path }}
+        TRIGGER_PAGES_REBUILD: ${{ inputs.trigger_pages_rebuild }}
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
       run: node "${{ github.action_path }}/../src/publish-directory.js"
