@@ -73,6 +73,11 @@ on:
         required: false
         type: string
         default: 'badges'
+      test_results_path:
+        description: 'Optional repository-relative path to a JSON Storybook interaction test results file'
+        required: false
+        type: string
+        default: ''
     outputs:
       page_url:
         description: 'The URL of the deployed GitHub Pages site'
@@ -108,6 +113,7 @@ jobs:
       artifact_name: ${{ steps.config.outputs.artifact_name }}
       generate_badges: ${{ steps.config.outputs.generate_badges }}
       badges_directory: ${{ steps.config.outputs.badges_directory }}
+      test_results_path: ${{ steps.config.outputs.test_results_path }}
 
     steps:
       - name: Checkout repository
@@ -125,6 +131,7 @@ jobs:
             }
             console.log(`managed_directories=${Array.isArray(c.managed_directories) ? c.managed_directories.join(",") : c.managed_directories || ""}`);
             console.log(`artifact_name=${c.artifact_name || "github-pages"}`);
+            console.log(`test_results_path=${c.test_results_path || ""}`);
             console.log(`install_command=${c.build.install_command ?? ""}`);
             console.log(`build_command=${c.build.build_command ?? ""}`);
           })' >> "$GITHUB_OUTPUT"
@@ -160,6 +167,7 @@ jobs:
                 staticDir: process.env.TARGET_PATH,
                 workspaceRoot: process.env.WORKSPACE_ROOT,
                 badgesDirectory: process.env.BADGES_DIRECTORY,
+                testResultsPath: process.env.TEST_RESULTS_PATH,
                 siteUrl: process.env.SITE_URL,
                 basePath: process.env.BASE_PATH
               });
@@ -170,6 +178,7 @@ jobs:
           TARGET_PATH: ${{ steps.config.outputs.path }}
           WORKSPACE_ROOT: ${{ github.workspace }}
           BADGES_DIRECTORY: ${{ steps.config.outputs.badges_directory }}
+          TEST_RESULTS_PATH: ${{ steps.config.outputs.test_results_path }}
           SITE_URL: ${{ steps.config.outputs.site_url }}
           BASE_PATH: ${{ steps.config.outputs.base_path }}
 

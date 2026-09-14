@@ -310,23 +310,40 @@ test('resolveConfiguration - defaults generate_badges and badges_directory, and 
   });
   assert.equal(defaults.generate_badges, true);
   assert.equal(defaults.badges_directory, 'badges');
+  assert.equal(defaults.test_results_path, '');
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-badges-'));
   const configPath = path.join(tmpDir, '.storybook-pages.yml');
-  fs.writeFileSync(configPath, 'generate_badges: false\nbadges_directory: custom-badges\n');
+  fs.writeFileSync(
+    configPath,
+    'generate_badges: false\nbadges_directory: custom-badges\ntest_results_path: .storybook/test-results.json\n'
+  );
 
   const fromFile = resolveConfiguration({ inputs: {}, configFilePath: configPath });
   assert.equal(fromFile.generate_badges, false);
   assert.equal(fromFile.badges_directory, 'custom-badges');
+  assert.equal(fromFile.test_results_path, '.storybook/test-results.json');
 
   const fromInput = resolveConfiguration({
-    inputs: { generate_badges: 'true', badges_directory: 'doc-badges' },
+    inputs: {
+      generate_badges: 'true',
+      badges_directory: 'doc-badges',
+      test_results_path: 'artifacts/test-results.json'
+    },
     configFilePath: configPath
   });
   assert.equal(fromInput.generate_badges, true);
   assert.equal(fromInput.badges_directory, 'doc-badges');
+  assert.equal(fromInput.test_results_path, 'artifacts/test-results.json');
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test('validateConfig - accepts safe test_results_path values and rejects unsafe ones', () => {
+  assert.equal(validateConfig({ test_results_path: 'artifacts/storybook-results.json' }), true);
+  assert.equal(validateConfig({ test_results_path: '' }), true);
+  assert.throws(() => validateConfig({ test_results_path: '../outside.json' }), /test_results_path/);
+  assert.throws(() => validateConfig({ test_results_path: '/absolute/path.json' }), /test_results_path/);
 });
 
 test('validateConfig - accepts valid generate_stats_graph and stats_directory', () => {
