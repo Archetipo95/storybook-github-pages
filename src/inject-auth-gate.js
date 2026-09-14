@@ -42,7 +42,13 @@ body > *:not(#storybook-passcode-gate) { visibility: hidden !important; }
   const input = form.querySelector('input');
   const alert = form.querySelector('[role="alert"]');
   const now = () => Date.now();
-  const isValid = () => Number(sessionStorage.getItem(key)) > now();
+  const isValid = () => {
+    try {
+      return Number(sessionStorage.getItem(key)) > now();
+    } catch {
+      return false;
+    }
+  };
   const reveal = () => { gate.remove(); document.querySelector('#storybook-passcode-gate-style')?.remove(); };
   const digest = async value => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))).map(byte => byte.toString(16).padStart(2, '0')).join('');
   if (isValid()) reveal();
@@ -55,7 +61,11 @@ body > *:not(#storybook-passcode-gate) { visibility: hidden !important; }
         input.select();
         return;
       }
-      sessionStorage.setItem(key, String(now() + config.sessionMs));
+      try {
+        sessionStorage.setItem(key, String(now() + config.sessionMs));
+      } catch {
+        // Reveal this page even when browser storage is blocked.
+      }
       reveal();
     } catch {
       alert.textContent = 'Passcode validation is unavailable in this browser.';
@@ -64,6 +74,9 @@ body > *:not(#storybook-passcode-gate) { visibility: hidden !important; }
 })();
 </script>`;
 }
+
+const ROBOTS_TXT = 'User-agent: *\nDisallow: /\n';
+const NO_INDEX_META = '<meta name="robots" content="noindex, nofollow, noarchive">\n';
 
 async function findHtmlFiles(staticDir) {
   const files = [];
@@ -80,11 +93,26 @@ export async function injectAuthGate(staticDir, { passcodeHash, sessionHours = 2
   const files = await findHtmlFiles(staticDir);
   if (files.length === 0) throw new Error(`No index.html or iframe.html found in ${staticDir}`);
   const markup = gateMarkup(passcodeHash, sessionHours);
+  await fs.writeFile(path.join(staticDir, 'robots.txt'), ROBOTS_TXT, 'utf8');
   for (const file of files) {
     const html = await fs.readFile(file, 'utf8');
     if (html.includes('storybook-passcode-gate-script')) continue;
-    const marker = /<\/head>/i;
-    const updated = marker.test(html) ? html.replace(marker, `${markup}</head>`) : `${markup}${html}`;
+    let withMeta = html;
+    if (!/<meta name="robots"/i.test(withMeta)) {
+      if (/<head\b[^>]*>/i.test(withMeta)) {
+        withMeta = withMeta.replace(/<head\b[^>]*>/i, match => `${match}\n${NO_INDEX_META}`);
+      } else if (/<body\b/i.test(withMeta)) {
+        withMeta = withMeta.replace(/<body\b/i, `<head>\n${NO_INDEX_META}</head>\n<body`);
+      } else {
+        withMeta = `${NO_INDEX_META}${withMeta}`;
+      }
+    }
+    const marker = /<\/body>/i;
+    const updated = marker.test(withMeta)
+      ? withMeta.replace(marker, `${markup}</body>`)
+      : /<\/html>/i.test(withMeta)
+        ? withMeta.replace(/<\/html>/i, `${markup}</html>`)
+        : `${withMeta}${markup}`;
     await fs.writeFile(file, updated);
   }
   return files;

@@ -18,7 +18,10 @@ test('injectAuthGate protects entry documents and is idempotent', async () => {
     const iframe = await fs.readFile(path.join(staticDir, 'nested', 'iframe.html'), 'utf8');
     assert.match(index, /storybook-passcode-gate-script/);
     assert.match(index, /sessionMs":43200000/);
+    assert.match(index, /name="robots" content="noindex, nofollow, noarchive"/);
+    assert.match(await fs.readFile(path.join(staticDir, 'robots.txt'), 'utf8'), /Disallow: \//);
     assert.match(iframe, /storybook-passcode-gate-script/);
+    assert.match(iframe, /name="robots" content="noindex, nofollow, noarchive"/);
     await injectAuthGate(staticDir, { passcodeHash: hash });
     assert.equal(
       (await fs.readFile(path.join(staticDir, 'index.html'), 'utf8')).match(/storybook-passcode-gate-script/g).length,

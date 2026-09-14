@@ -22,7 +22,7 @@ Security-hardened GitHub Action and reusable workflows for building, validating,
 - **Hand-Drawn Growth Chart**: Generates a star-history styled hand-drawn SVG growth chart (`stats/history.svg`) and metrics ledger (`stats/history.json`) tracking component coverage, story count, and component count evolution.
 - **Optional Passcode Gate**: Injects a zero-dependency browser passcode prompt into published Storybooks for casual privacy protection.
 
-The passcode gate is client-side protection against casual discovery and search indexing, not access control: the static assets remain publicly fetchable. Use GitHub Enterprise Pages, Cloudflare Access, or another authenticated hosting layer for confidentiality requirements.
+The passcode gate is client-side protection against casual discovery, and enables `robots.txt` plus `noindex, nofollow, noarchive` metadata. It is not access control: static assets remain publicly fetchable, and GitHub Pages cannot set an `X-Robots-Tag` response header. Use GitHub Enterprise Pages, Cloudflare Access, or another authenticated hosting layer for confidentiality requirements. For directory deployments, `robots.txt` applies at the Pages host root rather than only to the published subdirectory.
 
 ---
 
