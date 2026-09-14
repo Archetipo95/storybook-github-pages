@@ -304,12 +304,10 @@ export function resolveConfiguration({
   return merged;
 }
 
-export function resolveBaseDirectoryForRef(baseRef, {
-  target_directory = '',
-  environment = '',
-  default_branch = '',
-  ref_to_directory = {}
-} = {}) {
+export function resolveBaseDirectoryForRef(
+  baseRef,
+  { target_directory = '', environment = '', default_branch = '', ref_to_directory = {} } = {}
+) {
   const explicitDirectory = target_directory || environment || '';
   if (explicitDirectory !== '') {
     validateRelativeDirectory(explicitDirectory, 'target_directory', { allowEmpty: true });
@@ -329,14 +327,21 @@ export function resolveBaseDirectoryForRef(baseRef, {
 
   const branchKey = cleanBaseRef;
   const refKey = normalizedBaseRef.replace(/\\/g, '/');
-  const mapped = ref_to_directory && (ref_to_directory[branchKey] ?? ref_to_directory[refKey] ?? ref_to_directory[`refs/heads/${branchKey}`]);
+  const mapped =
+    ref_to_directory &&
+    (ref_to_directory[branchKey] ?? ref_to_directory[refKey] ?? ref_to_directory[`refs/heads/${branchKey}`]);
   if (mapped !== undefined && mapped !== null) {
     const mappedDirectory = String(mapped).trim();
     validateRelativeDirectory(mappedDirectory, 'ref_to_directory', { allowEmpty: true });
     return mappedDirectory === '.' || mappedDirectory === './' ? '' : mappedDirectory;
   }
 
-  const normalizedDefaultBranch = default_branch ? String(default_branch).trim().replace(/^refs\/heads\//, '').replace(/\\/g, '/') : '';
+  const normalizedDefaultBranch = default_branch
+    ? String(default_branch)
+        .trim()
+        .replace(/^refs\/heads\//, '')
+        .replace(/\\/g, '/')
+    : '';
   if (normalizedDefaultBranch && cleanBaseRef === normalizedDefaultBranch) {
     return '';
   }
