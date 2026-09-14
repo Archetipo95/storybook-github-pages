@@ -304,11 +304,61 @@ export function resolveConfiguration({
   return merged;
 }
 
+export function resolveBaseDirectoryForRef(baseRef, {
+  target_directory = '',
+  environment = '',
+  default_branch = '',
+  ref_to_directory = {}
+} = {}) {
+  const explicitDirectory = target_directory || environment || '';
+  if (explicitDirectory !== '') {
+    validateRelativeDirectory(explicitDirectory, 'target_directory', { allowEmpty: true });
+    return explicitDirectory === '.' || explicitDirectory === './' ? '' : explicitDirectory;
+  }
+
+  if (baseRef === undefined || baseRef === null || baseRef === '') {
+    return '';
+  }
+
+  const normalizedBaseRef = String(baseRef).trim();
+  const cleanBaseRef = normalizedBaseRef
+    .replace(/^refs\/heads\//, '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\/+$/, '');
+
+  const branchKey = cleanBaseRef;
+  const refKey = normalizedBaseRef.replace(/\\/g, '/');
+  const mapped = ref_to_directory && (ref_to_directory[branchKey] ?? ref_to_directory[refKey] ?? ref_to_directory[`refs/heads/${branchKey}`]);
+  if (mapped !== undefined && mapped !== null) {
+    const mappedDirectory = String(mapped).trim();
+    validateRelativeDirectory(mappedDirectory, 'ref_to_directory', { allowEmpty: true });
+    return mappedDirectory === '.' || mappedDirectory === './' ? '' : mappedDirectory;
+  }
+
+  const normalizedDefaultBranch = default_branch ? String(default_branch).trim().replace(/^refs\/heads\//, '').replace(/\\/g, '/') : '';
+  if (normalizedDefaultBranch && cleanBaseRef === normalizedDefaultBranch) {
+    return '';
+  }
+
+  if (cleanBaseRef === '' || cleanBaseRef === '.' || cleanBaseRef === '/') {
+    return '';
+  }
+
+  validateRelativeDirectory(cleanBaseRef, 'base_ref', { allowEmpty: true });
+  return cleanBaseRef;
+}
+
 export function resolveDeploymentTarget(config) {
   validateConfig(config);
   if (config.mode !== 'directory')
     return { directory: null, basePath: config.base_path || '/', url: config.site_url || '' };
-  const directory = config.target_directory || config.environment || '';
+  const directory = resolveBaseDirectoryForRef(config.base_ref, {
+    target_directory: config.target_directory,
+    environment: config.environment,
+    default_branch: config.default_branch || config.default_ref || '',
+    ref_to_directory: config.ref_to_directory || config.base_ref_directory_map || {}
+  });
   validateRelativeDirectory(directory, 'deployment target directory', { allowEmpty: true });
   const basePath = config.base_path || (directory ? `/${directory}` : '/');
   return {

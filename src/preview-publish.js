@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
+import { resolveBaseDirectoryForRef } from './config.js';
 import {
   decidePreviewAction,
   digestDirectory,
@@ -38,6 +39,28 @@ export function readBundleMetadata(bundleDir) {
  * rejection path (fork, stale run, provenance mismatch) is returned/thrown
  * before any write-capable operation runs.
  */
+export function resolveBaseMetricsPath({
+  pagesRepo,
+  baseRef,
+  targetDirectory = '',
+  defaultBranch = '',
+  refToDirectory = {}
+} = {}) {
+  if (!pagesRepo || typeof pagesRepo !== 'string') {
+    throw new Error('pagesRepo is required to resolve the Pages base-metrics path');
+  }
+
+  const baseDirectory = resolveBaseDirectoryForRef(baseRef, {
+    target_directory: targetDirectory,
+    default_branch: defaultBranch,
+    ref_to_directory: refToDirectory
+  });
+
+  return baseDirectory
+    ? path.join(pagesRepo, baseDirectory, 'badges', 'overview.json')
+    : path.join(pagesRepo, 'badges', 'overview.json');
+}
+
 export async function publishPreview({
   bundleDir,
   pagesRepo,
@@ -102,10 +125,15 @@ export async function publishPreview({
         }
       }
 
-      // Extract base metrics from pagesRepo (gh-pages) if available
+      // Extract base metrics from the Pages branch at the PR's actual base
+      // directory, falling back to the root when the base ref maps there.
       let baseMetrics = null;
       if (pagesRepo) {
-        const baseOverviewPath = path.join(pagesRepo, 'badges', 'overview.json');
+        const baseOverviewPath = resolveBaseMetricsPath({
+          pagesRepo,
+          baseRef: trustedContext?.baseRef ?? metadata.baseRef,
+          defaultBranch: ''
+        });
         if (fs.existsSync(baseOverviewPath)) {
           try {
             baseMetrics = JSON.parse(fs.readFileSync(baseOverviewPath, 'utf8'));
@@ -140,7 +168,22 @@ export async function publishPreview({
     }
   }
 
-  return { action: 'published', reason: decision.reason, metadata, publishResult, commentResult, commentError };
+  const resolvedBaseDirectory = resolveBaseDirectoryForRef(trustedContext?.baseRef, { default_branch: '' });
+
+  return {
+    action: 'published',
+    reason: decision.reason,
+    metadata,
+    publishResult,
+    commentResult,
+    commentError,
+    baseDirectory: resolvedBaseDirectory,
+    baseMetricsPath: resolveBaseMetricsPath({
+      pagesRepo,
+      baseRef: trustedContext?.baseRef,
+      defaultBranch: ''
+    })
+  };
 }
 
 if (process.argv[1] && process.argv[1].endsWith('preview-publish.js')) {

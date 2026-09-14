@@ -8,7 +8,8 @@ import {
   validateConfig,
   parseSimpleYaml,
   resolveConfiguration,
-  resolveDeploymentTarget
+  resolveDeploymentTarget,
+  resolveBaseDirectoryForRef
 } from '../src/config.js';
 
 test('validateConfig - default valid config', () => {
@@ -131,6 +132,31 @@ test('resolveDeploymentTarget - derives URL metadata for named environments', ()
     }
   );
   assert.equal(resolveDeploymentTarget({ mode: 'artifact' }).directory, null);
+});
+
+test('resolveBaseDirectoryForRef resolves base refs against the Pages root and explicit target directories', () => {
+  assert.equal(resolveBaseDirectoryForRef('main', { default_branch: 'main' }), '');
+  assert.equal(resolveBaseDirectoryForRef('preprod', { default_branch: 'main' }), 'preprod');
+  assert.equal(resolveBaseDirectoryForRef('refs/heads/preprod', { default_branch: 'main' }), 'preprod');
+  assert.equal(resolveBaseDirectoryForRef('preprod', { target_directory: 'staging', default_branch: 'main' }), 'staging');
+  assert.equal(resolveBaseDirectoryForRef('feature/x', { default_branch: 'main' }), 'feature/x');
+  assert.equal(resolveBaseDirectoryForRef('preprod', {
+    default_branch: 'main',
+    ref_to_directory: { preprod: 'staging', main: '' }
+  }), 'staging');
+});
+
+test('resolveDeploymentTarget - uses base_ref mapping when target_directory is omitted', () => {
+  assert.deepEqual(resolveDeploymentTarget({
+    mode: 'directory',
+    base_ref: 'preprod',
+    default_branch: 'main',
+    site_url: 'https://example.github.io/storybook'
+  }), {
+    directory: 'preprod',
+    basePath: '/preprod',
+    url: 'https://example.github.io/storybook/preprod'
+  });
 });
 
 test('parseSimpleYaml - parses simple key-value YAML', () => {
