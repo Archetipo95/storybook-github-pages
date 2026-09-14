@@ -43,7 +43,7 @@ export function resolveBaseMetricsPath({
   pagesRepo,
   baseRef,
   targetDirectory = '',
-  defaultBranch = '',
+  defaultBranch = 'main',
   refToDirectory = {}
 } = {}) {
   if (!pagesRepo || typeof pagesRepo !== 'string') {
@@ -132,7 +132,7 @@ export async function publishPreview({
         const baseOverviewPath = resolveBaseMetricsPath({
           pagesRepo,
           baseRef: trustedContext?.baseRef ?? metadata.baseRef,
-          defaultBranch: ''
+          defaultBranch: 'main'
         });
         if (fs.existsSync(baseOverviewPath)) {
           try {
@@ -168,7 +168,7 @@ export async function publishPreview({
     }
   }
 
-  const resolvedBaseDirectory = resolveBaseDirectoryForRef(trustedContext?.baseRef, { default_branch: '' });
+  const resolvedBaseDirectory = resolveBaseDirectoryForRef(trustedContext?.baseRef, { default_branch: 'main' });
 
   return {
     action: 'published',
@@ -181,7 +181,7 @@ export async function publishPreview({
     baseMetricsPath: resolveBaseMetricsPath({
       pagesRepo,
       baseRef: trustedContext?.baseRef,
-      defaultBranch: ''
+      defaultBranch: 'main'
     })
   };
 }
