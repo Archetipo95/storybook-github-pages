@@ -185,3 +185,4 @@ runs:
         path: ${{ steps.bundle.outputs.bundle_dir }}
         if-no-files-found: error
         retention-days: ${{ inputs.retention_days }}
+        include-hidden-files: true
