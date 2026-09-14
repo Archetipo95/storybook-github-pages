@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { readBundleMetadata, publishPreview } from '../src/preview-publish.js';
+import { readBundleMetadata, publishPreview, resolveBaseMetricsPath } from '../src/preview-publish.js';
 import { buildPreviewMetadata, digestDirectory } from '../src/preview-metadata.js';
 import { buildMarker } from '../src/preview-comment.js';
 
@@ -82,6 +82,23 @@ function trustedContextFor(metadata) {
 test('readBundleMetadata throws a clear error when the metadata file is missing', () => {
   const bundleDir = makeTempDir('storybook-preview-empty-');
   assert.throws(() => readBundleMetadata(bundleDir), /missing preview-metadata\.json/);
+});
+
+test('resolveBaseMetricsPath resolves the correct Pages directory for the PR base ref', () => {
+  const pagesRepo = '/tmp/storybook-pages';
+
+  assert.equal(
+    resolveBaseMetricsPath({ pagesRepo, baseRef: 'main', defaultBranch: 'main' }),
+    path.join(pagesRepo, 'badges', 'overview.json')
+  );
+  assert.equal(
+    resolveBaseMetricsPath({ pagesRepo, baseRef: 'preprod', defaultBranch: 'main' }),
+    path.join(pagesRepo, 'preprod', 'badges', 'overview.json')
+  );
+  assert.equal(
+    resolveBaseMetricsPath({ pagesRepo, baseRef: 'preprod', targetDirectory: 'staging', defaultBranch: 'main' }),
+    path.join(pagesRepo, 'staging', 'badges', 'overview.json')
+  );
 });
 
 test('publishPreview skips fork pull requests without touching the Pages branch', async () => {
