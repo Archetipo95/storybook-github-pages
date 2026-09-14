@@ -185,6 +185,12 @@ jobs:
           TARGET_PATH: ${{ steps.config.outputs.path }}
           WORKSPACE_ROOT: ${{ github.workspace }}
 
+      - name: Ensure .nojekyll exists
+        run: |
+          if [ -d "${{ steps.config.outputs.path }}" ]; then
+            touch "${{ steps.config.outputs.path }}/.nojekyll"
+          fi
+
       - name: Upload Pages artifact
         if: ${{ steps.config.outputs.mode == 'artifact' }}
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1

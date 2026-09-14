@@ -336,6 +336,16 @@ export function generateBadges({
 
   fs.mkdirSync(outDir, { recursive: true });
 
+  // Ensure .nojekyll exists in static output root so GitHub Pages serves underscore-prefixed assets (_plugin-vue...)
+  try {
+    const noJekyllPath = path.join(staticAbs, '.nojekyll');
+    if (!fs.existsSync(noJekyllPath)) {
+      fs.writeFileSync(noJekyllPath, '', 'utf8');
+    }
+  } catch {
+    // Non-fatal
+  }
+
   const metrics = extractStorybookMetrics(staticAbs, workspaceRoot);
 
   const shortSha = commitSha ? commitSha.slice(0, 7) : '';

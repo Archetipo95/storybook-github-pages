@@ -148,6 +148,15 @@ runs:
         GITHUB_SHA: ${{ inputs.head_sha }}
       run: node "${{ github.action_path }}/../src/generate-stats.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
 
+    - name: Ensure .nojekyll exists
+      shell: bash
+      env:
+        SOURCE_PATH: ${{ inputs.source_path }}
+      run: |
+        if [ -d "$SOURCE_PATH" ]; then
+          touch "$SOURCE_PATH/.nojekyll"
+        fi
+
     - name: Stage preview bundle (metadata + content digest)
       id: bundle
       shell: bash

@@ -519,6 +519,16 @@ export function generateStatsGraph({
 
   fs.mkdirSync(outDir, { recursive: true });
 
+  // Ensure .nojekyll exists in static output root so GitHub Pages serves underscore-prefixed assets (_plugin-vue...)
+  try {
+    const noJekyllPath = path.join(staticAbs, '.nojekyll');
+    if (!fs.existsSync(noJekyllPath)) {
+      fs.writeFileSync(noJekyllPath, '', 'utf8');
+    }
+  } catch {
+    // Non-fatal
+  }
+
   // 1. Read existing history from pagesRepo (if available) or staticDir
   let existingHistory = [];
   const candidateHistoryPaths = [];

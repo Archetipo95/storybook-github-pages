@@ -169,6 +169,7 @@ test('generateBadges creates SVG badges and Shields.io JSON endpoints', () => {
 
   assert.equal(result.metrics.storiesCount, 2);
   assert.equal(result.metrics.componentsCount, 2);
+  assert.ok(fs.existsSync(path.join(tmpDir, '.nojekyll')), '.nojekyll must be created in static root');
 
   const badgesDir = path.join(tmpDir, 'badges');
   assert.ok(fs.existsSync(path.join(badgesDir, 'storybook.svg')));
