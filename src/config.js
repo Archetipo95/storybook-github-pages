@@ -17,6 +17,7 @@ export const DEFAULT_CONFIG = {
   preview_retention_days: 30,
   generate_badges: true,
   badges_directory: 'badges',
+  test_results_path: '',
   generate_stats_graph: true,
   stats_directory: 'stats',
   build: {
@@ -140,6 +141,20 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
 
   if (config.badges_directory !== undefined) {
     validateRelativeDirectory(config.badges_directory, 'badges_directory', { allowEmpty: false });
+  }
+
+  if (config.test_results_path !== undefined) {
+    if (typeof config.test_results_path !== 'string') {
+      throw new Error('Config test_results_path must be a string');
+    }
+    if (config.test_results_path.trim() !== '') {
+      const normalized = path.normalize(config.test_results_path);
+      if (normalized === '.' || normalized === '..' || path.isAbsolute(normalized) || normalized.startsWith('../')) {
+        throw new Error(
+          `Config test_results_path "${config.test_results_path}" is unsafe. Use a repository-relative path.`
+        );
+      }
+    }
   }
 
   if (config.generate_stats_graph !== undefined && typeof config.generate_stats_graph !== 'boolean') {
@@ -279,6 +294,12 @@ export function resolveConfiguration({
           ? Boolean(fileConfig.generate_badges)
           : DEFAULT_CONFIG.generate_badges,
     badges_directory: inputs.badges_directory || fileConfig?.badges_directory || DEFAULT_CONFIG.badges_directory,
+    test_results_path:
+      inputs.test_results_path !== undefined && inputs.test_results_path !== ''
+        ? String(inputs.test_results_path)
+        : fileConfig?.test_results_path !== undefined && fileConfig.test_results_path !== ''
+          ? String(fileConfig.test_results_path)
+          : DEFAULT_CONFIG.test_results_path,
     generate_stats_graph:
       inputs.generate_stats_graph !== undefined && inputs.generate_stats_graph !== ''
         ? String(inputs.generate_stats_graph) === 'true'

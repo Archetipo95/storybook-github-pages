@@ -18,7 +18,7 @@ Security-hardened GitHub Action and reusable workflows for building, validating,
 - **Pinned Dependencies**: All third-party GitHub Actions are pinned to full 40-character commit SHAs.
 - **Directory Deployments**: Trusted publishers atomically update a directory on a Pages branch while preserving other environments and root `.nojekyll`.
 - **PR Preview Lifecycle**: Unprivileged per-PR builds, a trusted `workflow_run` publisher with strict provenance/stale-run validation, an idempotent bot preview comment with live badges, base vs PR delta comparison table, collapsible growth chart, metadata-only close cleanup, and a scheduled/manual retention janitor.
-- **Dynamic SVG Badges**: Automatically generates Shields.io-style SVG badges (Component Coverage %, Story count, Component count, Storybook version, and state-aware Status/Build) and JSON endpoints (`badges/`) for your documentation and README.
+- **Dynamic SVG Badges**: Automatically generates Shields.io-style SVG badges (Component Coverage %, Story count, Component count, Storybook version, optional interaction tests, and state-aware Status/Build) and JSON endpoints (`badges/`) for your documentation and README.
 - **Hand-Drawn Growth Chart**: Generates a star-history styled hand-drawn SVG growth chart (`stats/history.svg`) and metrics ledger (`stats/history.json`) tracking component coverage, story count, and component count evolution.
 
 ---
@@ -197,6 +197,7 @@ jobs:
 | `managed_directories`    | `string`  | `''`               | Comma-separated directories preserved during root publication in directory mode (e.g. `pr-preview`)                                       |
 | `generate_badges`        | `boolean` | `true`             | Whether to automatically generate SVG/JSON component and story count badges                                                               |
 | `badges_directory`       | `string`  | `badges`           | Relative directory inside the static output where generated badges are hosted                                                             |
+| `test_results_path`      | `string`  | `''`               | Optional repository-relative path to a JSON interaction test results file (for example, `.storybook/test-results.json`)                   |
 | `generate_stats_graph`   | `boolean` | `true`             | Whether to automatically generate hand-drawn growth chart (`history.svg`) and update metrics ledger (`history.json`)                      |
 | `stats_directory`        | `string`  | `stats`            | Relative directory inside the static output where generated stats graph and history ledger are hosted                                     |
 
@@ -220,7 +221,8 @@ When `generate_badges` is enabled (default), `storybook-github-pages` analyzes y
 - `badges/storybook.svg` / `badges/storybook.json` — Storybook version badge (e.g. `storybook | v8.6.0` or `v10.0.0`).
 - `badges/status.svg` / `badges/status.json` — State-aware deployment status badge with commit SHA (e.g. `storybook | published • 8ba5315`, `storybook | building • 8ba5315` in yellow, or `storybook | failed • 8ba5315` in red).
 - `badges/build.svg` / `badges/build.json` — Build status badge (`build | passed • 8ba5315`, `build | building`, `build | failed`).
-- `badges/overview.json` — Comprehensive metadata endpoint aggregating story count, component count, total components, coverage percentage, build status, and commit details.
+- `badges/tests.svg` / `badges/tests.json` — Optional interaction test badge (`tests | 546/546 passed`, or `tests | 3/546 failed`) when `test_results_path` points at a valid JSON results file.
+- `badges/overview.json` — Comprehensive metadata endpoint aggregating story count, component count, total components, coverage percentage, build status, commit details, and optional test totals.
 
 You can embed these badges directly into your `README.md`:
 
@@ -229,6 +231,7 @@ You can embed these badges directly into your `README.md`:
 [![Coverage](https://<owner>.github.io/<repo>/badges/coverage.svg)](https://<owner>.github.io/<repo>)
 [![Stories](https://<owner>.github.io/<repo>/badges/stories.svg)](https://<owner>.github.io/<repo>)
 [![Components](https://<owner>.github.io/<repo>/badges/components.svg)](https://<owner>.github.io/<repo>)
+[![Tests](https://<owner>.github.io/<repo>/badges/tests.svg)](https://<owner>.github.io/<repo>)
 [![Status](https://<owner>.github.io/<repo>/badges/status.svg)](https://<owner>.github.io/<repo>)
 ```
 

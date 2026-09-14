@@ -11,7 +11,8 @@ import {
   extractStorybookVersion,
   extractStorybookMetrics,
   buildBadgeMarkdown,
-  generateBadges
+  generateBadges,
+  parseTestResultsData
 } from '../src/generate-badges.js';
 
 test('estimateTextWidth returns reasonable widths for various character sets', () => {
@@ -138,14 +139,35 @@ test('extractStorybookMetrics handles directory with no index.json or stories.js
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
+test('parseTestResultsData accepts common pass/fail totals and nested result objects', () => {
+  assert.deepEqual(parseTestResultsData({ total: 546, passed: 546, failed: 0 }), {
+    total: 546,
+    passed: 546,
+    failed: 0
+  });
+  assert.deepEqual(parseTestResultsData({ totalTests: 10, passedTests: 9, failedTests: 1 }), {
+    total: 10,
+    passed: 9,
+    failed: 1
+  });
+  assert.deepEqual(parseTestResultsData({ counts: { total: 7, passed: 5, failed: 2 } }), {
+    total: 7,
+    passed: 5,
+    failed: 2
+  });
+  assert.equal(parseTestResultsData({ weird: 'value' }), null);
+});
+
 test('buildBadgeMarkdown constructs markdown links correctly', () => {
   const markdown = buildBadgeMarkdown({
     badgesUrl: 'https://example.github.io/my-repo/badges',
-    siteUrl: 'https://example.github.io/my-repo'
+    siteUrl: 'https://example.github.io/my-repo',
+    includeTests: true
   });
   assert.match(markdown, /\[!\[Storybook\]\(https:\/\/example\.github\.io\/my-repo\/badges\/storybook\.svg\)\]/);
   assert.match(markdown, /\[!\[Stories\]\(https:\/\/example\.github\.io\/my-repo\/badges\/stories\.svg\)\]/);
   assert.match(markdown, /\[!\[Components\]\(https:\/\/example\.github\.io\/my-repo\/badges\/components\.svg\)\]/);
+  assert.match(markdown, /\[!\[Tests\]\(https:\/\/example\.github\.io\/my-repo\/badges\/tests\.svg\)\]/);
 });
 
 test('generateBadges creates SVG badges and Shields.io JSON endpoints', () => {
@@ -159,12 +181,16 @@ test('generateBadges creates SVG badges and Shields.io JSON endpoints', () => {
   };
   fs.writeFileSync(path.join(tmpDir, 'stories.json'), JSON.stringify(storiesData));
 
+  const testResultsPath = path.join(tmpDir, 'test-results.json');
+  fs.writeFileSync(testResultsPath, JSON.stringify({ total: 2, passed: 2, failed: 0 }));
+
   const result = generateBadges({
     staticDir: tmpDir,
     workspaceRoot: tmpDir,
     badgesDirectory: 'badges',
     siteUrl: 'https://example.github.io/test-project',
-    commitSha: 'a1b2c3d4e5f6'
+    commitSha: 'a1b2c3d4e5f6',
+    testResultsPath
   });
 
   assert.equal(result.metrics.storiesCount, 2);
@@ -178,6 +204,7 @@ test('generateBadges creates SVG badges and Shields.io JSON endpoints', () => {
   assert.ok(fs.existsSync(path.join(badgesDir, 'status.svg')));
   assert.ok(fs.existsSync(path.join(badgesDir, 'build.svg')));
   assert.ok(fs.existsSync(path.join(badgesDir, 'coverage.svg')));
+  assert.ok(fs.existsSync(path.join(badgesDir, 'tests.svg')));
 
   // Check JSON endpoints
   assert.ok(fs.existsSync(path.join(badgesDir, 'stories.json')));
@@ -186,6 +213,7 @@ test('generateBadges creates SVG badges and Shields.io JSON endpoints', () => {
   assert.ok(fs.existsSync(path.join(badgesDir, 'status.json')));
   assert.ok(fs.existsSync(path.join(badgesDir, 'build.json')));
   assert.ok(fs.existsSync(path.join(badgesDir, 'storybook.json')));
+  assert.ok(fs.existsSync(path.join(badgesDir, 'tests.json')));
   assert.ok(fs.existsSync(path.join(badgesDir, 'overview.json')));
 
   const storiesJson = JSON.parse(fs.readFileSync(path.join(badgesDir, 'stories.json'), 'utf8'));
@@ -208,11 +236,16 @@ test('generateBadges creates SVG badges and Shields.io JSON endpoints', () => {
   assert.equal(componentsJson.label, 'components');
   assert.equal(componentsJson.message, '2');
 
+  const testsJson = JSON.parse(fs.readFileSync(path.join(badgesDir, 'tests.json'), 'utf8'));
+  assert.equal(testsJson.label, 'tests');
+  assert.equal(testsJson.message, '2/2 passed');
+
   const overviewJson = JSON.parse(fs.readFileSync(path.join(badgesDir, 'overview.json'), 'utf8'));
   assert.equal(overviewJson.storiesCount, 2);
   assert.equal(overviewJson.componentsCount, 2);
   assert.equal(overviewJson.status, 'published • a1b2c3d');
   assert.equal(overviewJson.commit, 'a1b2c3d');
+  assert.deepEqual(overviewJson.tests, { total: 2, passed: 2, failed: 0, passedPercent: 100 });
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
