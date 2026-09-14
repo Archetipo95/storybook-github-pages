@@ -150,7 +150,9 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
     if (config.test_results_path.trim() !== '') {
       const normalized = path.normalize(config.test_results_path);
       if (normalized === '.' || normalized === '..' || path.isAbsolute(normalized) || normalized.startsWith('../')) {
-        throw new Error(`Config test_results_path "${config.test_results_path}" is unsafe. Use a repository-relative path.`);
+        throw new Error(
+          `Config test_results_path "${config.test_results_path}" is unsafe. Use a repository-relative path.`
+        );
       }
     }
   }

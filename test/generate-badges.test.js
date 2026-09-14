@@ -12,8 +12,7 @@ import {
   extractStorybookMetrics,
   buildBadgeMarkdown,
   generateBadges,
-  parseTestResultsData,
-  readTestResultsFile
+  parseTestResultsData
 } from '../src/generate-badges.js';
 
 test('estimateTextWidth returns reasonable widths for various character sets', () => {
@@ -141,9 +140,21 @@ test('extractStorybookMetrics handles directory with no index.json or stories.js
 });
 
 test('parseTestResultsData accepts common pass/fail totals and nested result objects', () => {
-  assert.deepEqual(parseTestResultsData({ total: 546, passed: 546, failed: 0 }), { total: 546, passed: 546, failed: 0 });
-  assert.deepEqual(parseTestResultsData({ totalTests: 10, passedTests: 9, failedTests: 1 }), { total: 10, passed: 9, failed: 1 });
-  assert.deepEqual(parseTestResultsData({ counts: { total: 7, passed: 5, failed: 2 } }), { total: 7, passed: 5, failed: 2 });
+  assert.deepEqual(parseTestResultsData({ total: 546, passed: 546, failed: 0 }), {
+    total: 546,
+    passed: 546,
+    failed: 0
+  });
+  assert.deepEqual(parseTestResultsData({ totalTests: 10, passedTests: 9, failedTests: 1 }), {
+    total: 10,
+    passed: 9,
+    failed: 1
+  });
+  assert.deepEqual(parseTestResultsData({ counts: { total: 7, passed: 5, failed: 2 } }), {
+    total: 7,
+    passed: 5,
+    failed: 2
+  });
   assert.equal(parseTestResultsData({ weird: 'value' }), null);
 });
 

@@ -196,7 +196,7 @@ jobs:
 | `managed_directories`    | `string`  | `''`               | Comma-separated directories preserved during root publication in directory mode (e.g. `pr-preview`)                                       |
 | `generate_badges`        | `boolean` | `true`             | Whether to automatically generate SVG/JSON component and story count badges                                                               |
 | `badges_directory`       | `string`  | `badges`           | Relative directory inside the static output where generated badges are hosted                                                             |
-| `test_results_path`      | `string`  | `''`               | Optional repository-relative path to a JSON interaction test results file (for example, `.storybook/test-results.json`)                |
+| `test_results_path`      | `string`  | `''`               | Optional repository-relative path to a JSON interaction test results file (for example, `.storybook/test-results.json`)                   |
 | `generate_stats_graph`   | `boolean` | `true`             | Whether to automatically generate hand-drawn growth chart (`history.svg`) and update metrics ledger (`history.json`)                      |
 | `stats_directory`        | `string`  | `stats`            | Relative directory inside the static output where generated stats graph and history ledger are hosted                                     |
 

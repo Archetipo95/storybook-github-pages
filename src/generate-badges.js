@@ -319,11 +319,23 @@ export function parseTestResultsData(data) {
   }
 
   const resolvedTotal =
-    total !== null ? Math.max(0, Number(total)) : passed !== null && failed !== null ? Math.max(0, Number(passed + failed)) : null;
+    total !== null
+      ? Math.max(0, Number(total))
+      : passed !== null && failed !== null
+        ? Math.max(0, Number(passed + failed))
+        : null;
   const resolvedPassed =
-    passed !== null ? Math.max(0, Number(passed)) : resolvedTotal !== null && failed !== null ? Math.max(0, Number(resolvedTotal - failed)) : null;
+    passed !== null
+      ? Math.max(0, Number(passed))
+      : resolvedTotal !== null && failed !== null
+        ? Math.max(0, Number(resolvedTotal - failed))
+        : null;
   const resolvedFailed =
-    failed !== null ? Math.max(0, Number(failed)) : resolvedTotal !== null && resolvedPassed !== null ? Math.max(0, Number(resolvedTotal - resolvedPassed)) : null;
+    failed !== null
+      ? Math.max(0, Number(failed))
+      : resolvedTotal !== null && resolvedPassed !== null
+        ? Math.max(0, Number(resolvedTotal - resolvedPassed))
+        : null;
 
   if (resolvedTotal === null || resolvedPassed === null || resolvedFailed === null) {
     return null;

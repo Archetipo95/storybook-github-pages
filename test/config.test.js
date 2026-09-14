@@ -314,7 +314,10 @@ test('resolveConfiguration - defaults generate_badges and badges_directory, and 
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-badges-'));
   const configPath = path.join(tmpDir, '.storybook-pages.yml');
-  fs.writeFileSync(configPath, 'generate_badges: false\nbadges_directory: custom-badges\ntest_results_path: .storybook/test-results.json\n');
+  fs.writeFileSync(
+    configPath,
+    'generate_badges: false\nbadges_directory: custom-badges\ntest_results_path: .storybook/test-results.json\n'
+  );
 
   const fromFile = resolveConfiguration({ inputs: {}, configFilePath: configPath });
   assert.equal(fromFile.generate_badges, false);
@@ -322,7 +325,11 @@ test('resolveConfiguration - defaults generate_badges and badges_directory, and 
   assert.equal(fromFile.test_results_path, '.storybook/test-results.json');
 
   const fromInput = resolveConfiguration({
-    inputs: { generate_badges: 'true', badges_directory: 'doc-badges', test_results_path: 'artifacts/test-results.json' },
+    inputs: {
+      generate_badges: 'true',
+      badges_directory: 'doc-badges',
+      test_results_path: 'artifacts/test-results.json'
+    },
     configFilePath: configPath
   });
   assert.equal(fromInput.generate_badges, true);

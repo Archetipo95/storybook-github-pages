@@ -58,7 +58,9 @@ export function buildCommentBody({
       `[![Coverage](${cleanPreviewUrl}/badges/coverage.svg${vParam})](${cleanPreviewUrl})`,
       `[![Stories](${cleanPreviewUrl}/badges/stories.svg${vParam})](${cleanPreviewUrl})`,
       `[![Components](${cleanPreviewUrl}/badges/components.svg${vParam})](${cleanPreviewUrl})`,
-      ...(metrics && metrics.tests ? [`[![Tests](${cleanPreviewUrl}/badges/tests.svg${vParam})](${cleanPreviewUrl})`] : []),
+      ...(metrics && metrics.tests
+        ? [`[![Tests](${cleanPreviewUrl}/badges/tests.svg${vParam})](${cleanPreviewUrl})`]
+        : []),
       `[![Status](${cleanPreviewUrl}/badges/status.svg${vParam})](${cleanPreviewUrl})`
     ];
     lines.push(badges.join(' '), '');
@@ -71,7 +73,11 @@ export function buildCommentBody({
     const passedRatio = tests.total > 0 ? `${tests.passed}/${tests.total} passed` : '0/0 passed';
     const failedRatio = tests.total > 0 ? `${tests.failed}/${tests.total} failed` : '0/0 failed';
     const ciLink = runLink ? `**CI run:** ${runNote}` : `**CI run:** ${runNote}`;
-    lines.push('### 🧪 Interaction Test Results', '', `- **Result:** ${tests.failed === 0 ? passedRatio : failedRatio}`);
+    lines.push(
+      '### 🧪 Interaction Test Results',
+      '',
+      `- **Result:** ${tests.failed === 0 ? passedRatio : failedRatio}`
+    );
     lines.push(`- **Passed:** ${tests.passed} / **Failed:** ${tests.failed} / **Total:** ${tests.total}`);
     lines.push(`${ciLink}`, '');
   }
