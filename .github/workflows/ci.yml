@@ -2,7 +2,7 @@ name: CI & Action Validation
 
 on:
   push:
-    branches: [main, 'archetipo95-*', 'bootstrap-*']
+    branches: [main]
   pull_request:
     branches: [main]
 
