@@ -118,6 +118,7 @@ test('generateStatsGraph creates history.json and history.svg in static output d
   assert.equal(result.metrics.storiesCount, 3);
   assert.equal(result.metrics.componentsCount, 2);
   assert.equal(result.historyCount, 1);
+  assert.ok(fs.existsSync(path.join(staticDir, '.nojekyll')), '.nojekyll must be created in static root');
   assert.ok(fs.existsSync(result.historyJsonPath));
   assert.ok(fs.existsSync(result.historySvgPath));
 

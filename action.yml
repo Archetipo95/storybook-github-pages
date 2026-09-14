@@ -176,6 +176,15 @@ runs:
         WORKSPACE_ROOT: ${{ github.workspace }}
       run: node "${{ github.action_path }}/src/validate-artifact.js" "$SB_PATH" "$WORKSPACE_ROOT"
 
+    - name: Ensure .nojekyll exists
+      shell: bash
+      env:
+        SB_PATH: ${{ env.SB_PATH }}
+      run: |
+        if [ -d "$SB_PATH" ]; then
+          touch "$SB_PATH/.nojekyll"
+        fi
+
     - name: Upload Pages artifact
       if: ${{ env.SB_PUBLISH == 'true' && env.SB_MODE == 'artifact' }}
       uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
