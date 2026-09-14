@@ -99,6 +99,10 @@ export async function publishPreview({
     repository
   });
 
+  const baseRef = trustedContext?.baseRef ?? metadata.baseRef;
+  const baseDirectory = resolveBaseDirectoryForRef(baseRef, { default_branch: 'main' });
+  const baseMetricsPath = pagesRepo ? resolveBaseMetricsPath({ pagesRepo, baseRef, defaultBranch: 'main' }) : null;
+
   let commentResult = null;
   let commentError = null;
   if (token && repository) {
@@ -128,18 +132,11 @@ export async function publishPreview({
       // Extract base metrics from the Pages branch at the PR's actual base
       // directory, falling back to the root when the base ref maps there.
       let baseMetrics = null;
-      if (pagesRepo) {
-        const baseOverviewPath = resolveBaseMetricsPath({
-          pagesRepo,
-          baseRef: trustedContext?.baseRef ?? metadata.baseRef,
-          defaultBranch: 'main'
-        });
-        if (fs.existsSync(baseOverviewPath)) {
-          try {
-            baseMetrics = JSON.parse(fs.readFileSync(baseOverviewPath, 'utf8'));
-          } catch {
-            // ignore
-          }
+      if (baseMetricsPath && fs.existsSync(baseMetricsPath)) {
+        try {
+          baseMetrics = JSON.parse(fs.readFileSync(baseMetricsPath, 'utf8'));
+        } catch {
+          // ignore
         }
       }
 
@@ -168,8 +165,6 @@ export async function publishPreview({
     }
   }
 
-  const resolvedBaseDirectory = resolveBaseDirectoryForRef(trustedContext?.baseRef, { default_branch: 'main' });
-
   return {
     action: 'published',
     reason: decision.reason,
@@ -177,12 +172,8 @@ export async function publishPreview({
     publishResult,
     commentResult,
     commentError,
-    baseDirectory: resolvedBaseDirectory,
-    baseMetricsPath: resolveBaseMetricsPath({
-      pagesRepo,
-      baseRef: trustedContext?.baseRef,
-      defaultBranch: 'main'
-    })
+    baseDirectory,
+    baseMetricsPath
   };
 }
 

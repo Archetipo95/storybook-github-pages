@@ -314,7 +314,7 @@ export function resolveBaseDirectoryForRef(
     return explicitDirectory === '.' || explicitDirectory === './' ? '' : explicitDirectory;
   }
 
-  if (baseRef === undefined || baseRef === null || baseRef === '') {
+  if (!baseRef) {
     return '';
   }
 
@@ -322,14 +322,12 @@ export function resolveBaseDirectoryForRef(
   const cleanBaseRef = normalizedBaseRef
     .replace(/^refs\/heads\//, '')
     .replace(/\\/g, '/')
-    .replace(/^\/+/, '')
-    .replace(/\/+$/, '');
+    .replace(/^\/+|\/+$/g, '');
 
-  const branchKey = cleanBaseRef;
   const refKey = normalizedBaseRef.replace(/\\/g, '/');
   const mapped =
     ref_to_directory &&
-    (ref_to_directory[branchKey] ?? ref_to_directory[refKey] ?? ref_to_directory[`refs/heads/${branchKey}`]);
+    (ref_to_directory[cleanBaseRef] ?? ref_to_directory[refKey] ?? ref_to_directory[`refs/heads/${cleanBaseRef}`]);
   if (mapped !== undefined && mapped !== null) {
     const mappedDirectory = String(mapped).trim();
     validateRelativeDirectory(mappedDirectory, 'ref_to_directory', { allowEmpty: true });
