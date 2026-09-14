@@ -279,8 +279,70 @@ export function buildBadgeMarkdown({ badgesUrl, siteUrl }) {
     `[![Status](${cleanBadgesUrl}/status.svg)](${cleanSiteUrl})`,
     `[![Coverage](${cleanBadgesUrl}/coverage.svg)](${cleanSiteUrl})`,
     `[![Stories](${cleanBadgesUrl}/stories.svg)](${cleanSiteUrl})`,
-    `[![Components](${cleanBadgesUrl}/components.svg)](${cleanSiteUrl})`
+    `[![Components](${cleanBadgesUrl}/components.svg)](${cleanSiteUrl})`,
+    `[![Tests](${cleanBadgesUrl}/tests.svg)](${cleanSiteUrl})`
   ].join(' ');
+}
+
+export function parseTestResultsData(data) {
+  if (!data || typeof data !== 'object') return null;
+
+  const nestedCandidate = data.counts || data.summary || data.totals || data.stats || data.results;
+  if (nestedCandidate && typeof nestedCandidate === 'object' && nestedCandidate !== data) {
+    const nested = parseTestResultsData(nestedCandidate);
+    if (nested) return nested;
+  }
+
+  const readNumber = (...keys) => {
+    for (const key of keys) {
+      const value = data[key];
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (typeof value === 'string' && value.trim() !== '') {
+        const numeric = Number(value);
+        if (Number.isFinite(numeric)) return numeric;
+      }
+    }
+    return null;
+  };
+
+  const total = readNumber('total', 'totalTests', 'numTotalTests', 'tests');
+  const passed = readNumber('passed', 'passedTests', 'numPassedTests');
+  const failed = readNumber('failed', 'failedTests', 'numFailedTests');
+
+  if (total === null && passed === null && failed === null) {
+    return null;
+  }
+
+  const resolvedTotal =
+    total !== null ? Math.max(0, Number(total)) : passed !== null && failed !== null ? Math.max(0, Number(passed + failed)) : null;
+  const resolvedPassed =
+    passed !== null ? Math.max(0, Number(passed)) : resolvedTotal !== null && failed !== null ? Math.max(0, Number(resolvedTotal - failed)) : null;
+  const resolvedFailed =
+    failed !== null ? Math.max(0, Number(failed)) : resolvedTotal !== null && resolvedPassed !== null ? Math.max(0, Number(resolvedTotal - resolvedPassed)) : null;
+
+  if (resolvedTotal === null || resolvedPassed === null || resolvedFailed === null) {
+    return null;
+  }
+
+  return {
+    total: Math.round(resolvedTotal),
+    passed: Math.round(resolvedPassed),
+    failed: Math.round(resolvedFailed)
+  };
+}
+
+export function readTestResultsFile(testResultsPath, workspaceRoot = process.cwd()) {
+  if (!testResultsPath || typeof testResultsPath !== 'string') return null;
+  const resolvedPath = path.resolve(workspaceRoot, testResultsPath);
+  if (!fs.existsSync(resolvedPath)) return null;
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'));
+    const parsed = parseTestResultsData(raw);
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -314,7 +376,8 @@ export function generateBadges({
   statusMessage = '',
   buildMessage = '',
   buildState = '',
-  statusState = ''
+  statusState = '',
+  testResultsPath = ''
 } = {}) {
   if (!staticDir || typeof staticDir !== 'string') {
     throw new Error('generateBadges requires a valid staticDir');
@@ -347,11 +410,18 @@ export function generateBadges({
   }
 
   const metrics = extractStorybookMetrics(staticAbs, workspaceRoot);
+  const testResults = testResultsPath ? readTestResultsFile(testResultsPath, workspaceRoot) : null;
 
   const shortSha = commitSha ? commitSha.slice(0, 7) : '';
   const storybookMsg = metrics.storybookVersion || 'deployed';
   const storiesMsg = metrics.hasStoriesData ? String(metrics.storiesCount) : 'active';
   const componentsMsg = metrics.hasStoriesData ? String(metrics.componentsCount) : 'active';
+  const testsMessage = testResults
+    ? testResults.failed === 0
+      ? `${testResults.passed}/${testResults.total} passed`
+      : `${testResults.failed}/${testResults.total} failed`
+    : 'n/a';
+  const testsColor = testResults ? (testResults.failed === 0 ? '#4caf50' : '#e05d44') : '#9e9e9e';
 
   // Determine status & build messages and colors
   let statusMsg = statusMessage;
@@ -422,12 +492,22 @@ export function generateBadges({
     messageColor: metrics.coveragePercent >= 100 ? '#4caf50' : metrics.coveragePercent >= 75 ? '#0288d1' : '#ff9800'
   });
 
+  const svgTests = renderBadgeSvg({
+    label: 'tests',
+    message: testsMessage,
+    labelColor: '#555555',
+    messageColor: normalizeColor(testsColor)
+  });
+
   fs.writeFileSync(path.join(outDir, 'storybook.svg'), svgStorybook, 'utf8');
   fs.writeFileSync(path.join(outDir, 'stories.svg'), svgStories, 'utf8');
   fs.writeFileSync(path.join(outDir, 'components.svg'), svgComponents, 'utf8');
   fs.writeFileSync(path.join(outDir, 'status.svg'), svgStatus, 'utf8');
   fs.writeFileSync(path.join(outDir, 'build.svg'), svgBuild, 'utf8');
   fs.writeFileSync(path.join(outDir, 'coverage.svg'), svgCoverage, 'utf8');
+  if (testResults) {
+    fs.writeFileSync(path.join(outDir, 'tests.svg'), svgTests, 'utf8');
+  }
 
   // 2. Generate Shields.io-compatible JSON endpoints
   const jsonStories = {
@@ -472,6 +552,15 @@ export function generateBadges({
     color: 'ff4785'
   };
 
+  const jsonTests = testResults
+    ? {
+        schemaVersion: 1,
+        label: 'tests',
+        message: testsMessage,
+        color: testResults.failed === 0 ? '4caf50' : 'e05d44'
+      }
+    : null;
+
   const jsonOverview = {
     schemaVersion: 1,
     status: statusMsg,
@@ -484,6 +573,14 @@ export function generateBadges({
     coveragePercent: metrics.coveragePercent,
     docsCount: metrics.docsCount,
     hasStoriesData: metrics.hasStoriesData,
+    tests: testResults
+      ? {
+          total: testResults.total,
+          passed: testResults.passed,
+          failed: testResults.failed,
+          passedPercent: testResults.total > 0 ? Math.round((testResults.passed / testResults.total) * 100) : 0
+        }
+      : null,
     generatedAt: new Date().toISOString()
   };
 
@@ -493,6 +590,9 @@ export function generateBadges({
   fs.writeFileSync(path.join(outDir, 'status.json'), JSON.stringify(jsonStatus, null, 2), 'utf8');
   fs.writeFileSync(path.join(outDir, 'build.json'), JSON.stringify(jsonBuild, null, 2), 'utf8');
   fs.writeFileSync(path.join(outDir, 'storybook.json'), JSON.stringify(jsonStorybook, null, 2), 'utf8');
+  if (jsonTests) {
+    fs.writeFileSync(path.join(outDir, 'tests.json'), JSON.stringify(jsonTests, null, 2), 'utf8');
+  }
   fs.writeFileSync(path.join(outDir, 'overview.json'), JSON.stringify(jsonOverview, null, 2), 'utf8');
 
   // Calculate full URL for markdown snippets
@@ -523,12 +623,14 @@ export function generateBadges({
       'status.svg',
       'build.svg',
       'coverage.svg',
+      ...(testResults ? ['tests.svg'] : []),
       'stories.json',
       'components.json',
       'coverage.json',
       'status.json',
       'build.json',
       'storybook.json',
+      ...(testResults ? ['tests.json'] : []),
       'overview.json'
     ]
   };
@@ -545,6 +647,7 @@ if (process.argv[1] && process.argv[1].endsWith('generate-badges.js')) {
   const buildMessage = process.env.SB_BUILD_MESSAGE || '';
   const buildState = process.env.SB_BUILD_STATE || '';
   const statusState = process.env.SB_STATUS_STATE || '';
+  const testResultsPath = process.env.SB_TEST_RESULTS_PATH || '';
 
   try {
     const result = generateBadges({
@@ -557,7 +660,8 @@ if (process.argv[1] && process.argv[1].endsWith('generate-badges.js')) {
       statusMessage,
       buildMessage,
       buildState,
-      statusState
+      statusState,
+      testResultsPath
     });
 
     console.log(`✅ Storybook badges generated in "${result.outDir}":`);

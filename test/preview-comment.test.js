@@ -48,7 +48,7 @@ test('buildCommentBody includes the marker, preview URL, and short SHA', () => {
   assert.match(body, new RegExp(SHA.slice(0, 7)));
 });
 
-test('buildCommentBody renders badges, coverage delta, and growth chart when available', () => {
+test('buildCommentBody renders badges, test results, coverage delta, and growth chart when available', () => {
   const body = buildCommentBody({
     prNumber: 42,
     previewUrl: 'https://octo.github.io/widgets/pr-preview/pr-42',
@@ -59,13 +59,15 @@ test('buildCommentBody renders badges, coverage delta, and growth chart when ava
       storiesCount: 25,
       componentsCount: 6,
       totalComponents: 6,
-      coveragePercent: 100
+      coveragePercent: 100,
+      tests: { total: 12, passed: 12, failed: 0 }
     },
     baseMetrics: {
       storiesCount: 20,
       componentsCount: 4,
       totalComponents: 6,
-      coveragePercent: 67
+      coveragePercent: 67,
+      tests: { total: 10, passed: 8, failed: 2 }
     },
     hasBadges: true,
     hasStatsGraph: true
@@ -74,7 +76,10 @@ test('buildCommentBody renders badges, coverage delta, and growth chart when ava
   assert.ok(body.includes('badges/coverage.svg'));
   assert.ok(body.includes('badges/stories.svg'));
   assert.ok(body.includes('badges/components.svg'));
+  assert.ok(body.includes('badges/tests.svg'));
   assert.ok(body.includes('badges/status.svg'));
+  assert.ok(body.includes('### 🧪 Interaction Test Results'));
+  assert.ok(body.includes('Passed:** 12 / **Failed:** 0 / **Total:** 12'));
   assert.ok(body.includes('| 🎯 **Component Coverage** | `67% (4/6)` | `100% (6/6)` | **+33%** 🟢 |'));
   assert.ok(body.includes('| 📚 **Stories** | 20 | 25 | +5 📈 |'));
   assert.ok(body.includes('| 🧩 **Documented Components** | 4 | 6 | +2 📈 |'));
