@@ -20,6 +20,9 @@ Security-hardened GitHub Action and reusable workflows for building, validating,
 - **PR Preview Lifecycle**: Unprivileged per-PR builds, a trusted `workflow_run` publisher with strict provenance/stale-run validation, an idempotent bot preview comment with live badges, base vs PR delta comparison table, collapsible growth chart, metadata-only close cleanup, and a scheduled/manual retention janitor.
 - **Dynamic SVG Badges**: Automatically generates Shields.io-style SVG badges (Component Coverage %, Story count, Component count, Storybook version, optional interaction tests, and state-aware Status/Build) and JSON endpoints (`badges/`) for your documentation and README.
 - **Hand-Drawn Growth Chart**: Generates a star-history styled hand-drawn SVG growth chart (`stats/history.svg`) and metrics ledger (`stats/history.json`) tracking component coverage, story count, and component count evolution.
+- **Optional Passcode Gate**: Injects a zero-dependency browser passcode prompt into published Storybooks for casual privacy protection.
+
+The passcode gate is client-side protection against casual discovery and search indexing, not access control: the static assets remain publicly fetchable. Use GitHub Enterprise Pages, Cloudflare Access, or another authenticated hosting layer for confidentiality requirements.
 
 ---
 
@@ -199,6 +202,9 @@ jobs:
 | `test_results_path`      | `string`  | `''`               | Optional repository-relative path to a JSON interaction test results file (for example, `.storybook/test-results.json`)                   |
 | `generate_stats_graph`   | `boolean` | `true`             | Whether to automatically generate hand-drawn growth chart (`history.svg`) and update metrics ledger (`history.json`)                      |
 | `stats_directory`        | `string`  | `stats`            | Relative directory inside the static output where generated stats graph and history ledger are hosted                                     |
+| `enable_passcode_gate`   | `boolean` | `false`            | Inject a client-side passcode prompt into `index.html` and `iframe.html`                                                                  |
+| `passcode_session_hours` | `number`  | `24`               | Duration of a successful browser session                                                                                                  |
+| `passcode_hash`          | `secret`  | —                  | SHA-256 hash of the passcode; provide as a workflow secret (composite action input)                                                       |
 
 ### Outputs
 

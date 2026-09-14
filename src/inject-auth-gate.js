@@ -1,0 +1,101 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
+const HTML_FILES = new Set(['index.html', 'iframe.html']);
+
+function validateOptions({ passcodeHash, sessionHours }) {
+  if (!/^[a-f0-9]{64}$/i.test(passcodeHash || '')) {
+    throw new Error('passcode_hash must be a 64-character SHA-256 hexadecimal hash');
+  }
+  if (!Number.isFinite(sessionHours) || sessionHours <= 0) {
+    throw new Error('passcode_session_hours must be a positive number');
+  }
+}
+
+function gateMarkup(passcodeHash, sessionHours) {
+  const config = JSON.stringify({ hash: passcodeHash.toLowerCase(), sessionMs: sessionHours * 60 * 60 * 1000 });
+  return `<style id="storybook-passcode-gate-style">
+body > *:not(#storybook-passcode-gate) { visibility: hidden !important; }
+#storybook-passcode-gate { position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; background: #111827; color: #f9fafb; font: 16px system-ui, sans-serif; }
+#storybook-passcode-gate form { width: min(90vw, 20rem); padding: 2rem; border-radius: .75rem; background: #1f2937; box-shadow: 0 1rem 3rem #0008; }
+#storybook-passcode-gate h1 { margin: 0 0 .5rem; font-size: 1.25rem; }
+#storybook-passcode-gate p { margin: 0 0 1rem; color: #d1d5db; }
+#storybook-passcode-gate input, #storybook-passcode-gate button { box-sizing: border-box; width: 100%; min-height: 2.75rem; margin-top: .75rem; padding: .5rem .75rem; border: 1px solid #6b7280; border-radius: .375rem; font: inherit; }
+#storybook-passcode-gate button { border: 0; background: #2563eb; color: white; cursor: pointer; }
+#storybook-passcode-gate [role="alert"] { min-height: 1.25rem; margin-top: .75rem; color: #fca5a5; }
+</style>
+<div id="storybook-passcode-gate">
+  <form>
+    <h1>Private Storybook</h1>
+    <p>Enter the passcode to continue.</p>
+    <input type="password" autocomplete="current-password" aria-label="Passcode" required>
+    <button type="submit">Continue</button>
+    <div role="alert" aria-live="polite"></div>
+  </form>
+</div>
+<script id="storybook-passcode-gate-script">
+(() => {
+  const config = ${config};
+  const key = 'storybook-passcode-authenticated';
+  const gate = document.getElementById('storybook-passcode-gate');
+  const form = gate.querySelector('form');
+  const input = form.querySelector('input');
+  const alert = form.querySelector('[role="alert"]');
+  const now = () => Date.now();
+  const isValid = () => Number(sessionStorage.getItem(key)) > now();
+  const reveal = () => { gate.remove(); document.querySelector('#storybook-passcode-gate-style')?.remove(); };
+  const digest = async value => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))).map(byte => byte.toString(16).padStart(2, '0')).join('');
+  if (isValid()) reveal();
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    alert.textContent = '';
+    try {
+      if ((await digest(input.value)) !== config.hash) {
+        alert.textContent = 'Incorrect passcode.';
+        input.select();
+        return;
+      }
+      sessionStorage.setItem(key, String(now() + config.sessionMs));
+      reveal();
+    } catch {
+      alert.textContent = 'Passcode validation is unavailable in this browser.';
+    }
+  });
+})();
+</script>`;
+}
+
+async function findHtmlFiles(staticDir) {
+  const files = [];
+  for (const entry of await fs.readdir(staticDir, { withFileTypes: true })) {
+    const entryPath = path.join(staticDir, entry.name);
+    if (entry.isDirectory()) files.push(...(await findHtmlFiles(entryPath)));
+    else if (HTML_FILES.has(entry.name)) files.push(entryPath);
+  }
+  return files;
+}
+
+export async function injectAuthGate(staticDir, { passcodeHash, sessionHours = 24 }) {
+  validateOptions({ passcodeHash, sessionHours });
+  const files = await findHtmlFiles(staticDir);
+  if (files.length === 0) throw new Error(`No index.html or iframe.html found in ${staticDir}`);
+  const markup = gateMarkup(passcodeHash, sessionHours);
+  for (const file of files) {
+    const html = await fs.readFile(file, 'utf8');
+    if (html.includes('storybook-passcode-gate-script')) continue;
+    const marker = /<\/head>/i;
+    const updated = marker.test(html) ? html.replace(marker, `${markup}</head>`) : `${markup}${html}`;
+    await fs.writeFile(file, updated);
+  }
+  return files;
+}
+
+if (process.argv[1]?.endsWith('inject-auth-gate.js')) {
+  injectAuthGate(process.argv[2] || process.env.SB_PATH, {
+    passcodeHash: process.env.PASSCODE_HASH,
+    sessionHours: Number(process.env.PASSCODE_SESSION_HOURS || 24)
+  }).catch(error => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}

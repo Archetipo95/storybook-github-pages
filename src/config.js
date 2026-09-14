@@ -20,6 +20,8 @@ export const DEFAULT_CONFIG = {
   test_results_path: '',
   generate_stats_graph: true,
   stats_directory: 'stats',
+  enable_passcode_gate: false,
+  passcode_session_hours: 24,
   build: {
     install_command: null,
     build_command: null
@@ -164,6 +166,15 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
   if (config.stats_directory !== undefined) {
     validateRelativeDirectory(config.stats_directory, 'stats_directory', { allowEmpty: false });
   }
+  if (config.enable_passcode_gate !== undefined && typeof config.enable_passcode_gate !== 'boolean') {
+    throw new Error('Config enable_passcode_gate must be a boolean');
+  }
+  if (config.passcode_session_hours !== undefined) {
+    const hours = Number(config.passcode_session_hours);
+    if (!Number.isFinite(hours) || hours <= 0) {
+      throw new Error('Config passcode_session_hours must be a positive number');
+    }
+  }
 
   if (config.build !== undefined && config.build !== null) {
     if (typeof config.build !== 'object') {
@@ -307,6 +318,17 @@ export function resolveConfiguration({
           ? Boolean(fileConfig.generate_stats_graph)
           : DEFAULT_CONFIG.generate_stats_graph,
     stats_directory: inputs.stats_directory || fileConfig?.stats_directory || DEFAULT_CONFIG.stats_directory,
+    enable_passcode_gate:
+      inputs.enable_passcode_gate !== undefined && inputs.enable_passcode_gate !== ''
+        ? String(inputs.enable_passcode_gate) === 'true'
+        : fileConfig?.enable_passcode_gate !== undefined
+          ? Boolean(fileConfig.enable_passcode_gate)
+          : DEFAULT_CONFIG.enable_passcode_gate,
+    passcode_session_hours: Number(
+      inputs.passcode_session_hours !== undefined && inputs.passcode_session_hours !== ''
+        ? inputs.passcode_session_hours
+        : (fileConfig?.passcode_session_hours ?? DEFAULT_CONFIG.passcode_session_hours)
+    ),
     build: {
       install_command:
         inputs.install_command ||

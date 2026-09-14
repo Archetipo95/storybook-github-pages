@@ -78,6 +78,20 @@ on:
         required: false
         type: string
         default: ''
+      enable_passcode_gate:
+        description: 'Whether to inject a client-side passcode gate into the published Storybook'
+        required: false
+        type: boolean
+        default: false
+      passcode_session_hours:
+        description: 'Hours before the browser session expires'
+        required: false
+        type: number
+        default: 24
+    secrets:
+      passcode_hash:
+        description: 'SHA-256 hash of the Storybook passcode'
+        required: false
     outputs:
       page_url:
         description: 'The URL of the deployed GitHub Pages site'
@@ -114,6 +128,8 @@ jobs:
       generate_badges: ${{ steps.config.outputs.generate_badges }}
       badges_directory: ${{ steps.config.outputs.badges_directory }}
       test_results_path: ${{ steps.config.outputs.test_results_path }}
+      enable_passcode_gate: ${{ steps.config.outputs.enable_passcode_gate }}
+      passcode_session_hours: ${{ steps.config.outputs.passcode_session_hours }}
 
     steps:
       - name: Checkout repository
@@ -193,6 +209,14 @@ jobs:
         env:
           TARGET_PATH: ${{ steps.config.outputs.path }}
           WORKSPACE_ROOT: ${{ github.workspace }}
+
+      - name: Inject Storybook passcode gate
+        if: ${{ steps.config.outputs.enable_passcode_gate == 'true' }}
+        env:
+          TARGET_PATH: ${{ steps.config.outputs.path }}
+          PASSCODE_HASH: ${{ secrets.passcode_hash }}
+          PASSCODE_SESSION_HOURS: ${{ steps.config.outputs.passcode_session_hours }}
+        run: node src/inject-auth-gate.js "$TARGET_PATH"
 
       - name: Ensure .nojekyll exists
         run: |
