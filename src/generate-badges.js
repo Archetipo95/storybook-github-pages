@@ -270,18 +270,23 @@ export function extractStorybookMetrics(staticDir, workspaceRoot = process.cwd()
 /**
  * Builds markdown badge snippets for documentation and step summaries.
  */
-export function buildBadgeMarkdown({ badgesUrl, siteUrl }) {
+export function buildBadgeMarkdown({ badgesUrl, siteUrl, includeTests = false }) {
   const cleanBadgesUrl = (badgesUrl || '').replace(/\/$/, '');
   const cleanSiteUrl = (siteUrl || cleanBadgesUrl || '#').replace(/\/$/, '');
 
-  return [
+  const badges = [
     `[![Storybook](${cleanBadgesUrl}/storybook.svg)](${cleanSiteUrl})`,
     `[![Status](${cleanBadgesUrl}/status.svg)](${cleanSiteUrl})`,
     `[![Coverage](${cleanBadgesUrl}/coverage.svg)](${cleanSiteUrl})`,
     `[![Stories](${cleanBadgesUrl}/stories.svg)](${cleanSiteUrl})`,
-    `[![Components](${cleanBadgesUrl}/components.svg)](${cleanSiteUrl})`,
-    `[![Tests](${cleanBadgesUrl}/tests.svg)](${cleanSiteUrl})`
-  ].join(' ');
+    `[![Components](${cleanBadgesUrl}/components.svg)](${cleanSiteUrl})`
+  ];
+
+  if (includeTests) {
+    badges.push(`[![Tests](${cleanBadgesUrl}/tests.svg)](${cleanSiteUrl})`);
+  }
+
+  return badges.join(' ');
 }
 
 export function parseTestResultsData(data) {
@@ -607,7 +612,8 @@ export function generateBadges({
 
   const markdownSnippets = buildBadgeMarkdown({
     badgesUrl: derivedBadgesUrl,
-    siteUrl: siteUrl ? `${siteUrl.replace(/\/$/, '')}${basePath ? `/${basePath.replace(/^\/|\/$/g, '')}` : ''}` : ''
+    siteUrl: siteUrl ? `${siteUrl.replace(/\/$/, '')}${basePath ? `/${basePath.replace(/^\/|\/$/g, '')}` : ''}` : '',
+    includeTests: !!testResults
   });
 
   return {

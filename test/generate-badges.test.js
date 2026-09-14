@@ -150,7 +150,8 @@ test('parseTestResultsData accepts common pass/fail totals and nested result obj
 test('buildBadgeMarkdown constructs markdown links correctly', () => {
   const markdown = buildBadgeMarkdown({
     badgesUrl: 'https://example.github.io/my-repo/badges',
-    siteUrl: 'https://example.github.io/my-repo'
+    siteUrl: 'https://example.github.io/my-repo',
+    includeTests: true
   });
   assert.match(markdown, /\[!\[Storybook\]\(https:\/\/example\.github\.io\/my-repo\/badges\/storybook\.svg\)\]/);
   assert.match(markdown, /\[!\[Stories\]\(https:\/\/example\.github\.io\/my-repo\/badges\/stories\.svg\)\]/);
