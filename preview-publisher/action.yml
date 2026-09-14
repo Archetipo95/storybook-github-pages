@@ -23,6 +23,10 @@ inputs:
     description: 'Optional URL base path'
     required: false
     default: ''
+  trigger_pages_rebuild:
+    description: 'Whether to explicitly request a Pages rebuild after pushing (normally unnecessary for branch-based Pages)'
+    required: false
+    default: 'false'
   managed_directories:
     description: 'Comma-separated managed directories preserved during root publication'
     required: false
@@ -78,6 +82,7 @@ runs:
         PREVIEW_ROOT: ${{ inputs.preview_root }}
         SITE_URL: ${{ inputs.site_url }}
         BASE_PATH: ${{ inputs.base_path }}
+        TRIGGER_PAGES_REBUILD: ${{ inputs.trigger_pages_rebuild }}
         MANAGED_DIRECTORIES: ${{ inputs.managed_directories }}
         TRUSTED_REPOSITORY: ${{ inputs.trusted_repository }}
         TRUSTED_RUN_ID: ${{ inputs.trusted_run_id }}

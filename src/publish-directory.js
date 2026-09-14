@@ -97,6 +97,7 @@ export async function publishDirectory({
   managedDirectories = [],
   siteUrl = '',
   basePath = '',
+  triggerPagesRebuild = false,
   token,
   repository
 }) {
@@ -142,7 +143,7 @@ export async function publishDirectory({
       }
     }
     if (!pushed) throw new Error(`Pages directory publish failed after ${RETRIES} attempts: ${lastError.message}`);
-    if (token && repository) {
+    if (triggerPagesRebuild && token && repository) {
       const response = await fetch(`https://api.github.com/repos/${repository}/pages/builds`, {
         method: 'POST',
         headers: {
@@ -187,6 +188,7 @@ if (process.argv[1]?.endsWith('publish-directory.js')) {
     targetDirectory: process.env.TARGET_DIRECTORY || '',
     siteUrl: process.env.SITE_URL || '',
     basePath: process.env.BASE_PATH || '',
+    triggerPagesRebuild: process.env.TRIGGER_PAGES_REBUILD === 'true',
     managedDirectories: process.env.MANAGED_DIRECTORIES
       ? process.env.MANAGED_DIRECTORIES.split(',')
           .map(value => value.trim())

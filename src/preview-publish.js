@@ -70,6 +70,7 @@ export async function publishPreview({
   managedDirectories = [],
   siteUrl = '',
   basePath = '',
+  triggerPagesRebuild = false,
   token,
   repository
 }) {
@@ -95,6 +96,7 @@ export async function publishPreview({
     managedDirectories,
     siteUrl,
     basePath,
+    triggerPagesRebuild,
     token,
     repository
   });
