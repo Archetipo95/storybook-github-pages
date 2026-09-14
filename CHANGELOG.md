@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Optional Storybook Passcode Gate**: Added a zero-dependency browser passcode prompt for published `index.html` and `iframe.html` documents, with configurable session duration, `robots.txt`, and `noindex, nofollow, noarchive` metadata. This is a casual privacy measure, not access control; static assets remain publicly fetchable.
+- **Interaction-Test Badges and Preview Results**: Added `test_results_path` support for common JSON test-result shapes, generated `tests.svg`/`tests.json` badges and overview metrics, and included test totals in PR preview comments.
+- **Base-Ref Metrics Resolution**: PR preview comments now read baseline metrics from the Pages directory associated with the PR base ref, including explicit ref-to-directory mappings and non-root branch-backed deployments.
 - **Dynamic SVG Badges & Endpoints (`src/generate-badges.js`) (#53)**: Automatically extracts Storybook metadata (total stories, unique components, and Storybook version from `index.json` or `stories.json`) and renders pixel-perfect flat Shields.io-style SVG badges (`storybook.svg`, `stories.svg`, `components.svg`, `status.svg`) and Shields.io JSON endpoints into the `<badges_directory>/` folder (`badges/`). Configurable via `generate_badges` (default: `true`) and `badges_directory` (default: `badges`).
 - **ESLint & Prettier Tooling**: Added ESLint 10 with flat config (`eslint.config.js`) and Prettier 3 (`.prettierrc`, `.prettierignore`) with `npm run lint`, `npm run format`, and `npm run format:fix` scripts, integrated into CI (`ci.yml`).
 - **Node.js Engine Specification**: Defined `"engines": { "node": ">=20.0.0" }` in `package.json` for explicit runtime version compatibility.
@@ -24,13 +27,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Redundant Pages Rebuild Requests**: Directory and preview publishing no longer request an explicit Pages rebuild by default after a successful branch push; `trigger_pages_rebuild` remains available for non-standard Pages configurations.
+- **Existing Robots Metadata**: The passcode gate replaces pre-existing robots directives so an indexable `robots` meta tag cannot override the documented noindex behavior.
 - **Stale `preview-publisher` Internal Release Pin (#35)**: `.github/workflows/pr-preview-publish.yml` invoked `Archetipo95/storybook-github-pages/preview-publisher@6fdc8e3...` (v1.1.0), a commit that predates the `preview-publisher` action's introduction, causing every trusted preview publication to fail at action resolution (`Can't find action.yml`) before any provenance gates or Pages writes ran. Repinned to the current compatible commit (`d46e4b2...`, `v1.3.0`) which contains `preview-publisher/action.yml` and the `src/preview-publish.js` it depends on. Audited all other internal `Archetipo95/storybook-github-pages/<subaction>@<sha>` pins (`publisher`, `preview-cleanup`, `preview-janitor`) and confirmed they already resolve correctly. Added `test/action-pin-integrity.test.js`, which `git show`s every pinned commit locally to assert the referenced action path actually exists there, so an internal stale pin cannot silently pass CI again; `ci.yml` now checks out full history (`fetch-depth: 0`) so this validation has the commit objects it needs.
 - **PR Preview Artifact Download Without Git Checkout**: Clarified and documented artifact download requirements for trusted `workflow_run` preview publishers. When downloading untrusted build artifacts without a local Git checkout (to preserve security invariants), `actions/download-artifact@v4` with `run-id` and `github-token` or `gh run download` with `GH_REPO` / `--repo` prevents `fatal: not a git repository` errors.
 - **PR Preview Cleanup Missing Branch Graceful Skip**: When a repository has not initialized or configured a Pages branch, PR preview close cleanup (`pr-preview-cleanup.yml`) safely and noiselessly skips without failing the workflow.
 
 ### Documentation
 
+- **Directory Rebuild Behavior**: Documented `trigger_pages_rebuild` and clarified that branch-based Pages normally rebuild automatically after a push.
 - **Directory Mode Integration via Dedicated Publisher Action**: Investigated generic `startup_failure` runs when external consumers invoke multi-job reusable workflows in directory mode (#24). Documented the GitHub Actions platform limitation where caller permission validation evaluates all jobs in a reusable workflow graph at startup, causing runs to be rejected when callers only grant mode-specific permissions (`contents: write`, `pages: write`). Clarified and documented the supported two-job architecture for directory deployments using `publisher@v1.0.1` directly.
+
+### Changed
+
+- **CI Branch Triggers**: Push validation now runs only on `main`; feature branches continue to receive validation through pull-request workflows without duplicate push checks.
 
 ---
 
