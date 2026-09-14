@@ -8,7 +8,10 @@ import { injectAuthGate } from '../src/inject-auth-gate.js';
 test('injectAuthGate protects entry documents and is idempotent', async () => {
   const staticDir = await fs.mkdtemp(path.join(os.tmpdir(), 'storybook-gate-'));
   await fs.mkdir(path.join(staticDir, 'nested'));
-  await fs.writeFile(path.join(staticDir, 'index.html'), '<html><head></head><body>index</body></html>');
+  await fs.writeFile(
+    path.join(staticDir, 'index.html'),
+    "<html><head><meta name='robots' content='index, follow'></head><body>index</body></html>"
+  );
   await fs.writeFile(path.join(staticDir, 'nested', 'iframe.html'), '<html><body>iframe</body></html>');
 
   try {

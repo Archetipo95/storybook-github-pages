@@ -98,7 +98,10 @@ export async function injectAuthGate(staticDir, { passcodeHash, sessionHours = 2
     const html = await fs.readFile(file, 'utf8');
     if (html.includes('storybook-passcode-gate-script')) continue;
     let withMeta = html;
-    if (!/<meta name="robots"/i.test(withMeta)) {
+    const robotsMeta = /<meta\b(?=[^>]*\bname\s*=\s*(['"])robots\1)[^>]*>/i;
+    if (robotsMeta.test(withMeta)) {
+      withMeta = withMeta.replace(robotsMeta, NO_INDEX_META);
+    } else {
       if (/<head\b[^>]*>/i.test(withMeta)) {
         withMeta = withMeta.replace(/<head\b[^>]*>/i, match => `${match}\n${NO_INDEX_META}`);
       } else if (/<body\b/i.test(withMeta)) {
