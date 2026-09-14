@@ -24,7 +24,7 @@ test('replaceDirectory replaces only the selected target and preserves siblings'
   await fs.rm(source, { recursive: true, force: true });
 });
 
-test('publishDirectory sends authenticated Pages rebuild request with proper headers', async () => {
+test('publishDirectory sends an opt-in authenticated Pages rebuild request with proper headers', async () => {
   const { publishDirectory } = await import('../src/publish-directory.js');
   const repoBare = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-bare-'));
   const repoClone = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-clone-'));
@@ -67,6 +67,7 @@ test('publishDirectory sends authenticated Pages rebuild request with proper hea
       source,
       branch: 'gh-pages',
       targetDirectory: 'storybook',
+      triggerPagesRebuild: true,
       token: 'ghp_secret_token_123',
       repository: 'my-org/my-repo',
       siteUrl: 'https://my-org.github.io/my-repo'
@@ -91,7 +92,57 @@ test('publishDirectory sends authenticated Pages rebuild request with proper hea
   }
 });
 
-test('publishDirectory surfaces Pages rebuild failures after push', async () => {
+test('publishDirectory does not request a Pages rebuild by default', async () => {
+  const { publishDirectory } = await import('../src/publish-directory.js');
+  const repoBare = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-bare-default-'));
+  const repoClone = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-clone-default-'));
+  const source = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-src-default-'));
+
+  const { execFileSync } = await import('node:child_process');
+  execFileSync('git', ['init', '--bare', '-q', repoBare]);
+  const seed = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-seed-default-'));
+  execFileSync('git', ['init', '-q', seed]);
+  execFileSync('git', ['config', 'user.name', 'test'], { cwd: seed });
+  execFileSync('git', ['config', 'user.email', 'test@test.com'], { cwd: seed });
+  await fs.writeFile(path.join(seed, 'init.txt'), 'init');
+  execFileSync('git', ['add', '-A'], { cwd: seed });
+  execFileSync('git', ['commit', '-q', '-m', 'init'], { cwd: seed });
+  execFileSync('git', ['branch', '-M', 'gh-pages'], { cwd: seed });
+  execFileSync('git', ['remote', 'add', 'origin', repoBare], { cwd: seed });
+  execFileSync('git', ['push', '-q', 'origin', 'gh-pages'], { cwd: seed });
+  execFileSync('git', ['clone', '-q', repoBare, repoClone]);
+  execFileSync('git', ['config', 'user.name', 'test'], { cwd: repoClone });
+  execFileSync('git', ['config', 'user.email', 'test@test.com'], { cwd: repoClone });
+  execFileSync('git', ['checkout', '-q', 'gh-pages'], { cwd: repoClone });
+  await fs.writeFile(path.join(source, 'index.html'), '<html>deployed</html>');
+
+  const originalFetch = global.fetch;
+  let requestCount = 0;
+  global.fetch = async () => {
+    requestCount += 1;
+    throw new Error('Pages rebuild should not be requested by default');
+  };
+
+  try {
+    await publishDirectory({
+      repo: repoClone,
+      source,
+      branch: 'gh-pages',
+      targetDirectory: 'storybook',
+      token: 'ghp_secret_token_123',
+      repository: 'my-org/my-repo'
+    });
+    assert.equal(requestCount, 0);
+  } finally {
+    global.fetch = originalFetch;
+    await fs.rm(repoBare, { recursive: true, force: true });
+    await fs.rm(repoClone, { recursive: true, force: true });
+    await fs.rm(seed, { recursive: true, force: true });
+    await fs.rm(source, { recursive: true, force: true });
+  }
+});
+
+test('publishDirectory surfaces opt-in Pages rebuild failures after push', async () => {
   const { publishDirectory } = await import('../src/publish-directory.js');
   const repoBare = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-bare-fail-'));
   const repoClone = await fs.mkdtemp(path.join(os.tmpdir(), 'pages-clone-fail-'));
@@ -133,6 +184,7 @@ test('publishDirectory surfaces Pages rebuild failures after push', async () => 
         source,
         branch: 'gh-pages',
         targetDirectory: 'storybook',
+        triggerPagesRebuild: true,
         token: 'ghp_secret_token_123',
         repository: 'my-org/my-repo'
       }),
