@@ -9,6 +9,35 @@ Security-hardened GitHub Action and reusable workflows for building, validating,
 
 ---
 
+## v2 lean core (preview)
+
+`v2/action.yml` is the intentionally narrow replacement for the v1 composite
+action. It validates and deploys an **already-built** static Storybook; it does
+not install packages, evaluate build commands, parse repository configuration,
+generate badges, or create preview comments. Those concerns remain opt-in,
+separately composable capabilities while their v2 contracts are finalized.
+
+```yaml
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+steps:
+  - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+  - run: npm ci && npm run build-storybook
+  - uses: Archetipo95/storybook-github-pages/v2@<immutable-v2-release-sha>
+    with:
+      static_dir: storybook-static
+```
+
+Use the existing v1 root action and reusable workflows until v2 has a release
+tag. The v2 migration removes `checkout`, `package_manager`, install/build
+commands, config-file precedence, and optional publishing features from the
+core; build those steps explicitly in the caller workflow.
+
+---
+
 ## Features
 
 - **Security First**: Job-scoped least privilege permissions (`contents: read`, `pages: write`, `id-token: write`).

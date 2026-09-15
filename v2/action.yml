@@ -1,0 +1,50 @@
+name: Deploy static Storybook to GitHub Pages
+description: Validate and deploy an already-built static Storybook directory to GitHub Pages
+author: Archetipo95
+
+branding:
+  icon: book-open
+  color: blue
+
+inputs:
+  static_dir:
+    description: Repository-relative directory containing the built static Storybook
+    required: false
+    default: storybook-static
+  artifact_name:
+    description: GitHub Pages artifact name
+    required: false
+    default: github-pages
+
+outputs:
+  page_url:
+    description: URL of the deployed GitHub Pages site
+    value: ${{ steps.deploy.outputs.page_url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate static Storybook
+      shell: bash
+      env:
+        STATIC_DIR: ${{ inputs.static_dir }}
+        WORKSPACE_ROOT: ${{ github.workspace }}
+      run: node "${{ github.action_path }}/../src/validate-artifact.js" "$STATIC_DIR" "$WORKSPACE_ROOT"
+
+    - name: Ensure .nojekyll exists
+      shell: bash
+      env:
+        STATIC_DIR: ${{ inputs.static_dir }}
+      run: touch "$STATIC_DIR/.nojekyll"
+
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+      with:
+        path: ${{ inputs.static_dir }}
+        name: ${{ inputs.artifact_name }}
+
+    - name: Deploy to GitHub Pages
+      id: deploy
+      uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+      with:
+        artifact_name: ${{ inputs.artifact_name }}
