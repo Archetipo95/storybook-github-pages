@@ -58,8 +58,18 @@ if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
     .then(async result => {
       console.log(JSON.stringify(result));
       const prNumber = Number(process.env.PR_NUMBER || 0);
-      if (result.changed && process.env.GITHUB_TOKEN && process.env.GITHUB_REPOSITORY && Number.isFinite(prNumber) && prNumber > 0) {
-        const deploymentEnvironment = process.env.DEPLOYMENT_ENVIRONMENT || process.env.ENVIRONMENT_NAME || process.env.ENVIRONMENT || 'pr-preview';
+      if (
+        result.changed &&
+        process.env.GITHUB_TOKEN &&
+        process.env.GITHUB_REPOSITORY &&
+        Number.isFinite(prNumber) &&
+        prNumber > 0
+      ) {
+        const deploymentEnvironment =
+          process.env.DEPLOYMENT_ENVIRONMENT ||
+          process.env.ENVIRONMENT_NAME ||
+          process.env.ENVIRONMENT ||
+          `pr-preview-${prNumber}`;
         await deactivateDeploymentsForPullRequest({
           token: process.env.GITHUB_TOKEN,
           repository: process.env.GITHUB_REPOSITORY,

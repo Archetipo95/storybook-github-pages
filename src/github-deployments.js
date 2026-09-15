@@ -44,7 +44,8 @@ async function githubApiRequest({ token, repository, path, method = 'GET', body,
   }
 
   if (!response.ok) {
-    const message = payload && typeof payload === 'object' && payload.message ? payload.message : text || `${response.status}`;
+    const message =
+      payload && typeof payload === 'object' && payload.message ? payload.message : text || `${response.status}`;
     throw new Error(`GitHub API request failed for ${method} ${path}: ${message}`);
   }
 
@@ -163,17 +164,18 @@ export async function deactivateDeploymentsForPullRequest({
   description = 'PR preview cleaned up'
 }) {
   const normalizedName = normalizeEnvironmentName(environmentName, 'github-pages');
+  const normalizedPrNumber = Number(prNumber);
+  const descriptionBoundaryPattern = new RegExp(`#${normalizedPrNumber}(?!\\d)`);
   const deployments = await listDeployments({ token, repository, environmentName: normalizedName });
   const matches = deployments.filter(deployment => {
     const payload = deployment.payload && typeof deployment.payload === 'object' ? deployment.payload : {};
-    const prValues = [
-      payload.pr_number,
-      payload.prNumber,
-      payload.preview_pr_number,
-      payload.previewPrNumber,
-      deployment.description
-    ];
-    return prValues.some(value => String(value ?? '').includes(`#${prNumber}`) || Number(value) === Number(prNumber));
+    const numericValues = [payload.pr_number, payload.prNumber, payload.preview_pr_number, payload.previewPrNumber];
+    const numericMatch = numericValues.some(
+      value => value !== undefined && value !== null && value !== '' && Number(value) === normalizedPrNumber
+    );
+    const descriptionMatch =
+      typeof deployment.description === 'string' && descriptionBoundaryPattern.test(deployment.description);
+    return numericMatch || descriptionMatch;
   });
 
   for (const deployment of matches) {

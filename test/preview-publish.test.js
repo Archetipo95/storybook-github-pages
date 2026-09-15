@@ -298,3 +298,93 @@ test('publishPreview surfaces a comment failure independently without treating t
     global.fetch = originalFetch;
   }
 });
+
+test('publishPreview fails loudly when create_deployment is enabled but no token/repository is available', async () => {
+  const { bundleDir, metadata } = makeBundle();
+  const pagesRepo = initBarePagesRepo();
+
+  const originalCreateDeployment = process.env.CREATE_DEPLOYMENT;
+  process.env.CREATE_DEPLOYMENT = 'true';
+
+  try {
+    await assert.rejects(
+      publishPreview({
+        bundleDir,
+        pagesRepo,
+        trustedContext: trustedContextFor(metadata),
+        currentHeadSha: SHA_A,
+        // No token/repository provided: this must be a loud failure, not a
+        // silent skip of deployment creation followed by a successful publish.
+        siteUrl: 'https://octo.github.io/widgets'
+      }),
+      /create_deployment is enabled but no GitHub token\/repository context was provided/
+    );
+    assert.ok(
+      !fs.existsSync(path.join(pagesRepo, 'pr-preview', 'pr-42', 'index.html')),
+      'preview must not be published when the required deployment cannot be created'
+    );
+  } finally {
+    if (originalCreateDeployment === undefined) delete process.env.CREATE_DEPLOYMENT;
+    else process.env.CREATE_DEPLOYMENT = originalCreateDeployment;
+  }
+});
+
+test('publishPreview creates a pending deployment and marks it successful with the preview URL and run log URL', async () => {
+  const { bundleDir, metadata } = makeBundle();
+  const pagesRepo = initBarePagesRepo();
+
+  const originalCreateDeployment = process.env.CREATE_DEPLOYMENT;
+  process.env.CREATE_DEPLOYMENT = 'true';
+
+  const originalFetch = global.fetch;
+  const requests = [];
+  global.fetch = async (url, options = {}) => {
+    requests.push({ url, method: options.method || 'GET', body: options.body ? JSON.parse(options.body) : undefined });
+    if (url.includes('/comments') && (!options.method || options.method === 'GET')) {
+      return { ok: true, status: 200, json: async () => [] };
+    }
+    if (url.includes('/comments') && options.method === 'POST') {
+      return { ok: true, status: 201, json: async () => ({ id: 1 }) };
+    }
+    if (url.includes('/pages/builds')) {
+      return { ok: true, status: 201, json: async () => ({}) };
+    }
+    if (url === 'https://api.github.com/repos/octo/widgets/deployments' && options.method === 'POST') {
+      return { ok: true, status: 201, text: async () => JSON.stringify({ id: 501 }) };
+    }
+    if (url === 'https://api.github.com/repos/octo/widgets/deployments/501/statuses' && options.method === 'POST') {
+      return { ok: true, status: 201, text: async () => JSON.stringify({ id: 5010 }) };
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  try {
+    const result = await publishPreview({
+      bundleDir,
+      pagesRepo,
+      trustedContext: trustedContextFor(metadata),
+      currentHeadSha: SHA_A,
+      token: 'tok',
+      repository: 'octo/widgets',
+      siteUrl: 'https://octo.github.io/widgets'
+    });
+
+    assert.equal(result.action, 'published');
+    assert.equal(result.deploymentRecord.id, 501);
+
+    const createCall = requests.find(r => r.url === 'https://api.github.com/repos/octo/widgets/deployments');
+    assert.equal(createCall.body.environment, 'pr-preview-42', 'defaults to a per-PR environment, not a shared one');
+
+    const statusCalls = requests.filter(
+      r => r.url === 'https://api.github.com/repos/octo/widgets/deployments/501/statuses'
+    );
+    const successCall = statusCalls.find(r => r.body.state === 'success');
+    assert.ok(successCall, 'expected a success status update after publishing');
+    assert.equal(successCall.body.environment_url, 'https://octo.github.io/widgets/pr-preview/pr-42');
+    assert.match(successCall.body.log_url, /\/actions\/runs\/55$/);
+  } finally {
+    if (originalCreateDeployment === undefined) delete process.env.CREATE_DEPLOYMENT;
+    else process.env.CREATE_DEPLOYMENT = originalCreateDeployment;
+    global.fetch = originalFetch;
+  }
+});

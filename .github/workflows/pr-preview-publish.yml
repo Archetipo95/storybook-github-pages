@@ -65,10 +65,10 @@ on:
         type: boolean
         default: true
       environment_name:
-        description: 'GitHub deployment environment name for the preview deployment'
+        description: 'GitHub deployment environment name for the preview deployment (defaults to pr-preview-<PR_NUMBER> when empty)'
         required: false
         type: string
-        default: 'pr-preview'
+        default: ''
       environment_url:
         description: 'Explicit preview URL to attach to the deployment status'
         required: false
@@ -373,6 +373,9 @@ jobs:
           site_url: ${{ steps.config.outputs.site_url }}
           base_path: ${{ steps.config.outputs.base_path }}
           managed_directories: ${{ steps.config.outputs.managed_directories }}
+          create_deployment: ${{ inputs.create_deployment }}
+          environment_name: ${{ inputs.environment_name || format('pr-preview-{0}', needs.gate.outputs.pr_number) }}
+          environment_url: ${{ inputs.environment_url }}
           trusted_repository: ${{ github.repository }}
           trusted_run_id: ${{ needs.gate.outputs.run_id }}
           trusted_pr_number: ${{ needs.gate.outputs.pr_number }}

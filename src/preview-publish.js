@@ -83,12 +83,23 @@ export async function publishPreview({
   }
 
   const shouldCreateDeployment = process.env.CREATE_DEPLOYMENT === 'true';
-  const deploymentEnvironment = process.env.DEPLOYMENT_ENVIRONMENT || process.env.ENVIRONMENT_NAME || process.env.ENVIRONMENT || 'pr-preview';
+  const deploymentEnvironment =
+    process.env.DEPLOYMENT_ENVIRONMENT ||
+    process.env.ENVIRONMENT_NAME ||
+    process.env.ENVIRONMENT ||
+    `pr-preview-${metadata.prNumber}`;
   const deploymentDescription = `Storybook preview for PR #${metadata.prNumber}`;
-  const deploymentLogUrl = trustedContext?.runId ? `https://github.com/${repository}/actions/runs/${trustedContext.runId}` : '';
+  const deploymentLogUrl = trustedContext?.runId
+    ? `https://github.com/${repository}/actions/runs/${trustedContext.runId}`
+    : '';
 
   let deploymentRecord = null;
-  if (shouldCreateDeployment && token && repository) {
+  if (shouldCreateDeployment) {
+    if (!token || !repository) {
+      throw new Error(
+        'create_deployment is enabled but no GitHub token/repository context was provided; cannot create the GitHub deployment record'
+      );
+    }
     deploymentRecord = await createDeployment({
       token,
       repository,

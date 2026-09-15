@@ -68,9 +68,9 @@ inputs:
     required: false
     default: 'true'
   environment_name:
-    description: 'GitHub deployment environment name for the preview'
+    description: 'GitHub deployment environment name for the preview (defaults to pr-preview-<PR_NUMBER> when empty)'
     required: false
-    default: 'pr-preview'
+    default: ''
   environment_url:
     description: 'Explicit preview URL to attach to the deployment status'
     required: false

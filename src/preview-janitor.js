@@ -219,12 +219,13 @@ if (process.argv[1] && process.argv[1].endsWith('preview-janitor.js')) {
         )
       );
       if (result.changed) {
-        const deploymentEnvironment = process.env.DEPLOYMENT_ENVIRONMENT || process.env.ENVIRONMENT_NAME || process.env.ENVIRONMENT || 'pr-preview';
+        const deploymentEnvironmentOverride =
+          process.env.DEPLOYMENT_ENVIRONMENT || process.env.ENVIRONMENT_NAME || process.env.ENVIRONMENT || '';
         for (const item of result.removed) {
           await deactivateDeploymentsForPullRequest({
             token: process.env.GITHUB_TOKEN,
             repository: process.env.GITHUB_REPOSITORY,
-            environmentName: deploymentEnvironment,
+            environmentName: deploymentEnvironmentOverride || `pr-preview-${item.prNumber}`,
             prNumber: item.prNumber,
             description: `Preview cleanup for PR #${item.prNumber}`
           });

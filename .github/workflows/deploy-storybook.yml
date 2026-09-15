@@ -299,6 +299,10 @@ jobs:
       deployment_id: ${{ steps.create-deployment.outputs.deployment_id || steps.deploy-pages.outputs.deployment_id }}
 
     steps:
+      - name: Checkout repository
+        if: ${{ needs.build-and-upload.outputs.create_deployment == 'true' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Create GitHub deployment (pending)
         id: create-deployment
         if: ${{ needs.build-and-upload.outputs.create_deployment == 'true' }}
