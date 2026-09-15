@@ -136,7 +136,6 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
         `Config preview_retention_days must be a non-negative integer, got "${config.preview_retention_days}"`
       );
     }
-
   }
 
   if (config.warning_days_before_cleanup !== undefined) {

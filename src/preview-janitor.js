@@ -5,6 +5,7 @@ import { run, withSerializedBranchWrite, requestPagesRebuild } from './git-branc
 import { updatePreviewCommentStatus } from './preview-comment.js';
 
 const PREVIEW_DIR_PATTERN = /^pr-(\d+)$/;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Parses a preview root entry name and returns its PR number, or null when
@@ -29,7 +30,7 @@ export function classifyPreviewEntries({
   entries,
   openPrNumbers,
   retentionMs,
-  warningMs = 0,
+  warningMs = null,
   now = Date.now(),
   getLastModifiedMs
 }) {
@@ -60,11 +61,16 @@ export function classifyPreviewEntries({
     }
     if (
       Number.isFinite(warningMs) &&
-      warningMs > 0 &&
+      warningMs >= 0 &&
       typeof lastModifiedMs === 'number' &&
       now - lastModifiedMs >= warningMs
     ) {
-      warn.push({ entry, prNumber, ageMs: now - lastModifiedMs });
+      warn.push({
+        entry,
+        prNumber,
+        ageMs: now - lastModifiedMs,
+        remainingDays: Math.max(0, Math.ceil((retentionMs - (now - lastModifiedMs)) / DAY_MS))
+      });
     }
     keep.push(entry);
   }
@@ -135,12 +141,9 @@ export async function runJanitor({
 }) {
   const normalizedRoot = previewRoot === '.' || previewRoot === './' ? '' : previewRoot;
   validateRelativeDirectory(normalizedRoot, 'preview_root', { allowEmpty: true });
-  const retentionMs = Number(retentionDays) > 0 ? Number(retentionDays) * 24 * 60 * 60 * 1000 : 0;
+  const retentionMs = Number(retentionDays) > 0 ? Number(retentionDays) * DAY_MS : 0;
   const warningDays = Number(warningDaysBeforeCleanup);
-  const warningMs =
-    retentionMs > 0 && warningDays > 0
-      ? Math.max(0, Number(retentionDays) - warningDays) * 24 * 60 * 60 * 1000
-      : 0;
+  const warningMs = retentionMs > 0 && warningDays > 0 ? Math.max(0, retentionMs - warningDays * DAY_MS) : null;
   const openPrNumbers = await fetchOpenPullRequestNumbers({ token, repository });
   const entries = await listPreviewEntries(repo, normalizedRoot);
 
@@ -222,7 +225,7 @@ if (process.argv[1] && process.argv[1].endsWith('preview-janitor.js')) {
           token: process.env.GITHUB_TOKEN,
           repository: process.env.GITHUB_REPOSITORY,
           prNumber: item.prNumber,
-          warningDays: Number(process.env.WARNING_DAYS_BEFORE_CLEANUP)
+          warningDays: item.remainingDays
         });
       }
       for (const item of result.removed) {
