@@ -32,13 +32,19 @@ export function computeBaseUrl({ repository = '', siteUrl = '', basePath = '', e
 }
 
 export function hasExplicitBaseUrl(command = '') {
-  return /(?:^|\s)(?:--base(?:-url)?|--public-path|--output-base)(?:[=\s]|$)|(?:^|\s)(?:BASE_URL|PUBLIC_URL|STORYBOOK_BASE_HREF)=/i.test(
+  return /(?:^|\s)(?:--base(?:-url)?|--public-path|--output-base|--output-dir|-o)(?:[=\s]|$)|(?:^|\s)(?:BASE_URL|PUBLIC_URL|STORYBOOK_BASE_HREF)=/i.test(
     command
   );
 }
 
+export function isStorybookBuildCommand(command = '') {
+  return /(?:^|\s)(?:build-storybook|storybook\s+build)(?:\s|$)/i.test(command);
+}
+
 export function augmentBuildCommand(command, baseUrl, { autoBaseUrl = true } = {}) {
-  if (!autoBaseUrl || !command || !baseUrl || hasExplicitBaseUrl(command)) return command;
+  if (!autoBaseUrl || !command || !baseUrl || hasExplicitBaseUrl(command) || !isStorybookBuildCommand(command)) {
+    return command;
+  }
   const separator = /^(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?/.test(command.trim()) ? ' -- ' : ' ';
   return `${command}${separator}--base-url ${shellQuote(baseUrl)}`;
 }

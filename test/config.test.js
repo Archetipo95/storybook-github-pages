@@ -34,6 +34,8 @@ test('automatic base URL computation handles repository, custom-domain, and PR p
 
 test('automatic base URL augmentation preserves explicit base configuration', () => {
   assert.equal(hasExplicitBaseUrl('npm run build-storybook -- --base /custom/'), true);
+  assert.equal(hasExplicitBaseUrl('storybook build -o dist'), true);
+  assert.equal(hasExplicitBaseUrl('storybook build --output-dir=dist'), true);
   assert.equal(
     augmentBuildCommand('npm run build-storybook -- --base /custom/', '/repo/'),
     'npm run build-storybook -- --base /custom/'
@@ -42,6 +44,8 @@ test('automatic base URL augmentation preserves explicit base configuration', ()
     augmentBuildCommand('npm run build-storybook', '/repo/'),
     "npm run build-storybook -- --base-url '/repo/'"
   );
+  assert.equal(augmentBuildCommand('npm run build', '/repo/'), 'npm run build');
+  assert.equal(augmentBuildCommand('vite build', '/repo/'), 'vite build');
   assert.equal(
     augmentBuildCommand('npm run build-storybook', '/repo/', { autoBaseUrl: false }),
     'npm run build-storybook'
