@@ -8,6 +8,9 @@ export const DEFAULT_CONFIG = {
   pages_branch: 'gh-pages',
   target_directory: '',
   environment: '',
+  environment_name: '',
+  environment_url: '',
+  create_deployment: false,
   site_url: '',
   base_path: '',
   artifact_name: 'github-pages',
@@ -111,10 +114,15 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
     validateRelativeDirectory(config.target_directory, 'target_directory', { allowEmpty: true });
   if (config.environment !== undefined)
     validateRelativeDirectory(config.environment, 'environment', { allowEmpty: true });
-  for (const field of ['site_url', 'base_path']) {
+  if (config.environment_name !== undefined)
+    validateRelativeDirectory(config.environment_name, 'environment_name', { allowEmpty: true });
+  for (const field of ['environment_url', 'site_url', 'base_path']) {
     if (config[field] !== undefined && typeof config[field] !== 'string') {
       throw new Error(`Config ${field} must be a string`);
     }
+  }
+  if (config.create_deployment !== undefined && typeof config.create_deployment !== 'boolean') {
+    throw new Error('Config create_deployment must be a boolean');
   }
   if (config.managed_directories !== undefined) {
     const values = Array.isArray(config.managed_directories)
@@ -289,6 +297,19 @@ export function resolveConfiguration({
     pages_branch: inputs.pages_branch || fileConfig?.pages_branch || DEFAULT_CONFIG.pages_branch,
     target_directory: inputs.target_directory || fileConfig?.target_directory || DEFAULT_CONFIG.target_directory,
     environment: inputs.environment || fileConfig?.environment || DEFAULT_CONFIG.environment,
+    environment_name:
+      inputs.environment_name ||
+      inputs.environment ||
+      fileConfig?.environment_name ||
+      fileConfig?.environment ||
+      DEFAULT_CONFIG.environment_name,
+    environment_url: inputs.environment_url || fileConfig?.environment_url || DEFAULT_CONFIG.environment_url,
+    create_deployment:
+      inputs.create_deployment !== undefined && inputs.create_deployment !== ''
+        ? String(inputs.create_deployment) === 'true'
+        : fileConfig?.create_deployment !== undefined
+          ? Boolean(fileConfig.create_deployment)
+          : DEFAULT_CONFIG.create_deployment,
     site_url: inputs.site_url || fileConfig?.site_url || DEFAULT_CONFIG.site_url,
     base_path: inputs.base_path || fileConfig?.base_path || DEFAULT_CONFIG.base_path,
     artifact_name: inputs.artifact_name || fileConfig?.artifact_name || DEFAULT_CONFIG.artifact_name,

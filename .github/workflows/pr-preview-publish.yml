@@ -59,6 +59,21 @@ on:
         required: false
         type: string
         default: ''
+      create_deployment:
+        description: 'Whether to create a native GitHub deployment record for the preview'
+        required: false
+        type: boolean
+        default: true
+      environment_name:
+        description: 'GitHub deployment environment name for the preview deployment'
+        required: false
+        type: string
+        default: 'pr-preview'
+      environment_url:
+        description: 'Explicit preview URL to attach to the deployment status'
+        required: false
+        type: string
+        default: ''
     outputs:
       page_url:
         description: 'The URL of the published preview'
@@ -195,6 +210,7 @@ jobs:
       pages: write
       pull-requests: write
       actions: read
+      deployments: write
     outputs:
       page_url: ${{ steps.publisher.outputs.page_url }}
       action: ${{ steps.publisher.outputs.action }}
