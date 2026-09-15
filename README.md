@@ -177,35 +177,36 @@ jobs:
 
 ### Action / Workflow Inputs
 
-| Input                    | Type      | Default            | Description                                                                                                                               |
-| ------------------------ | --------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `path`                   | `string`  | `storybook-static` | Path to the directory containing built static Storybook files                                                                             |
-| `package_manager`        | `string`  | `npm`              | Reusable workflow: `npm`, `yarn`, `pnpm`, or `bun`; composite action: `npm`, `yarn`, or `pnpm`                                            |
-| `checkout`               | `string`  | `'true'`           | Whether to check out the repository automatically (Action only)                                                                           |
-| `install_command`        | `string`  | `''`               | Bitovi compatibility / custom dependency installation command                                                                             |
-| `build_command`          | `string`  | `''`               | Bitovi compatibility / custom Storybook build command                                                                                     |
-| `custom_install_command` | `string`  | `''`               | Alias for `install_command`                                                                                                               |
-| `custom_build_command`   | `string`  | `''`               | Alias for `build_command`                                                                                                                 |
-| `publish`                | `string`  | `'true'`           | Whether to upload and deploy the Pages artifact                                                                                           |
-| `artifact_name`          | `string`  | `github-pages`     | GitHub Pages artifact name                                                                                                                |
-| `environment`            | `string`  | `github-pages`     | GitHub Pages deployment environment name                                                                                                  |
-| `mode`                   | `string`  | `artifact`         | `artifact` or trusted branch-backed `directory`                                                                                           |
-| `pages_branch`           | `string`  | `gh-pages`         | Pages branch used by directory mode                                                                                                       |
-| `target_directory`       | `string`  | `''`               | Relative directory to replace; empty means the production root                                                                            |
-| `site_url`               | `string`  | `''`               | Canonical site URL used for deployment metadata                                                                                           |
-| `base_path`              | `string`  | `''`               | URL base path; derived from `target_directory` when empty                                                                                 |
-| `trigger_pages_rebuild`  | `boolean` | `false`            | Whether to explicitly request a Pages rebuild after a directory publish; normally unnecessary for branch-based Pages                      |
-| `preview_root`           | `string`  | `pr-preview`       | Root directory (on the Pages branch) under which PR previews are published, as `<preview_root>/pr-<number>`                               |
-| `preview_retention_days` | `number`  | `30`               | Days an _open_ PR's preview may remain before the janitor prunes it; closed-PR previews are always eligible for removal regardless of age |
-| `managed_directories`    | `string`  | `''`               | Comma-separated directories preserved during root publication in directory mode (e.g. `pr-preview`)                                       |
-| `generate_badges`        | `boolean` | `true`             | Whether to automatically generate SVG/JSON component and story count badges                                                               |
-| `badges_directory`       | `string`  | `badges`           | Relative directory inside the static output where generated badges are hosted                                                             |
-| `test_results_path`      | `string`  | `''`               | Optional repository-relative path to a JSON interaction test results file (for example, `.storybook/test-results.json`)                   |
-| `generate_stats_graph`   | `boolean` | `true`             | Whether to automatically generate hand-drawn growth chart (`history.svg`) and update metrics ledger (`history.json`)                      |
-| `stats_directory`        | `string`  | `stats`            | Relative directory inside the static output where generated stats graph and history ledger are hosted                                     |
-| `enable_passcode_gate`   | `boolean` | `false`            | Inject a client-side passcode prompt into `index.html` and `iframe.html`                                                                  |
-| `passcode_session_hours` | `number`  | `24`               | Duration of a successful browser session                                                                                                  |
-| `passcode_hash`          | `secret`  | —                  | SHA-256 hash of the passcode; provide as a workflow secret (composite action input)                                                       |
+| Input                         | Type      | Default            | Description                                                                                                                               |
+| ----------------------------- | --------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`                        | `string`  | `storybook-static` | Path to the directory containing built static Storybook files                                                                             |
+| `package_manager`             | `string`  | `npm`              | Reusable workflow: `npm`, `yarn`, `pnpm`, or `bun`; composite action: `npm`, `yarn`, or `pnpm`                                            |
+| `checkout`                    | `string`  | `'true'`           | Whether to check out the repository automatically (Action only)                                                                           |
+| `install_command`             | `string`  | `''`               | Bitovi compatibility / custom dependency installation command                                                                             |
+| `build_command`               | `string`  | `''`               | Bitovi compatibility / custom Storybook build command                                                                                     |
+| `custom_install_command`      | `string`  | `''`               | Alias for `install_command`                                                                                                               |
+| `custom_build_command`        | `string`  | `''`               | Alias for `build_command`                                                                                                                 |
+| `publish`                     | `string`  | `'true'`           | Whether to upload and deploy the Pages artifact                                                                                           |
+| `artifact_name`               | `string`  | `github-pages`     | GitHub Pages artifact name                                                                                                                |
+| `environment`                 | `string`  | `github-pages`     | GitHub Pages deployment environment name                                                                                                  |
+| `mode`                        | `string`  | `artifact`         | `artifact` or trusted branch-backed `directory`                                                                                           |
+| `pages_branch`                | `string`  | `gh-pages`         | Pages branch used by directory mode                                                                                                       |
+| `target_directory`            | `string`  | `''`               | Relative directory to replace; empty means the production root                                                                            |
+| `site_url`                    | `string`  | `''`               | Canonical site URL used for deployment metadata                                                                                           |
+| `base_path`                   | `string`  | `''`               | URL base path; derived from `target_directory` when empty                                                                                 |
+| `trigger_pages_rebuild`       | `boolean` | `false`            | Whether to explicitly request a Pages rebuild after a directory publish; normally unnecessary for branch-based Pages                      |
+| `preview_root`                | `string`  | `pr-preview`       | Root directory (on the Pages branch) under which PR previews are published, as `<preview_root>/pr-<number>`                               |
+| `preview_retention_days`      | `number`  | `30`               | Days an _open_ PR's preview may remain before the janitor prunes it; closed-PR previews are always eligible for removal regardless of age |
+| `warning_days_before_cleanup` | `number`  | `3`                | Days before cleanup to warn in the bot PR comment; `0` disables warnings                                                                  |
+| `managed_directories`         | `string`  | `''`               | Comma-separated directories preserved during root publication in directory mode (e.g. `pr-preview`)                                       |
+| `generate_badges`             | `boolean` | `true`             | Whether to automatically generate SVG/JSON component and story count badges                                                               |
+| `badges_directory`            | `string`  | `badges`           | Relative directory inside the static output where generated badges are hosted                                                             |
+| `test_results_path`           | `string`  | `''`               | Optional repository-relative path to a JSON interaction test results file (for example, `.storybook/test-results.json`)                   |
+| `generate_stats_graph`        | `boolean` | `true`             | Whether to automatically generate hand-drawn growth chart (`history.svg`) and update metrics ledger (`history.json`)                      |
+| `stats_directory`             | `string`  | `stats`            | Relative directory inside the static output where generated stats graph and history ledger are hosted                                     |
+| `enable_passcode_gate`        | `boolean` | `false`            | Inject a client-side passcode prompt into `index.html` and `iframe.html`                                                                  |
+| `passcode_session_hours`      | `number`  | `24`               | Duration of a successful browser session                                                                                                  |
+| `passcode_hash`               | `secret`  | —                  | SHA-256 hash of the passcode; provide as a workflow secret (composite action input)                                                       |
 
 ### Outputs
 
@@ -435,6 +436,7 @@ Both are ordinary `.storybook-pages.yml` / workflow-input settings, validated th
 ```yaml
 preview_root: pr-preview # default; set to '' in .storybook-pages.yml for repository-root layout (pr-<number>)
 preview_retention_days: 30 # default; 0 disables age-based pruning (closed-PR previews are still removed)
+warning_days_before_cleanup: 3 # default; 0 disables inactivity warnings
 ```
 
 #### Repository-Root Preview Layout (`preview_root: ''`)

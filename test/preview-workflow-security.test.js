@@ -123,6 +123,7 @@ test('pr-preview-janitor workflow supports manual dispatch and schedule, never c
   assert.match(content, /preview_root:/, 'janitor must support preview_root input');
   assert.match(content, /pages_branch:/, 'janitor must support pages_branch input');
   assert.match(content, /retention_days:/, 'janitor must support retention_days input');
+  assert.match(content, /warning_days_before_cleanup:/, 'janitor must support warning_days_before_cleanup input');
   assert.doesNotMatch(content, /pull_request/);
   const janitorJob = extractJobBlock(content, 'janitor');
   assert.match(janitorJob, /contents:\s*write/);

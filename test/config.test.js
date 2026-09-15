@@ -118,6 +118,13 @@ test('validateConfig - accepts 0 or positive preview_retention_days and rejects 
   assert.throws(() => validateConfig({ preview_retention_days: 'many' }), /preview_retention_days/);
 });
 
+test('validateConfig - accepts warning_days_before_cleanup and rejects invalid values', () => {
+  assert.equal(validateConfig({ warning_days_before_cleanup: 3 }), true);
+  assert.equal(validateConfig({ warning_days_before_cleanup: 0 }), true);
+  assert.throws(() => validateConfig({ warning_days_before_cleanup: -1 }), /warning_days_before_cleanup/);
+  assert.throws(() => validateConfig({ warning_days_before_cleanup: 'many' }), /warning_days_before_cleanup/);
+});
+
 test('resolveDeploymentTarget - derives URL metadata for named environments', () => {
   assert.deepEqual(
     resolveDeploymentTarget({
@@ -239,6 +246,7 @@ test('resolveConfiguration - defaults preview_root and preview_retention_days, a
   });
   assert.equal(defaults.preview_root, 'pr-preview');
   assert.equal(defaults.preview_retention_days, 30);
+  assert.equal(defaults.warning_days_before_cleanup, 3);
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-config-preview-'));
   const configPath = path.join(tmpDir, '.storybook-pages.yml');

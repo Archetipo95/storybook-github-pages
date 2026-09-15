@@ -16,6 +16,10 @@ on:
         description: 'Remove previews for still-open PRs after this many days (0 disables age-based pruning; closed-PR previews are always removed)'
         required: false
         default: ''
+      warning_days_before_cleanup:
+        description: 'Warn in the PR preview comment this many days before cleanup (0 disables warnings)'
+        required: false
+        default: '3'
   schedule:
     - cron: '17 4 * * *'
   workflow_call:
@@ -35,6 +39,11 @@ on:
         required: false
         type: string
         default: ''
+      warning_days_before_cleanup:
+        description: 'Warn in the PR preview comment this many days before cleanup (0 disables warnings)'
+        required: false
+        type: string
+        default: '3'
 
 jobs:
   janitor:
@@ -67,6 +76,7 @@ jobs:
           INPUT_PREVIEW_ROOT: ${{ inputs.preview_root }}
           INPUT_PAGES_BRANCH: ${{ inputs.pages_branch }}
           INPUT_RETENTION_DAYS: ${{ inputs.retention_days || github.event.inputs.retention_days }}
+          INPUT_WARNING_DAYS: ${{ inputs.warning_days_before_cleanup || github.event.inputs.warning_days_before_cleanup }}
         run: |
           node -e '
             import("node:fs").then(async ({existsSync}) => {
@@ -75,15 +85,18 @@ jobs:
                 const c = resolveConfiguration({inputs: {
                   preview_root: process.env.INPUT_PREVIEW_ROOT,
                   pages_branch: process.env.INPUT_PAGES_BRANCH,
-                  preview_retention_days: process.env.INPUT_RETENTION_DAYS
+                  preview_retention_days: process.env.INPUT_RETENTION_DAYS,
+                  warning_days_before_cleanup: process.env.INPUT_WARNING_DAYS
                 }});
                 console.log(`preview_root=${c.preview_root}`);
                 console.log(`pages_branch=${c.pages_branch}`);
                 console.log(`retention_days=${c.preview_retention_days}`);
+                console.log(`warning_days_before_cleanup=${c.warning_days_before_cleanup}`);
               } else {
                 let file_preview_root = undefined;
                 let file_pages_branch = undefined;
                 let file_retention_days = undefined;
+                let file_warning_days = undefined;
                 if (existsSync(".storybook-pages.yml")) {
                   const {readFileSync} = await import("node:fs");
                   const content = readFileSync(".storybook-pages.yml", "utf8");
@@ -97,6 +110,9 @@ jobs:
                     }
                     if (file_retention_days === undefined && trimmed.startsWith("preview_retention_days:")) {
                       file_retention_days = trimmed.slice("preview_retention_days:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                    if (file_warning_days === undefined && trimmed.startsWith("warning_days_before_cleanup:")) {
+                      file_warning_days = trimmed.slice("warning_days_before_cleanup:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
                     }
                   }
                 }
@@ -117,9 +133,14 @@ jobs:
                 const retention_days = (rawRetentionDays !== undefined && rawRetentionDays !== "")
                   ? rawRetentionDays
                   : (file_retention_days !== undefined ? file_retention_days : "30");
+                const rawWarningDays = process.env.INPUT_WARNING_DAYS;
+                const warning_days_before_cleanup = (rawWarningDays !== undefined && rawWarningDays !== "")
+                  ? rawWarningDays
+                  : (file_warning_days !== undefined ? file_warning_days : "3");
                 console.log(`preview_root=${preview_root}`);
                 console.log(`pages_branch=${pages_branch}`);
                 console.log(`retention_days=${retention_days}`);
+                console.log(`warning_days_before_cleanup=${warning_days_before_cleanup}`);
               }
             });
           ' >> "$GITHUB_OUTPUT"
@@ -156,3 +177,4 @@ jobs:
           pages_branch: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
           preview_root: ${{ steps.config.outputs.preview_root }}
           retention_days: ${{ steps.config.outputs.retention_days }}
+          warning_days_before_cleanup: ${{ steps.config.outputs.warning_days_before_cleanup }}
