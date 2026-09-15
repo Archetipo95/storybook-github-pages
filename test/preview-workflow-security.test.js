@@ -102,6 +102,7 @@ test('pr-preview-cleanup workflow never checks out the pull request head and sta
   const cleanupJob = extractJobBlock(content, 'cleanup');
   assert.match(cleanupJob, /contents:\s*write/);
   assert.match(cleanupJob, /pages:\s*write/);
+  assert.match(cleanupJob, /deployments:\s*write/);
   assert.match(
     cleanupJob,
     /git ls-remote --exit-code --heads origin/,
@@ -128,6 +129,7 @@ test('pr-preview-janitor workflow supports manual dispatch and schedule, never c
   const janitorJob = extractJobBlock(content, 'janitor');
   assert.match(janitorJob, /contents:\s*write/);
   assert.match(janitorJob, /pages:\s*write/);
+  assert.match(janitorJob, /deployments:\s*write/);
   assert.match(janitorJob, /pull-requests:\s*read/);
   assert.match(
     janitorJob,
