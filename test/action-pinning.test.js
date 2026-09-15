@@ -119,8 +119,9 @@ test('directory publisher has Pages permission and rebuild is outside push retri
   const job = workflow.match(/directory-publish:[\s\S]*$/)[0];
   assert.match(job, /contents:\s*write[\s\S]*pages:\s*write/);
   const publisher = fs.readFileSync(path.join(process.cwd(), 'src/publish-directory.js'), 'utf8');
-  assert.ok(publisher.indexOf("['push'") < publisher.indexOf('fetch(`https://api.github.com'));
-  assert.ok(publisher.indexOf('fetch(`https://api.github.com') > publisher.indexOf('for (let attempt'));
+  assert.match(publisher, /withSerializedBranchWrite/);
+  assert.match(publisher, /requestPagesRebuild/);
+  assert.doesNotMatch(publisher, /spawn\(|for \(let attempt/);
 });
 
 test('directory publisher reference pins the reviewed implementation commit', () => {

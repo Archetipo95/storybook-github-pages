@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 
-const LOCK_NAME = '.storybook-pages-write.lock';
+export const WRITE_LOCK_NAME = '.storybook-pages-write.lock';
 const RETRIES = 3;
 
 export function run(command, args, cwd) {
@@ -24,7 +24,7 @@ export function run(command, args, cwd) {
 }
 
 export async function acquireLock(repo, timeoutMs = 120000) {
-  const lock = path.join(repo, LOCK_NAME);
+  const lock = path.join(repo, WRITE_LOCK_NAME);
   const started = Date.now();
   while (true) {
     try {
@@ -50,8 +50,10 @@ export async function requestPagesRebuild({ token, repository }) {
     }
   });
   if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(`Pages rebuild request failed (${response.status}) after a successful push: ${text}`);
+    const text = typeof response.text === 'function' ? await response.text().catch(() => '') : '';
+    throw new Error(
+      `Pages rebuild request failed (${response.status}) after successful push${text ? `: ${text}` : ''}`
+    );
   }
 }
 
