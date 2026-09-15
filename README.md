@@ -243,6 +243,57 @@ You can embed these badges directly into your `README.md`:
 
 ---
 
+## Coverage Discovery & Path Filtering
+
+The component coverage calculation uses the checked-out repository as the default discovery root. In the current release, the action walks the workspace and counts likely framework component files such as `.vue`, `.jsx`, `.tsx`, and `.svelte` while excluding common non-component and generated paths (`node_modules`, `.git`, `storybook-static`, `dist`, `build`, `coverage`, and files ending with `.stories.*`, `.story.*`, `.test.*`, `.spec.*`). This default behavior is intentionally repository-wide and is what drives the coverage badge, `badges/overview.json`, PR preview coverage deltas, and the growth-chart ledger.
+
+### Planned future configuration shape
+
+This is a proposed future API for repositories that need finer control over the coverage set. It is not yet exposed in the current workflow inputs or validation layer, and the actual implementation remains pending.
+
+The intended configuration shape is:
+
+```yaml
+with:
+  coverage_include_paths: |
+    src/components/**
+    packages/*/src/components/**
+  coverage_ignore_paths: |
+    **/generated/**
+    **/vendor/**
+    **/*.stories.*
+    **/*.spec.*
+```
+
+This planned configuration is intentionally repository-root-relative. In other words, the patterns are evaluated against the checkout root rather than the Storybook source directory, and the effective coverage set is computed before the badge and metrics are generated.
+
+### Matching rules and precedence
+
+- `coverage_include_paths` narrows the candidate component set to matching files; when it is empty, the default repository-wide scan is used.
+- `coverage_ignore_paths` removes matching files from the final set even if they also match an include rule.
+- Ignore rules win when the same file matches both include and ignore patterns.
+- Supported globs follow standard `*`, `**`, and `?` matching semantics for files and directories under the repository root.
+- Glob examples for monorepos are usually written as `packages/*/src/components/**` or `apps/web/src/**`, while generated and vendor content is typically excluded with patterns like `**/generated/**`, `**/vendor/**`, and `**/dist/**`.
+
+### Example scenarios
+
+- Monorepo: `coverage_include_paths` can target only the actual app packages that should contribute to the published Storybook coverage score.
+- Generated code: `coverage_ignore_paths` can ignore files under `**/generated/**` or `**/vendor/**` so metrics reflect the shipped, hand-maintained components instead of build artifacts.
+- Storybook-only files: `**/*.stories.*` and `**/*.story.*` remain excluded from component totals by design, preventing documentation-only files from inflating or skewing the ratio.
+
+### Impact on published metrics
+
+Once implemented, the selected coverage set will be the single source of truth for:
+
+- the coverage badge (`badges/coverage.svg` / `badges/coverage.json`);
+- `badges/overview.json`;
+- PR preview coverage comparisons and deltas;
+- the historical growth-chart ledger (`stats/history.json` and `stats/history.svg`).
+
+Until the path-filter configuration is exposed in the action, the current default remains the repository-wide component scan described above.
+
+---
+
 ## 📈 Hand-Drawn Growth Chart & Metrics Ledger
 
 When `generate_stats_graph` is enabled (default), `storybook-github-pages` generates a star-history styled hand-drawn SVG chart and keeps an incremental metrics ledger across deployments:
