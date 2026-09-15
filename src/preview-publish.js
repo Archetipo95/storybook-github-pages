@@ -92,6 +92,7 @@ export async function publishPreview({
   const deploymentLogUrl = trustedContext?.runId
     ? `https://github.com/${repository}/actions/runs/${trustedContext.runId}`
     : '';
+  const explicitEnvironmentUrl = process.env.ENVIRONMENT_URL || '';
 
   let deploymentRecord = null;
   if (shouldCreateDeployment) {
@@ -105,7 +106,7 @@ export async function publishPreview({
       repository,
       ref: metadata.headSha,
       environmentName: deploymentEnvironment,
-      environmentUrl: '',
+      environmentUrl: explicitEnvironmentUrl,
       logUrl: deploymentLogUrl,
       description: deploymentDescription,
       payload: {
@@ -194,7 +195,7 @@ export async function publishPreview({
       repository,
       deploymentId: deploymentRecord.id,
       state: 'success',
-      environmentUrl: previewUrl,
+      environmentUrl: explicitEnvironmentUrl || previewUrl,
       logUrl: deploymentLogUrl,
       description: `${deploymentDescription} published successfully`
     });

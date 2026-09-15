@@ -388,3 +388,74 @@ test('publishPreview creates a pending deployment and marks it successful with t
     global.fetch = originalFetch;
   }
 });
+
+test('publishPreview honors an explicit ENVIRONMENT_URL override for both pending and success deployment statuses', async () => {
+  const { bundleDir, metadata } = makeBundle();
+  const pagesRepo = initBarePagesRepo();
+
+  const originalCreateDeployment = process.env.CREATE_DEPLOYMENT;
+  const originalEnvironmentUrl = process.env.ENVIRONMENT_URL;
+  process.env.CREATE_DEPLOYMENT = 'true';
+  process.env.ENVIRONMENT_URL = 'https://custom.example.com/preview';
+
+  const originalFetch = global.fetch;
+  const requests = [];
+  global.fetch = async (url, options = {}) => {
+    requests.push({ url, method: options.method || 'GET', body: options.body ? JSON.parse(options.body) : undefined });
+    if (url.includes('/comments') && (!options.method || options.method === 'GET')) {
+      return { ok: true, status: 200, json: async () => [] };
+    }
+    if (url.includes('/comments') && options.method === 'POST') {
+      return { ok: true, status: 201, json: async () => ({ id: 1 }) };
+    }
+    if (url.includes('/pages/builds')) {
+      return { ok: true, status: 201, json: async () => ({}) };
+    }
+    if (url === 'https://api.github.com/repos/octo/widgets/deployments' && options.method === 'POST') {
+      return { ok: true, status: 201, text: async () => JSON.stringify({ id: 501 }) };
+    }
+    if (url === 'https://api.github.com/repos/octo/widgets/deployments/501/statuses' && options.method === 'POST') {
+      return { ok: true, status: 201, text: async () => JSON.stringify({ id: 5010 }) };
+    }
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  try {
+    const result = await publishPreview({
+      bundleDir,
+      pagesRepo,
+      trustedContext: trustedContextFor(metadata),
+      currentHeadSha: SHA_A,
+      token: 'tok',
+      repository: 'octo/widgets',
+      siteUrl: 'https://octo.github.io/widgets'
+    });
+
+    assert.equal(result.action, 'published');
+
+    const statusCalls = requests.filter(
+      r => r.url === 'https://api.github.com/repos/octo/widgets/deployments/501/statuses'
+    );
+    const pendingCall = statusCalls.find(r => r.body.state === 'pending');
+    assert.ok(pendingCall, 'expected a pending status update when creating the deployment');
+    assert.equal(
+      pendingCall.body.environment_url,
+      'https://custom.example.com/preview',
+      'the pending deployment status must use the explicit environment_url override'
+    );
+
+    const successCall = statusCalls.find(r => r.body.state === 'success');
+    assert.ok(successCall, 'expected a success status update after publishing');
+    assert.equal(
+      successCall.body.environment_url,
+      'https://custom.example.com/preview',
+      'the success status must use the explicit environment_url override rather than the computed preview URL'
+    );
+  } finally {
+    if (originalCreateDeployment === undefined) delete process.env.CREATE_DEPLOYMENT;
+    else process.env.CREATE_DEPLOYMENT = originalCreateDeployment;
+    if (originalEnvironmentUrl === undefined) delete process.env.ENVIRONMENT_URL;
+    else process.env.ENVIRONMENT_URL = originalEnvironmentUrl;
+    global.fetch = originalFetch;
+  }
+});
