@@ -7,7 +7,7 @@ test('release validation - package.json runtime dependency cleanliness', () => {
   const pkgPath = path.join(process.cwd(), 'package.json');
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 
-  assert.equal(pkg.version, '1.7.0', 'package.json version must be set to 1.7.0 for stable release');
+  assert.equal(pkg.version, '1.7.1', 'package.json version must be set to 1.7.1 for stable release');
   assert.ok(
     !pkg.dependencies || Object.keys(pkg.dependencies).length === 0,
     'storybook-github-pages must have zero runtime npm dependencies for maximum reproducibility'

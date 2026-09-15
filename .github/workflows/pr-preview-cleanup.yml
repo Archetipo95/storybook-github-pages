@@ -43,6 +43,7 @@ jobs:
     permissions:
       contents: write
       pages: write
+      deployments: write
     steps:
       # Checks out the default branch only (no `ref:` on a pull_request_target
       # checkout resolves to the base repository's default branch) so the
@@ -134,7 +135,7 @@ jobs:
 
       - name: Remove preview directory for closed pull request
         if: steps.branch_check.outputs.exists == 'true'
-        uses: Archetipo95/storybook-github-pages/preview-cleanup@4f9b2b13ec9fb1707fabbbc28fe1b3a6d8965832
+        uses: Archetipo95/storybook-github-pages/preview-cleanup@bbaa08670a721d1b3cc42463a3408e2e62f48b3a
         with:
           pages_repo: ${{ github.workspace }}/pages-repo
           pages_branch: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}

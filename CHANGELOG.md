@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.1] - 2026-09-15
+
+### Fixed
+
+- **PR Preview Cleanup Deployment Permissions (#90)**: Granted `deployments: write` to the reusable cleanup and janitor workflows so preview removal can deactivate its associated GitHub deployment.
+- **Stale Internal Preview Action Pins**: Repinned `preview-publisher`, `preview-cleanup`, and `preview-janitor` to merged commit `bbaa08670a721d1b3cc42463a3408e2e62f48b3a`, ensuring the release workflows execute the deployment-aware action implementations.
+
 ## [1.7.0] - 2026-09-15
 
 ### Added
