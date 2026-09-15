@@ -47,7 +47,7 @@ permissions:
 
 jobs:
   deploy-storybook:
-    uses: Archetipo95/storybook-github-pages/.github/workflows/deploy-storybook.yml@v1.0.0
+    uses: Archetipo95/storybook-github-pages/.github/workflows/deploy-storybook.yml@v1.8.3
     with:
       path: 'storybook-static'
       package_manager: 'npm'
@@ -79,7 +79,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Build and Deploy Storybook
-        uses: Archetipo95/storybook-github-pages@v1.0.0
+        uses: Archetipo95/storybook-github-pages@v1.8.3
         with:
           path: 'storybook-static'
           build_command: 'npm run build-storybook'
@@ -149,7 +149,7 @@ jobs:
           fetch-depth: 0
 
       - name: Publish directory
-        uses: Archetipo95/storybook-github-pages/publisher@v1.0.1
+        uses: Archetipo95/storybook-github-pages/publisher@v1.8.3
         with:
           pages_repo: ${{ github.workspace }}/pages-repo
           source_directory: ${{ github.workspace }}/storybook-static
@@ -163,13 +163,13 @@ jobs:
 
 `storybook-github-pages` is designed and validated for the following support matrix:
 
-| Category             | Supported Environments                                                                   | Notes                                                                                                                                                                             |
-| -------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Platform**         | GitHub.com (Public & Private Repositories)                                               | Uses native GitHub Pages API & OIDC JWTs                                                                                                                                          |
-| **Runner OS**        | GitHub-hosted Linux (`ubuntu-latest`)                                                    | Tested on `ubuntu-latest` with Node.js 20+                                                                                                                                        |
-| **Node.js Runtime**  | Node.js 20+                                                                              | Zero external npm dependencies (uses native Node.js ES modules)                                                                                                                   |
-| **Package Managers** | Reusable workflow: `npm`, `yarn`, `pnpm`, `bun`; composite action: `npm`, `yarn`, `pnpm` | Bun is provisioned only in the reusable workflow's read-only build job                                                                                                            |
-| **Tagging Strategy** | Immutable release tags (for example, `@v1.0.1`)                                          | **Recommended for stable, reproducible use.** This Bun support change requires a new release tag after merge. Floating major tags (e.g. `@v1`) are optional and non-reproducible. |
+| Category             | Supported Environments                                                                   | Notes                                                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Platform**         | GitHub.com (Public & Private Repositories)                                               | Uses native GitHub Pages API & OIDC JWTs                                                                          |
+| **Runner OS**        | GitHub-hosted Linux (`ubuntu-latest`)                                                    | Tested on `ubuntu-latest` with Node.js 20+                                                                        |
+| **Node.js Runtime**  | Node.js 20+                                                                              | Zero external npm dependencies (uses native Node.js ES modules)                                                   |
+| **Package Managers** | Reusable workflow: `npm`, `yarn`, `pnpm`, `bun`; composite action: `npm`, `yarn`, `pnpm` | Bun is provisioned only in the reusable workflow's read-only build job                                            |
+| **Tagging Strategy** | Immutable release tags (for example, `@v1.8.3`)                                          | **Recommended for stable, reproducible use.** Floating major tags (e.g. `@v1`) are optional and non-reproducible. |
 
 ---
 
@@ -323,7 +323,7 @@ Embed the growth chart in your `README.md`:
 | `build_command`   | `build_command` / `custom_build_command`     | Fully supported                        |
 
 **Migrating to `storybook-github-pages`:**
-Simply replace `bitovi/github-actions-storybook-to-github-pages@v1.0.3` with `Archetipo95/storybook-github-pages@v1.0.0` in your workflow.
+Simply replace `bitovi/github-actions-storybook-to-github-pages@v1.0.3` with `Archetipo95/storybook-github-pages@v1.8.3` in your workflow.
 
 ---
 
@@ -355,7 +355,7 @@ permissions:
 ```
 
 > **Platform Note on Reusable Workflows vs Directory Mode:**
-> GitHub Actions compiles all jobs in a reusable workflow (`workflow_call`) before execution. Because the reusable workflow contains both artifact deployment (`id-token: write`) and directory deployment (`contents: write`) jobs, invoking it with only directory-level permissions triggers a GitHub Actions `startup_failure` (zero materialized jobs) due to caller permission validation. For branch-backed directory deployments in external repositories, always use the supported **Option 3** pipeline invoking `Archetipo95/storybook-github-pages/publisher@v1.0.1` directly in a dedicated publish job.
+> GitHub Actions compiles all jobs in a reusable workflow (`workflow_call`) before execution. Because the reusable workflow contains both artifact deployment (`id-token: write`) and directory deployment (`contents: write`) jobs, invoking it with only directory-level permissions triggers a GitHub Actions `startup_failure` (zero materialized jobs) due to caller permission validation. For branch-backed directory deployments in external repositories, always use the supported **Option 3** pipeline invoking `Archetipo95/storybook-github-pages/publisher@v1.8.3` directly in a dedicated publish job.
 
 The PR preview lifecycle workflows declare their own job-scoped permissions and need no caller configuration: the untrusted build job uses `contents: read` only; the trusted publish job uses `contents: write`, `pages: write`, `pull-requests: write` (for the bot comment), `actions: read` (to download the build artifact by run id), and `deployments: write` (to deactivate superseded deployments); cleanup uses `contents: write`, `pages: write`, and `deployments: write`; the janitor uses `contents: write`, `pages: write`, `deployments: write`, and `pull-requests: read`.
 
