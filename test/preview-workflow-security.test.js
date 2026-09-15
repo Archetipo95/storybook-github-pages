@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const root = process.cwd();
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), 'utf8');
@@ -88,6 +89,21 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
     /steps\.branch_check\.outputs\.exists == 'true'/,
     'checkout and publish steps must be guarded by Pages branch existence'
   );
+});
+
+test('pr-preview-publish pins a preview-publisher action schema that supports the passcode gate', () => {
+  const content = read('.github/workflows/pr-preview-publish.yml');
+  const match = content.match(/Archetipo95\/storybook-github-pages\/preview-publisher@([a-f0-9]{40})/);
+  assert.ok(match, 'publish must pin preview-publisher to a full commit SHA');
+
+  const action = execFileSync('git', ['show', `${match[1]}:preview-publisher/action.yml`], {
+    cwd: root,
+    encoding: 'utf8'
+  });
+
+  assert.match(action, /enable_passcode_gate:/, 'pinned preview-publisher must accept enable_passcode_gate');
+  assert.match(action, /passcode_hash:/, 'pinned preview-publisher must accept passcode_hash');
+  assert.match(action, /passcode_session_hours:/, 'pinned preview-publisher must accept passcode_session_hours');
 });
 
 test('pr-preview-cleanup workflow never checks out the pull request head and stays metadata-only', () => {
