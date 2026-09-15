@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Interaction-Test Badge Action Input**: Exposed the documented `test_results_path` input in the `publisher` and `preview-build` composite actions so consumers can generate `tests.svg` and `tests.json` badges.
+- **PR Preview Cleanup Permissions (#90)**: Granted `deployments: write` to the reusable cleanup and janitor workflows and documented the permission for direct composite-action consumers, preventing successful preview removals from failing during deployment deactivation.
 
 ## [1.6.0] - 2026-09-14
 

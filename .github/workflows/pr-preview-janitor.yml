@@ -55,6 +55,7 @@ jobs:
     permissions:
       contents: write
       pages: write
+      deployments: write
       pull-requests: read
     steps:
       - name: Checkout repository (default branch, trusted)

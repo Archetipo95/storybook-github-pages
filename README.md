@@ -357,7 +357,7 @@ permissions:
 > **Platform Note on Reusable Workflows vs Directory Mode:**
 > GitHub Actions compiles all jobs in a reusable workflow (`workflow_call`) before execution. Because the reusable workflow contains both artifact deployment (`id-token: write`) and directory deployment (`contents: write`) jobs, invoking it with only directory-level permissions triggers a GitHub Actions `startup_failure` (zero materialized jobs) due to caller permission validation. For branch-backed directory deployments in external repositories, always use the supported **Option 3** pipeline invoking `Archetipo95/storybook-github-pages/publisher@v1.0.1` directly in a dedicated publish job.
 
-The PR preview lifecycle workflows declare their own job-scoped permissions and need no caller configuration: the untrusted build job uses `contents: read` only; the trusted publish job uses `contents: write`, `pages: write`, `pull-requests: write` (for the bot comment), and `actions: read` (to download the build artifact by run id); cleanup uses `contents: write` and `pages: write`; the janitor uses `contents: write`, `pages: write`, and `pull-requests: read`.
+The PR preview lifecycle workflows declare their own job-scoped permissions and need no caller configuration: the untrusted build job uses `contents: read` only; the trusted publish job uses `contents: write`, `pages: write`, `pull-requests: write` (for the bot comment), `actions: read` (to download the build artifact by run id), and `deployments: write` (to deactivate superseded deployments); cleanup uses `contents: write`, `pages: write`, and `deployments: write`; the janitor uses `contents: write`, `pages: write`, `deployments: write`, and `pull-requests: read`.
 
 ---
 
@@ -510,6 +510,7 @@ on:
 permissions:
   contents: write
   pages: write
+  deployments: write
   pull-requests: write
   actions: read
 
@@ -656,6 +657,9 @@ steps:
       pr_number: ${{ github.event.pull_request.number }}
 ```
 
+The job running this composite action also needs `deployments: write` because
+cleanup deactivates the deployment associated with a removed preview.
+
 #### 3. Reusable Stale-Preview Janitor
 
 Call the reusable janitor workflow on schedule or dispatch:
@@ -671,6 +675,7 @@ on:
 permissions:
   contents: write
   pages: write
+  deployments: write
   pull-requests: read
 
 jobs:
@@ -700,6 +705,9 @@ steps:
       preview_root: ''
       retention_days: '30'
 ```
+
+The job running this composite action needs `deployments: write` and
+`pull-requests: read` to deactivate deployments and identify live PRs.
 
 ### Adapting the templates to another repository
 

@@ -43,6 +43,7 @@ jobs:
     permissions:
       contents: write
       pages: write
+      deployments: write
     steps:
       # Checks out the default branch only (no `ref:` on a pull_request_target
       # checkout resolves to the base repository's default branch) so the
