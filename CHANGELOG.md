@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.0] - 2026-09-15
+
+### Added
+
+- **GitHub Deployment Lifecycle**: Added deployment-status tracking for production Pages publishes and PR previews, including environment URLs and preview lifecycle state.
+- **Deployment-Aware Preview Publishing**: Preview publication now creates and completes GitHub deployments while preserving stale-run protection, cleanup, and janitor behavior.
+- **Reusable Deployment Inputs**: Exposed configuration for deployment environments and Pages rebuild behavior across the reusable workflow and supported composite actions.
+
 ## [1.6.1] - 2026-09-15
 
 ### Fixed
