@@ -171,7 +171,7 @@ jobs:
 
       - name: Prune stale preview directories
         if: steps.branch_check.outputs.exists == 'true'
-        uses: Archetipo95/storybook-github-pages/preview-janitor@81658c93c696c9d69f86c2731a1daecff1678111
+        uses: Archetipo95/storybook-github-pages/preview-janitor@4f9b2b13ec9fb1707fabbbc28fe1b3a6d8965832
         with:
           pages_repo: ${{ github.workspace }}/pages-repo
           pages_branch: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
