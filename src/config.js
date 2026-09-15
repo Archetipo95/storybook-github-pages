@@ -23,6 +23,7 @@ export const DEFAULT_CONFIG = {
   stats_directory: 'stats',
   enable_passcode_gate: false,
   passcode_session_hours: 24,
+  auto_base_url: true,
   build: {
     install_command: null,
     build_command: null
@@ -178,6 +179,9 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
   }
   if (config.enable_passcode_gate !== undefined && typeof config.enable_passcode_gate !== 'boolean') {
     throw new Error('Config enable_passcode_gate must be a boolean');
+  }
+  if (config.auto_base_url !== undefined && typeof config.auto_base_url !== 'boolean') {
+    throw new Error('Config auto_base_url must be a boolean');
   }
   if (config.passcode_session_hours !== undefined) {
     const hours = Number(config.passcode_session_hours);
@@ -346,6 +350,12 @@ export function resolveConfiguration({
         ? inputs.passcode_session_hours
         : (fileConfig?.passcode_session_hours ?? DEFAULT_CONFIG.passcode_session_hours)
     ),
+    auto_base_url:
+      inputs.auto_base_url !== undefined && inputs.auto_base_url !== ''
+        ? String(inputs.auto_base_url) === 'true'
+        : fileConfig?.auto_base_url !== undefined
+          ? Boolean(fileConfig.auto_base_url)
+          : DEFAULT_CONFIG.auto_base_url,
     build: {
       install_command:
         inputs.install_command ||
