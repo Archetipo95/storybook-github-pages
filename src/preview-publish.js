@@ -11,6 +11,7 @@ import {
 import { validateArtifactDirectory } from './validate-artifact.js';
 import { publishDirectory } from './publish-directory.js';
 import { buildCommentBody, upsertPreviewComment } from './preview-comment.js';
+import { createDeployment, updateDeploymentStatus } from './github-deployments.js';
 
 /**
  * Reads and parses the metadata file bundled inside the downloaded build
@@ -81,45 +82,129 @@ export async function publishPreview({
     return { ...decision, metadata };
   }
 
+  const shouldCreateDeployment = process.env.CREATE_DEPLOYMENT === 'true';
+  const deploymentEnvironment =
+    process.env.DEPLOYMENT_ENVIRONMENT ||
+    process.env.ENVIRONMENT_NAME ||
+    process.env.ENVIRONMENT ||
+    `pr-preview-${metadata.prNumber}`;
+  const deploymentDescription = `Storybook preview for PR #${metadata.prNumber}`;
+  const deploymentLogUrl = trustedContext?.runId
+    ? `https://github.com/${repository}/actions/runs/${trustedContext.runId}`
+    : '';
+  const explicitEnvironmentUrl = process.env.ENVIRONMENT_URL || '';
+
+  let deploymentRecord = null;
+  if (shouldCreateDeployment) {
+    if (!token || !repository) {
+      throw new Error(
+        'create_deployment is enabled but no GitHub token/repository context was provided; cannot create the GitHub deployment record'
+      );
+    }
+    deploymentRecord = await createDeployment({
+      token,
+      repository,
+      ref: metadata.headSha,
+      environmentName: deploymentEnvironment,
+      environmentUrl: explicitEnvironmentUrl,
+      logUrl: deploymentLogUrl,
+      description: deploymentDescription,
+      payload: {
+        pr_number: metadata.prNumber,
+        prNumber: metadata.prNumber,
+        preview_root: metadata.previewRoot,
+        target: metadata.target,
+        repository: metadata.repository,
+        base_ref: metadata.baseRef,
+        head_sha: metadata.headSha,
+        run_id: metadata.runId,
+        action: 'publish'
+      },
+      productionEnvironment: false,
+      transientEnvironment: true
+    });
+    if (!deploymentRecord || !deploymentRecord.id) {
+      throw new Error('Failed to create the GitHub deployment record before publishing the preview');
+    }
+  }
+
   const contentDir = path.join(bundleDir, PREVIEW_CONTENT_DIRNAME);
   validateArtifactDirectory(PREVIEW_CONTENT_DIRNAME, bundleDir);
   const contentDigest = digestDirectory(contentDir);
   if (contentDigest !== metadata.contentDigest) {
+    if (deploymentRecord && deploymentRecord.id && token && repository) {
+      await updateDeploymentStatus({
+        token,
+        repository,
+        deploymentId: deploymentRecord.id,
+        state: 'failure',
+        environmentUrl: '',
+        logUrl: deploymentLogUrl,
+        description: `${deploymentDescription} failed: content digest mismatch`
+      });
+    }
     throw new Error(`Preview content digest mismatch: expected ${metadata.contentDigest}, got ${contentDigest}`);
   }
 
-  const publishResult = await publishDirectory({
-    repo: pagesRepo,
-    source: contentDir,
-    branch: pagesBranch,
-    targetDirectory: metadata.target,
-    managedDirectories,
-    siteUrl,
-    basePath,
-    triggerPagesRebuild,
-    token,
-    repository
-  });
+  let publishResult;
+  try {
+    publishResult = await publishDirectory({
+      repo: pagesRepo,
+      source: contentDir,
+      branch: pagesBranch,
+      targetDirectory: metadata.target,
+      managedDirectories,
+      siteUrl,
+      basePath,
+      triggerPagesRebuild,
+      token,
+      repository
+    });
+  } catch (error) {
+    if (deploymentRecord && deploymentRecord.id && token && repository) {
+      await updateDeploymentStatus({
+        token,
+        repository,
+        deploymentId: deploymentRecord.id,
+        state: 'failure',
+        environmentUrl: '',
+        logUrl: deploymentLogUrl,
+        description: `${deploymentDescription} failed: ${error.message}`
+      });
+    }
+    throw error;
+  }
 
   const baseRef = trustedContext?.baseRef ?? metadata.baseRef;
   const baseDirectory = resolveBaseDirectoryForRef(baseRef, { default_branch: 'main' });
   const baseMetricsPath = pagesRepo ? resolveBaseMetricsPath({ pagesRepo, baseRef, defaultBranch: 'main' }) : null;
+  const previewUrl =
+    publishResult.url ||
+    (() => {
+      const [owner, repoName] = repository.split('/');
+      if (!owner || !repoName) return '';
+      const isUserPage = repoName.toLowerCase() === `${owner.toLowerCase()}.github.io`;
+      const baseSiteUrl = isUserPage ? `https://${owner}.github.io` : `https://${owner}.github.io/${repoName}`;
+      const targetPath = metadata.target ? `/${metadata.target}` : '';
+      return `${baseSiteUrl}${targetPath}`;
+    })();
+
+  if (deploymentRecord && deploymentRecord.id && token && repository) {
+    await updateDeploymentStatus({
+      token,
+      repository,
+      deploymentId: deploymentRecord.id,
+      state: 'success',
+      environmentUrl: explicitEnvironmentUrl || previewUrl,
+      logUrl: deploymentLogUrl,
+      description: `${deploymentDescription} published successfully`
+    });
+  }
 
   let commentResult = null;
   let commentError = null;
   if (token && repository) {
     try {
-      const previewUrl =
-        publishResult.url ||
-        (() => {
-          const [owner, repoName] = repository.split('/');
-          if (!owner || !repoName) return '';
-          const isUserPage = repoName.toLowerCase() === `${owner.toLowerCase()}.github.io`;
-          const baseSiteUrl = isUserPage ? `https://${owner}.github.io` : `https://${owner}.github.io/${repoName}`;
-          const targetPath = metadata.target ? `/${metadata.target}` : '';
-          return `${baseSiteUrl}${targetPath}`;
-        })();
-
       // Extract preview metrics and badges if present
       let metrics = null;
       const overviewPath = path.join(contentDir, 'badges', 'overview.json');
@@ -174,6 +259,7 @@ export async function publishPreview({
     publishResult,
     commentResult,
     commentError,
+    deploymentRecord,
     baseDirectory,
     baseMetricsPath
   };

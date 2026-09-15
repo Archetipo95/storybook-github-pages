@@ -3,6 +3,7 @@ import path from 'node:path';
 import { validateRelativeDirectory, resolveConfiguration } from './config.js';
 import { run, withSerializedBranchWrite, requestPagesRebuild } from './git-branch-writer.js';
 import { updatePreviewCommentStatus } from './preview-comment.js';
+import { deactivateDeploymentsForPullRequest } from './github-deployments.js';
 
 const PREVIEW_DIR_PATTERN = /^pr-(\d+)$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -218,6 +219,17 @@ if (process.argv[1] && process.argv[1].endsWith('preview-janitor.js')) {
         )
       );
       if (result.changed) {
+        const deploymentEnvironmentOverride =
+          process.env.DEPLOYMENT_ENVIRONMENT || process.env.ENVIRONMENT_NAME || process.env.ENVIRONMENT || '';
+        for (const item of result.removed) {
+          await deactivateDeploymentsForPullRequest({
+            token: process.env.GITHUB_TOKEN,
+            repository: process.env.GITHUB_REPOSITORY,
+            environmentName: deploymentEnvironmentOverride || `pr-preview-${item.prNumber}`,
+            prNumber: item.prNumber,
+            description: `Preview cleanup for PR #${item.prNumber}`
+          });
+        }
         await requestPagesRebuild({ token: process.env.GITHUB_TOKEN, repository: process.env.GITHUB_REPOSITORY });
       }
       for (const item of result.warned) {

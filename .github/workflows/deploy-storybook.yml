@@ -33,6 +33,21 @@ on:
         required: false
         type: string
         default: 'github-pages'
+      create_deployment:
+        description: 'Whether to create a native GitHub deployment record and status lifecycle for the Pages deployment'
+        required: false
+        type: boolean
+        default: true
+      environment_name:
+        description: 'GitHub deployment environment name for Pages/native deployment records'
+        required: false
+        type: string
+        default: 'github-pages'
+      environment_url:
+        description: 'Explicit environment URL to expose on the deployment record'
+        required: false
+        type: string
+        default: ''
       mode:
         description: 'Deployment mode: artifact or trusted branch-backed directory'
         required: false
@@ -124,6 +139,9 @@ jobs:
     outputs:
       mode: ${{ steps.config.outputs.mode }}
       environment: ${{ steps.config.outputs.environment }}
+      environment_name: ${{ steps.config.outputs.environment_name }}
+      environment_url: ${{ steps.config.outputs.environment_url }}
+      create_deployment: ${{ steps.config.outputs.create_deployment }}
       pages_branch: ${{ steps.config.outputs.pages_branch }}
       target_directory: ${{ steps.config.outputs.target_directory }}
       site_url: ${{ steps.config.outputs.site_url }}
@@ -157,6 +175,9 @@ jobs:
             console.log(`install_command=${c.build.install_command ?? ""}`);
             console.log(`build_command=${c.build.build_command ?? ""}`);
             console.log(`auto_base_url=${c.auto_base_url}`);
+            console.log(`create_deployment=${String(Boolean(c.create_deployment))}`);
+            console.log(`environment_name=${c.environment_name || ""}`);
+            console.log(`environment_url=${c.environment_url || ""}`);
           })' >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
@@ -264,24 +285,69 @@ jobs:
     if: ${{ needs.build-and-upload.result == 'success' && needs.build-and-upload.outputs.mode == 'artifact' }}
     runs-on: ubuntu-latest
     environment:
-      name: ${{ needs.build-and-upload.outputs.environment }}
-      url: ${{ steps.deploy-pages.outputs.page_url }}
+      name: ${{ needs.build-and-upload.outputs.environment_name || needs.build-and-upload.outputs.environment || 'github-pages' }}
+      url: ${{ needs.build-and-upload.outputs.environment_url || steps.deploy-pages.outputs.page_url }}
     permissions:
       contents: read
       pages: write
       id-token: write
+      deployments: write
 
     outputs:
       page_url: ${{ steps.deploy-pages.outputs.page_url }}
       status: 'success'
-      deployment_id: ${{ steps.deploy-pages.outputs.deployment_id }}
+      deployment_id: ${{ steps.create-deployment.outputs.deployment_id || steps.deploy-pages.outputs.deployment_id }}
 
     steps:
+      - name: Checkout repository
+        if: ${{ needs.build-and-upload.outputs.create_deployment == 'true' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Create GitHub deployment (pending)
+        id: create-deployment
+        if: ${{ needs.build-and-upload.outputs.create_deployment == 'true' }}
+        env:
+          ACTION: create
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DEPLOY_REF: ${{ github.sha }}
+          DEPLOYMENT_ENVIRONMENT: ${{ needs.build-and-upload.outputs.environment_name || needs.build-and-upload.outputs.environment || 'github-pages' }}
+          ENVIRONMENT_URL: ${{ needs.build-and-upload.outputs.environment_url }}
+          LOG_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DEPLOYMENT_DESCRIPTION: ${{ needs.build-and-upload.outputs.environment_name || needs.build-and-upload.outputs.environment || 'github-pages' }} deployment
+        run: node src/github-deployments.js
+
       - name: Deploy to GitHub Pages
         id: deploy-pages
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
         with:
           artifact_name: ${{ needs.build-and-upload.outputs.artifact_name }}
+
+      - name: Update GitHub deployment status (success)
+        if: ${{ always() && steps.create-deployment.outputs.deployment_id != '' && steps.deploy-pages.outcome == 'success' }}
+        env:
+          ACTION: update
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DEPLOYMENT_ID: ${{ steps.create-deployment.outputs.deployment_id }}
+          DEPLOYMENT_STATE: success
+          ENVIRONMENT_URL: ${{ needs.build-and-upload.outputs.environment_url || steps.deploy-pages.outputs.page_url }}
+          LOG_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DEPLOYMENT_DESCRIPTION: Deployment succeeded for ${{ needs.build-and-upload.outputs.environment_name || needs.build-and-upload.outputs.environment || 'github-pages' }}
+        run: node src/github-deployments.js
+
+      - name: Update GitHub deployment status (failure)
+        if: ${{ failure() && steps.create-deployment.outputs.deployment_id != '' }}
+        env:
+          ACTION: update
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DEPLOYMENT_ID: ${{ steps.create-deployment.outputs.deployment_id }}
+          DEPLOYMENT_STATE: failure
+          ENVIRONMENT_URL: ${{ needs.build-and-upload.outputs.environment_url || steps.deploy-pages.outputs.page_url }}
+          LOG_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DEPLOYMENT_DESCRIPTION: Deployment failed for ${{ needs.build-and-upload.outputs.environment_name || needs.build-and-upload.outputs.environment || 'github-pages' }}
+        run: node src/github-deployments.js
 
   directory-publish:
     name: Publish Storybook directory

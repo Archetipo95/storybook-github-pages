@@ -59,6 +59,21 @@ on:
         required: false
         type: string
         default: ''
+      create_deployment:
+        description: 'Whether to create a native GitHub deployment record for the preview'
+        required: false
+        type: boolean
+        default: true
+      environment_name:
+        description: 'GitHub deployment environment name for the preview deployment (defaults to pr-preview-<PR_NUMBER> when empty)'
+        required: false
+        type: string
+        default: ''
+      environment_url:
+        description: 'Explicit preview URL to attach to the deployment status'
+        required: false
+        type: string
+        default: ''
     outputs:
       page_url:
         description: 'The URL of the published preview'
@@ -195,6 +210,7 @@ jobs:
       pages: write
       pull-requests: write
       actions: read
+      deployments: write
     outputs:
       page_url: ${{ steps.publisher.outputs.page_url }}
       action: ${{ steps.publisher.outputs.action }}
@@ -348,7 +364,7 @@ jobs:
       - name: Validate provenance and publish
         id: publisher
         if: steps.branch_check.outputs.exists == 'true'
-        uses: Archetipo95/storybook-github-pages/preview-publisher@f40de1f006349536dac43e9dab6728f210fd9e3f
+        uses: Archetipo95/storybook-github-pages/preview-publisher@205ed664fedf28c17a51103d032ff6cebf665400
         with:
           bundle_dir: ${{ runner.temp }}/preview-bundle
           pages_repo: ${{ github.workspace }}/pages-repo
@@ -357,6 +373,9 @@ jobs:
           site_url: ${{ steps.config.outputs.site_url }}
           base_path: ${{ steps.config.outputs.base_path }}
           managed_directories: ${{ steps.config.outputs.managed_directories }}
+          create_deployment: ${{ inputs.create_deployment }}
+          environment_name: ${{ inputs.environment_name || format('pr-preview-{0}', needs.gate.outputs.pr_number) }}
+          environment_url: ${{ inputs.environment_url }}
           trusted_repository: ${{ github.repository }}
           trusted_run_id: ${{ needs.gate.outputs.run_id }}
           trusted_pr_number: ${{ needs.gate.outputs.pr_number }}

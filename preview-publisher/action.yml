@@ -63,6 +63,18 @@ inputs:
     description: 'Current live pull request head commit SHA'
     required: false
     default: ''
+  create_deployment:
+    description: 'Whether to create a native GitHub deployment record for the preview'
+    required: false
+    default: 'true'
+  environment_name:
+    description: 'GitHub deployment environment name for the preview (defaults to pr-preview-<PR_NUMBER> when empty)'
+    required: false
+    default: ''
+  environment_url:
+    description: 'Explicit preview URL to attach to the deployment status'
+    required: false
+    default: ''
 outputs:
   page_url:
     description: 'The URL of the published GitHub Pages site'
@@ -92,6 +104,9 @@ runs:
         TRUSTED_BASE_REF: ${{ inputs.trusted_base_ref }}
         EXPECTED_ARTIFACT_NAME: ${{ inputs.expected_artifact_name }}
         CURRENT_HEAD_SHA: ${{ inputs.current_head_sha }}
+        CREATE_DEPLOYMENT: ${{ inputs.create_deployment }}
+        DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment_name }}
+        ENVIRONMENT_URL: ${{ inputs.environment_url }}
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
       run: node "${{ github.action_path }}/../src/preview-publish.js"

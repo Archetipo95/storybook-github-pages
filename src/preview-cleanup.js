@@ -4,6 +4,7 @@ import { resolvePreviewTarget } from './preview-metadata.js';
 import { resolveConfiguration } from './config.js';
 import { withSerializedBranchWrite, requestPagesRebuild } from './git-branch-writer.js';
 import { updatePreviewCommentStatus } from './preview-comment.js';
+import { deactivateDeploymentsForPullRequest } from './github-deployments.js';
 
 async function pathExists(target) {
   try {
@@ -56,7 +57,26 @@ if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
   })
     .then(async result => {
       console.log(JSON.stringify(result));
-      if (result.changed && process.env.GITHUB_TOKEN && process.env.GITHUB_REPOSITORY) {
+      const prNumber = Number(process.env.PR_NUMBER || 0);
+      if (
+        result.changed &&
+        process.env.GITHUB_TOKEN &&
+        process.env.GITHUB_REPOSITORY &&
+        Number.isFinite(prNumber) &&
+        prNumber > 0
+      ) {
+        const deploymentEnvironment =
+          process.env.DEPLOYMENT_ENVIRONMENT ||
+          process.env.ENVIRONMENT_NAME ||
+          process.env.ENVIRONMENT ||
+          `pr-preview-${prNumber}`;
+        await deactivateDeploymentsForPullRequest({
+          token: process.env.GITHUB_TOKEN,
+          repository: process.env.GITHUB_REPOSITORY,
+          environmentName: deploymentEnvironment,
+          prNumber,
+          description: `Preview cleanup for PR #${prNumber}`
+        });
         await requestPagesRebuild({ token: process.env.GITHUB_TOKEN, repository: process.env.GITHUB_REPOSITORY });
         await updatePreviewCommentStatus({
           token: process.env.GITHUB_TOKEN,
