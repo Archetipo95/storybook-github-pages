@@ -63,6 +63,10 @@ inputs:
     description: 'Directory within the static build output to store generated badges'
     required: false
     default: 'badges'
+  test_results_path:
+    description: 'Path to JSON test results used to generate tests.svg/tests.json badges'
+    required: false
+    default: ''
   generate_stats_graph:
     description: 'Whether to auto-generate hand-drawn growth chart (history.svg) and update metrics ledger (history.json)'
     required: false
@@ -134,6 +138,7 @@ runs:
       env:
         SOURCE_PATH: ${{ inputs.source_path }}
         SB_BADGES_DIRECTORY: ${{ inputs.badges_directory || 'badges' }}
+        SB_TEST_RESULTS_PATH: ${{ inputs.test_results_path || '' }}
         WORKSPACE_ROOT: ${{ github.workspace }}
         GITHUB_SHA: ${{ inputs.head_sha || github.sha }}
       run: node "${{ github.action_path }}/../src/generate-badges.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
