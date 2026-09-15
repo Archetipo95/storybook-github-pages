@@ -74,6 +74,20 @@ on:
         required: false
         type: string
         default: ''
+      enable_passcode_gate:
+        description: 'Whether to inject a client-side passcode gate into the published Storybook'
+        required: false
+        type: boolean
+        default: false
+      passcode_session_hours:
+        description: 'Hours before the browser session expires'
+        required: false
+        type: number
+        default: 24
+    secrets:
+      passcode_hash:
+        description: 'SHA-256 hash of the passcode used by the trusted publisher'
+        required: false
     outputs:
       page_url:
         description: 'The URL of the published preview'
@@ -376,6 +390,9 @@ jobs:
           create_deployment: ${{ inputs.create_deployment }}
           environment_name: ${{ inputs.environment_name || format('pr-preview-{0}', needs.gate.outputs.pr_number) }}
           environment_url: ${{ inputs.environment_url }}
+          enable_passcode_gate: ${{ inputs.enable_passcode_gate }}
+          passcode_hash: ${{ secrets.passcode_hash }}
+          passcode_session_hours: ${{ inputs.passcode_session_hours }}
           trusted_repository: ${{ github.repository }}
           trusted_run_id: ${{ needs.gate.outputs.run_id }}
           trusted_pr_number: ${{ needs.gate.outputs.pr_number }}

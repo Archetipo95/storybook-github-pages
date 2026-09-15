@@ -12,6 +12,7 @@ import { validateArtifactDirectory } from './validate-artifact.js';
 import { publishDirectory } from './publish-directory.js';
 import { buildCommentBody, upsertPreviewComment } from './preview-comment.js';
 import { createDeployment, updateDeploymentStatus } from './github-deployments.js';
+import { injectAuthGate } from './inject-auth-gate.js';
 
 /**
  * Reads and parses the metadata file bundled inside the downloaded build
@@ -72,6 +73,9 @@ export async function publishPreview({
   siteUrl = '',
   basePath = '',
   triggerPagesRebuild = false,
+  enablePasscodeGate = false,
+  passcodeHash = '',
+  passcodeSessionHours = 24,
   token,
   repository
 }) {
@@ -148,6 +152,12 @@ export async function publishPreview({
 
   let publishResult;
   try {
+    if (enablePasscodeGate) {
+      await injectAuthGate(contentDir, {
+        passcodeHash,
+        sessionHours: Number(passcodeSessionHours)
+      });
+    }
     publishResult = await publishDirectory({
       repo: pagesRepo,
       source: contentDir,
@@ -291,6 +301,9 @@ if (process.argv[1] && process.argv[1].endsWith('preview-publish.js')) {
     siteUrl: process.env.SITE_URL || '',
     basePath: process.env.BASE_PATH || '',
     triggerPagesRebuild: process.env.TRIGGER_PAGES_REBUILD === 'true',
+    enablePasscodeGate: process.env.ENABLE_PASSCODE_GATE === 'true',
+    passcodeHash: process.env.PASSCODE_HASH || '',
+    passcodeSessionHours: process.env.PASSCODE_SESSION_HOURS || 24,
     token: process.env.GITHUB_TOKEN,
     repository: process.env.GITHUB_REPOSITORY
   })

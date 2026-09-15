@@ -565,6 +565,10 @@ jobs:
     with:
       preview_root: '' # optional: override preview root; defaults to .storybook-pages.yml or 'pr-preview'
       pages_branch: 'gh-pages'
+      enable_passcode_gate: true
+      passcode_session_hours: 24
+    secrets:
+      passcode_hash: ${{ secrets.STORYBOOK_PREVIEW_PASSCODE_HASH }}
 ```
 
 Or call the composite action `preview-publisher` in a custom `workflow_run` job:
@@ -613,7 +617,17 @@ steps:
       trusted_base_ref: ${{ github.event.workflow_run.pull_requests[0].base.ref }}
       expected_artifact_name: storybook-preview-pr-${{ github.event.workflow_run.pull_requests[0].number }}-run-${{ github.event.workflow_run.id }}
       current_head_sha: ${{ steps.current.outputs.head_sha }}
+      enable_passcode_gate: true
+      passcode_session_hours: 24
+      passcode_hash: ${{ secrets.STORYBOOK_PREVIEW_PASSCODE_HASH }}
 ```
+
+The preview gate is configured only in the trusted publisher. `passcode_hash`
+must be a 64-character SHA-256 hash stored as a secret; it is never included
+in the untrusted `pull_request` build artifact. The publisher validates
+provenance and the artifact content digest first, then injects the existing
+gate immediately before publishing. Omit `enable_passcode_gate` (or set it to
+`false`) to publish without a gate.
 
 #### 2. Reusable Closed-PR Preview Cleanup
 
