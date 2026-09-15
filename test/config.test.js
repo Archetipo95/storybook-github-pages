@@ -11,6 +11,48 @@ import {
   resolveDeploymentTarget,
   resolveBaseDirectoryForRef
 } from '../src/config.js';
+import { augmentBuildCommand, computeBaseUrl, hasExplicitBaseUrl } from '../src/base-url.js';
+
+test('automatic base URL computation handles repository, custom-domain, and PR preview paths', () => {
+  assert.equal(computeBaseUrl({ repository: 'acme/design-system' }), '/design-system/');
+  assert.equal(
+    computeBaseUrl({ repository: 'acme/design-system', eventName: 'pull_request', prNumber: 123 }),
+    '/design-system/pr-123/'
+  );
+  assert.equal(computeBaseUrl({ repository: 'acme/design-system', siteUrl: 'https://storybook.example.com' }), '/');
+  assert.equal(computeBaseUrl({ repository: 'acme/design-system', basePath: 'docs' }), '/docs/');
+  assert.equal(
+    computeBaseUrl({
+      repository: 'acme/design-system',
+      siteUrl: 'https://storybook.example.com',
+      eventName: 'pull_request',
+      prNumber: 123
+    }),
+    '/pr-123/'
+  );
+});
+
+test('automatic base URL augmentation preserves explicit base configuration', () => {
+  assert.equal(hasExplicitBaseUrl('npm run build-storybook -- --base /custom/'), true);
+  assert.equal(
+    augmentBuildCommand('npm run build-storybook -- --base /custom/', '/repo/'),
+    'npm run build-storybook -- --base /custom/'
+  );
+  assert.equal(
+    augmentBuildCommand('npm run build-storybook', '/repo/'),
+    "npm run build-storybook -- --base-url '/repo/'"
+  );
+  assert.equal(
+    augmentBuildCommand('npm run build-storybook', '/repo/', { autoBaseUrl: false }),
+    'npm run build-storybook'
+  );
+});
+
+test('resolveConfiguration - auto_base_url defaults on and honors false overrides', () => {
+  const configFilePath = path.join(os.tmpdir(), 'missing-auto-base-url.yml');
+  assert.equal(resolveConfiguration({ inputs: {}, configFilePath }).auto_base_url, true);
+  assert.equal(resolveConfiguration({ inputs: { auto_base_url: 'false' }, configFilePath }).auto_base_url, false);
+});
 
 test('validateConfig - default valid config', () => {
   const valid = {

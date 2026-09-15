@@ -207,6 +207,7 @@ jobs:
 | `enable_passcode_gate`        | `boolean` | `false`            | Inject a client-side passcode prompt into `index.html` and `iframe.html`                                                                  |
 | `passcode_session_hours`      | `number`  | `24`               | Duration of a successful browser session                                                                                                  |
 | `passcode_hash`               | `secret`  | —                  | SHA-256 hash of the passcode; provide as a workflow secret (composite action input)                                                       |
+| `auto_base_url`          | `boolean` | `true`             | Automatically inject the repository or preview base URL into Storybook builds unless an explicit base option is provided                   |
 
 ### Outputs
 

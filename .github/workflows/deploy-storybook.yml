@@ -58,6 +58,11 @@ on:
         required: false
         type: string
         default: ''
+      auto_base_url:
+        description: 'Whether to compute and inject the Storybook base URL for the deployment target'
+        required: false
+        type: boolean
+        default: true
       managed_directories:
         description: 'Comma-separated managed directories preserved at the root'
         required: false
@@ -123,6 +128,7 @@ jobs:
       target_directory: ${{ steps.config.outputs.target_directory }}
       site_url: ${{ steps.config.outputs.site_url }}
       base_path: ${{ steps.config.outputs.base_path }}
+      auto_base_url: ${{ steps.config.outputs.auto_base_url }}
       managed_directories: ${{ steps.config.outputs.managed_directories }}
       artifact_name: ${{ steps.config.outputs.artifact_name }}
       generate_badges: ${{ steps.config.outputs.generate_badges }}
@@ -150,6 +156,7 @@ jobs:
             console.log(`test_results_path=${c.test_results_path || ""}`);
             console.log(`install_command=${c.build.install_command ?? ""}`);
             console.log(`build_command=${c.build.build_command ?? ""}`);
+            console.log(`auto_base_url=${c.auto_base_url}`);
           })' >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
@@ -172,7 +179,18 @@ jobs:
         if: ${{ steps.config.outputs.build_command != '' }}
         env:
           BUILD_COMMAND: ${{ steps.config.outputs.build_command }}
-        run: eval "$BUILD_COMMAND"
+          AUTO_BASE_URL: ${{ steps.config.outputs.auto_base_url }}
+          REPOSITORY: ${{ github.repository }}
+          SITE_URL: ${{ steps.config.outputs.site_url }}
+          BASE_PATH: ${{ steps.config.outputs.base_path }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          CMD="$BUILD_COMMAND"
+          if [ "$AUTO_BASE_URL" = "true" ]; then
+            eval "$(node -e 'import("./src/base-url.js").then(({computeBaseUrl, augmentBuildCommand, buildEnvironment}) => { const baseUrl = computeBaseUrl({repository: process.env.REPOSITORY, siteUrl: process.env.SITE_URL, basePath: process.env.BASE_PATH, eventName: process.env.EVENT_NAME, prNumber: process.env.PR_NUMBER}); const command = augmentBuildCommand(process.env.BUILD_COMMAND, baseUrl); console.log(`CMD=${JSON.stringify(command)}`); for (const [key, value] of Object.entries(buildEnvironment(baseUrl))) console.log(`${key}=${JSON.stringify(value)}`); })')"
+          fi
+          eval "$CMD"
 
       - name: Generate Storybook badges
         if: ${{ steps.config.outputs.generate_badges == 'true' }}
