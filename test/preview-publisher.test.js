@@ -99,6 +99,9 @@ test('preview-publisher action.yml schema, inputs, and outputs are well-formed',
   assert.match(content, /trusted_base_ref:/);
   assert.match(content, /expected_artifact_name:/);
   assert.match(content, /current_head_sha:/);
+  assert.match(content, /enable_passcode_gate:/);
+  assert.match(content, /passcode_hash:/);
+  assert.match(content, /passcode_session_hours:/);
   assert.match(content, /TRIGGER_PAGES_REBUILD: \$\{\{ inputs\.trigger_pages_rebuild \}\}/);
 
   // Outputs
@@ -265,6 +268,71 @@ test('preview-publisher CLI invocation rejects tampering and exits with non-zero
   const run = spawnSync('node', [scriptPath], { env, encoding: 'utf8' });
   assert.notEqual(run.status, 0, 'Tampered content must cause non-zero exit code');
   assert.match(run.stderr, /Preview content digest mismatch/);
+});
+
+test('preview-publisher injects the trusted passcode gate after digest validation', () => {
+  const { bundleDir, metadata } = makeBundle({ prNumber: 55 });
+  const { cloneDir: pagesRepo } = initBarePagesRepo();
+  const hash = 'e'.repeat(64);
+  const env = {
+    ...process.env,
+    BUNDLE_DIR: bundleDir,
+    PAGES_REPO: pagesRepo,
+    PAGES_BRANCH: 'gh-pages',
+    PREVIEW_ROOT: 'pr-preview',
+    TRUSTED_REPOSITORY: 'acme/design-system',
+    TRUSTED_RUN_ID: String(metadata.runId),
+    TRUSTED_PR_NUMBER: String(metadata.prNumber),
+    TRUSTED_HEAD_SHA: metadata.headSha,
+    TRUSTED_HEAD_REPOSITORY: metadata.headRepository,
+    TRUSTED_BASE_REF: metadata.baseRef,
+    EXPECTED_ARTIFACT_NAME: metadata.artifactName,
+    CURRENT_HEAD_SHA: SHA_VALID,
+    ENABLE_PASSCODE_GATE: 'true',
+    PASSCODE_HASH: hash,
+    PASSCODE_SESSION_HOURS: '12',
+    GITHUB_REPOSITORY: 'acme/design-system'
+  };
+
+  const run = spawnSync('node', [path.join(process.cwd(), 'src/preview-publish.js')], {
+    env,
+    encoding: 'utf8'
+  });
+  assert.equal(run.status, 0, `Process failed: ${run.stderr}`);
+  const published = fs.readFileSync(path.join(pagesRepo, 'pr-preview', 'pr-55', 'index.html'), 'utf8');
+  assert.match(published, /storybook-passcode-gate-script/);
+  assert.match(published, new RegExp(`"hash":"${hash}"`));
+  assert.match(published, /sessionMs":43200000/);
+  assert.doesNotMatch(fs.readFileSync(path.join(bundleDir, 'preview-metadata.json'), 'utf8'), new RegExp(hash));
+});
+
+test('preview-publisher leaves the artifact unchanged when the passcode gate is disabled', () => {
+  const { bundleDir, metadata } = makeBundle({ prNumber: 56 });
+  const { cloneDir: pagesRepo } = initBarePagesRepo();
+  const env = {
+    ...process.env,
+    BUNDLE_DIR: bundleDir,
+    PAGES_REPO: pagesRepo,
+    PAGES_BRANCH: 'gh-pages',
+    PREVIEW_ROOT: 'pr-preview',
+    TRUSTED_REPOSITORY: 'acme/design-system',
+    TRUSTED_RUN_ID: String(metadata.runId),
+    TRUSTED_PR_NUMBER: String(metadata.prNumber),
+    TRUSTED_HEAD_SHA: metadata.headSha,
+    TRUSTED_HEAD_REPOSITORY: metadata.headRepository,
+    TRUSTED_BASE_REF: metadata.baseRef,
+    EXPECTED_ARTIFACT_NAME: metadata.artifactName,
+    CURRENT_HEAD_SHA: SHA_VALID,
+    GITHUB_REPOSITORY: 'acme/design-system'
+  };
+
+  const run = spawnSync('node', [path.join(process.cwd(), 'src/preview-publish.js')], {
+    env,
+    encoding: 'utf8'
+  });
+  assert.equal(run.status, 0, `Process failed: ${run.stderr}`);
+  const published = fs.readFileSync(path.join(pagesRepo, 'pr-preview', 'pr-56', 'index.html'), 'utf8');
+  assert.doesNotMatch(published, /storybook-passcode-gate-script/);
 });
 
 test('preview-publisher supports repository-root layout preview_root: ""', () => {

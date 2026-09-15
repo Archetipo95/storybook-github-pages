@@ -38,6 +38,9 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
   assert.match(content, /base_path:/, 'publish must support base_path input');
   assert.match(content, /managed_directories:/, 'publish must support managed_directories input');
   assert.match(content, /artifact_name:/, 'publish must support artifact_name input');
+  assert.match(content, /enable_passcode_gate:/, 'publish must support passcode gate input');
+  assert.match(content, /passcode_session_hours:/, 'publish must support passcode session duration');
+  assert.match(content, /passcode_hash:/, 'publish must declare the trusted passcode secret');
   const gateJob = extractJobBlock(content, 'gate');
   assert.match(gateJob, /github\.event\.workflow_run\.conclusion == 'success'/);
   assert.match(gateJob, /github\.event\.workflow_run\.event == 'pull_request'/);
@@ -69,6 +72,12 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
   assert.match(publishJob, /actions:\s*read/);
   assert.match(publishJob, /run-id: \$\{\{ needs\.gate\.outputs\.run_id \}\}/);
   assert.match(publishJob, /github-token: \$\{\{ secrets\.GITHUB_TOKEN \}\}/);
+  assert.match(publishJob, /passcode_hash: \$\{\{ secrets\.passcode_hash \}\}/);
+  assert.doesNotMatch(
+    read('.github/workflows/pr-preview-build.yml'),
+    /passcode_hash|enable_passcode_gate|PASSCODE_HASH/,
+    'the untrusted build workflow must never receive passcode gate configuration or secrets'
+  );
   assert.match(
     publishJob,
     /git ls-remote --exit-code --heads origin/,

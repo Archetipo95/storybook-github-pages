@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Trusted PR Preview Passcode Gate**: Added optional `enable_passcode_gate`, `passcode_session_hours`, and trusted `passcode_hash` inputs to the reusable PR preview publisher and `preview-publisher` action. The hash stays in the trusted publisher context, while the existing gate injector runs only after provenance and content-digest validation and immediately before publication.
+
 ## [1.6.1] - 2026-09-15
 
 ### Fixed

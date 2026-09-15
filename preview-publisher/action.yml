@@ -75,6 +75,18 @@ inputs:
     description: 'Explicit preview URL to attach to the deployment status'
     required: false
     default: ''
+  enable_passcode_gate:
+    description: 'Whether to inject a client-side passcode gate into the published Storybook'
+    required: false
+    default: 'false'
+  passcode_hash:
+    description: 'SHA-256 hash of the passcode; keep this value in a trusted workflow secret'
+    required: false
+    default: ''
+  passcode_session_hours:
+    description: 'Hours before the browser session expires'
+    required: false
+    default: '24'
 outputs:
   page_url:
     description: 'The URL of the published GitHub Pages site'
@@ -107,6 +119,9 @@ runs:
         CREATE_DEPLOYMENT: ${{ inputs.create_deployment }}
         DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment_name }}
         ENVIRONMENT_URL: ${{ inputs.environment_url }}
+        ENABLE_PASSCODE_GATE: ${{ inputs.enable_passcode_gate }}
+        PASSCODE_HASH: ${{ inputs.passcode_hash }}
+        PASSCODE_SESSION_HOURS: ${{ inputs.passcode_session_hours }}
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
       run: node "${{ github.action_path }}/../src/preview-publish.js"
