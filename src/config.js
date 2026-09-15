@@ -15,6 +15,7 @@ export const DEFAULT_CONFIG = {
   package_manager: 'npm',
   preview_root: 'pr-preview',
   preview_retention_days: 30,
+  warning_days_before_cleanup: 3,
   generate_badges: true,
   badges_directory: 'badges',
   test_results_path: '',
@@ -133,6 +134,16 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
     if (!Number.isInteger(days) || days < 0) {
       throw new Error(
         `Config preview_retention_days must be a non-negative integer, got "${config.preview_retention_days}"`
+      );
+    }
+
+  }
+
+  if (config.warning_days_before_cleanup !== undefined) {
+    const days = Number(config.warning_days_before_cleanup);
+    if (!Number.isInteger(days) || days < 0) {
+      throw new Error(
+        `Config warning_days_before_cleanup must be a non-negative integer, got "${config.warning_days_before_cleanup}"`
       );
     }
   }
@@ -297,6 +308,13 @@ export function resolveConfiguration({
         : fileConfig?.preview_retention_days !== undefined && fileConfig?.preview_retention_days !== ''
           ? fileConfig.preview_retention_days
           : DEFAULT_CONFIG.preview_retention_days
+    ),
+    warning_days_before_cleanup: Number(
+      inputs.warning_days_before_cleanup !== undefined && inputs.warning_days_before_cleanup !== ''
+        ? inputs.warning_days_before_cleanup
+        : fileConfig?.warning_days_before_cleanup !== undefined && fileConfig?.warning_days_before_cleanup !== ''
+          ? fileConfig.warning_days_before_cleanup
+          : DEFAULT_CONFIG.warning_days_before_cleanup
     ),
     generate_badges:
       inputs.generate_badges !== undefined && inputs.generate_badges !== ''

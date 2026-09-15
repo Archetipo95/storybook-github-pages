@@ -52,6 +52,20 @@ test('classifyPreviewEntries removes open-PR previews that exceed the retention 
     now,
     getLastModifiedMs: entry => (entry === 'pr-1' ? now - 1 * DAY_MS : now - 30 * DAY_MS)
   });
+
+  test('classifyPreviewEntries identifies open previews approaching cleanup', () => {
+    const now = Date.now();
+    const { warn, remove } = classifyPreviewEntries({
+      entries: ['pr-1', 'pr-2'],
+      openPrNumbers: new Set([1, 2]),
+      retentionMs: 30 * DAY_MS,
+      warningMs: 27 * DAY_MS,
+      now,
+      getLastModifiedMs: entry => (entry === 'pr-1' ? now - 28 * DAY_MS : now - 31 * DAY_MS)
+    });
+    assert.deepEqual(warn.map(item => item.entry), ['pr-1']);
+    assert.deepEqual(remove.map(item => item.entry), ['pr-2']);
+  });
   assert.deepEqual(keep, ['pr-1']);
   assert.deepEqual(
     remove.map(r => r.entry),

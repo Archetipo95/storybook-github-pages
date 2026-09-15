@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildMarker, buildCommentBody, upsertPreviewComment } from '../src/preview-comment.js';
+import {
+  buildMarker,
+  buildCommentBody,
+  buildExpirationStatus,
+  upsertPreviewComment
+} from '../src/preview-comment.js';
 
 const SHA = 'c'.repeat(40);
 
@@ -42,6 +47,11 @@ test('buildCommentBody includes the marker, preview URL, and short SHA', () => {
     headSha: SHA,
     runId: 99,
     repository: 'octo/widgets'
+  });
+
+  test('buildExpirationStatus is deterministic for warnings and expiry', () => {
+    assert.match(buildExpirationStatus({ warningDays: 3 }), /will be removed in 3 days/);
+    assert.match(buildExpirationStatus({ expired: true }), /has expired and was removed/);
   });
   assert.ok(body.startsWith(buildMarker(7)));
   assert.match(body, /https:\/\/octo\.github\.io\/widgets\/pr-preview\/pr-7/);
@@ -105,6 +115,7 @@ test('upsertPreviewComment creates a new comment when none exists yet', async ()
       prNumber: 7,
       body: `${buildMarker(7)}\nhello`
     });
+
     assert.deepEqual(result, { action: 'created', commentId: 555 });
     assert.equal(mock.calls.length, 2);
   } finally {

@@ -197,6 +197,7 @@ jobs:
 | `trigger_pages_rebuild`  | `boolean` | `false`            | Whether to explicitly request a Pages rebuild after a directory publish; normally unnecessary for branch-based Pages                      |
 | `preview_root`           | `string`  | `pr-preview`       | Root directory (on the Pages branch) under which PR previews are published, as `<preview_root>/pr-<number>`                               |
 | `preview_retention_days` | `number`  | `30`               | Days an _open_ PR's preview may remain before the janitor prunes it; closed-PR previews are always eligible for removal regardless of age |
+| `warning_days_before_cleanup` | `number` | `3` | Days before cleanup to warn in the bot PR comment; `0` disables warnings |
 | `managed_directories`    | `string`  | `''`               | Comma-separated directories preserved during root publication in directory mode (e.g. `pr-preview`)                                       |
 | `generate_badges`        | `boolean` | `true`             | Whether to automatically generate SVG/JSON component and story count badges                                                               |
 | `badges_directory`       | `string`  | `badges`           | Relative directory inside the static output where generated badges are hosted                                                             |
@@ -435,6 +436,7 @@ Both are ordinary `.storybook-pages.yml` / workflow-input settings, validated th
 ```yaml
 preview_root: pr-preview # default; set to '' in .storybook-pages.yml for repository-root layout (pr-<number>)
 preview_retention_days: 30 # default; 0 disables age-based pruning (closed-PR previews are still removed)
+warning_days_before_cleanup: 3 # default; 0 disables inactivity warnings
 ```
 
 #### Repository-Root Preview Layout (`preview_root: ''`)

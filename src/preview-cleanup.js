@@ -3,6 +3,7 @@ import path from 'node:path';
 import { resolvePreviewTarget } from './preview-metadata.js';
 import { resolveConfiguration } from './config.js';
 import { withSerializedBranchWrite, requestPagesRebuild } from './git-branch-writer.js';
+import { updatePreviewCommentStatus } from './preview-comment.js';
 
 async function pathExists(target) {
   try {
@@ -57,6 +58,12 @@ if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
       console.log(JSON.stringify(result));
       if (result.changed && process.env.GITHUB_TOKEN && process.env.GITHUB_REPOSITORY) {
         await requestPagesRebuild({ token: process.env.GITHUB_TOKEN, repository: process.env.GITHUB_REPOSITORY });
+        await updatePreviewCommentStatus({
+          token: process.env.GITHUB_TOKEN,
+          repository: process.env.GITHUB_REPOSITORY,
+          prNumber: process.env.PR_NUMBER,
+          expired: true
+        });
       }
       if (process.env.GITHUB_STEP_SUMMARY) {
         const message = result.changed
