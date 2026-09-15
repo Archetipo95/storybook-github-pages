@@ -173,7 +173,7 @@ runs:
       run: |
         CMD="$SB_BUILD_COMMAND"
         if [ "$SB_AUTO_BASE_URL" = "true" ]; then
-          eval "$(node -e 'import("./src/base-url.js").then(({computeBaseUrl, augmentBuildCommand, buildEnvironment}) => { const baseUrl = computeBaseUrl({repository: process.env.SB_REPOSITORY, siteUrl: process.env.SB_SITE_URL, basePath: process.env.SB_BASE_PATH, eventName: process.env.SB_EVENT_NAME, prNumber: process.env.SB_PR_NUMBER}); const command = augmentBuildCommand(process.env.SB_BUILD_COMMAND, baseUrl); console.log(`CMD=${JSON.stringify(command)}`); for (const [key, value] of Object.entries(buildEnvironment(baseUrl))) console.log(`export ${key}=${JSON.stringify(value)}`); })')"
+          eval "$(node -e 'import("${{ github.action_path }}/src/base-url.js").then(({computeBaseUrl, augmentBuildCommand, buildEnvironment}) => { const baseUrl = computeBaseUrl({repository: process.env.SB_REPOSITORY, siteUrl: process.env.SB_SITE_URL, basePath: process.env.SB_BASE_PATH, eventName: process.env.SB_EVENT_NAME, prNumber: process.env.SB_PR_NUMBER}); const command = augmentBuildCommand(process.env.SB_BUILD_COMMAND, baseUrl); console.log(`CMD=${JSON.stringify(command)}`); for (const [key, value] of Object.entries(buildEnvironment(baseUrl))) console.log(`export ${key}=${JSON.stringify(value)}`); })')"
         fi
         echo "Running custom build command: $CMD"
         eval "$CMD"
