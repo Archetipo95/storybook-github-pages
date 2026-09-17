@@ -239,8 +239,34 @@ export function parseSimpleYaml(content) {
   const result = {};
   let currentSection = null;
 
-  const lines = content.split('\n');
-  for (let line of lines) {
+  const lines = content.split(/\r?\n/);
+  const parseBlockScalar = (startIndex, { allowNested = false } = {}) => {
+    const block = [];
+    let index = startIndex + 1;
+
+    while (index < lines.length) {
+      const rawLine = lines[index];
+      if (!rawLine || !rawLine.trim()) {
+        block.push('');
+        index += 1;
+        continue;
+      }
+
+      const indent = rawLine.search(/\S/);
+      if (allowNested ? indent > 0 : indent >= 0) {
+        if (indent === 0) break;
+        block.push(rawLine.slice(indent));
+        index += 1;
+        continue;
+      }
+      break;
+    }
+
+    return { value: block.join('\n').replace(/\n$/, ''), nextIndex: index };
+  };
+
+  for (let index = 0; index < lines.length; index++) {
+    let line = lines[index];
     const commentIdx = line.indexOf('#');
     if (commentIdx !== -1) {
       line = line.slice(0, commentIdx);
@@ -255,7 +281,13 @@ export function parseSimpleYaml(content) {
       const colonIdx = trimmed.indexOf(':');
       if (colonIdx !== -1) {
         const key = trimmed.slice(0, colonIdx).trim();
-        const val = trimmed.slice(colonIdx + 1).trim();
+        let val = trimmed.slice(colonIdx + 1).trim();
+        if (val === '|' || val === '>' || /^([|>])([+-]?)$/.test(val)) {
+          const { value, nextIndex } = parseBlockScalar(index, { allowNested: false });
+          result[key] = value;
+          index = nextIndex - 1;
+          continue;
+        }
         if (val) {
           result[key] = parseValue(val);
         } else {
@@ -267,7 +299,13 @@ export function parseSimpleYaml(content) {
       const colonIdx = trimmed.indexOf(':');
       if (colonIdx !== -1) {
         const key = trimmed.slice(0, colonIdx).trim();
-        const val = trimmed.slice(colonIdx + 1).trim();
+        let val = trimmed.slice(colonIdx + 1).trim();
+        if (val === '|' || val === '>' || /^([|>])([+-]?)$/.test(val)) {
+          const { value, nextIndex } = parseBlockScalar(index, { allowNested: true });
+          result[currentSection][key] = value;
+          index = nextIndex - 1;
+          continue;
+        }
         result[currentSection][key] = parseValue(val);
       }
     }

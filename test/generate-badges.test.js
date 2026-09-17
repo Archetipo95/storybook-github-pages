@@ -15,6 +15,7 @@ import {
   generateBadges,
   parseTestResultsData
 } from '../src/generate-badges.js';
+import { parseSimpleYaml } from '../src/config.js';
 
 test('estimateTextWidth returns reasonable widths for various character sets', () => {
   assert.equal(estimateTextWidth(''), 0);
@@ -138,6 +139,14 @@ test('extractStorybookMetrics handles directory with no index.json or stories.js
   assert.equal(metrics.componentsCount, 0);
   assert.equal(metrics.hasStoriesData, false);
   fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test('parseSimpleYaml reads block scalar values for coverage path filters', () => {
+  const yaml = `coverage_include_paths: |\n  src/components/**\n  packages/*/src/components/**\ncoverage_ignore_paths: |\n  **/generated/**\n  **/vendor/**\n`;
+  assert.deepEqual(parseSimpleYaml(yaml), {
+    coverage_include_paths: 'src/components/**\npackages/*/src/components/**',
+    coverage_ignore_paths: '**/generated/**\n**/vendor/**'
+  });
 });
 
 test('countWorkspaceComponents honors include and ignore repository-root glob filters', () => {
