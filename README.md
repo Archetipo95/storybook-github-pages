@@ -249,11 +249,9 @@ You can embed these badges directly into your `README.md`:
 
 The component coverage calculation uses the checked-out repository as the default discovery root. In the current release, the action walks the workspace and counts likely framework component files such as `.vue`, `.jsx`, `.tsx`, and `.svelte` while excluding common non-component and generated paths (`node_modules`, `.git`, `storybook-static`, `dist`, `build`, `coverage`, and files ending with `.stories.*`, `.story.*`, `.test.*`, `.spec.*`). This default behavior is intentionally repository-wide and is what drives the coverage badge, `badges/overview.json`, PR preview coverage deltas, and the growth-chart ledger.
 
-### Planned future configuration shape
+### Supported configuration
 
-This is a proposed future API for repositories that need finer control over the coverage set. It is not yet exposed in the current workflow inputs or validation layer, and the actual implementation remains pending.
-
-The intended configuration shape is:
+These inputs are supported and are evaluated against the repository root before the coverage badge or metrics are generated:
 
 ```yaml
 with:
@@ -267,7 +265,7 @@ with:
     **/*.spec.*
 ```
 
-This planned configuration is intentionally repository-root-relative. In other words, the patterns are evaluated against the checkout root rather than the Storybook source directory, and the effective coverage set is computed before the badge and metrics are generated.
+The patterns are intentionally repository-root-relative. In other words, they are evaluated against the checkout root rather than the Storybook source directory, and the effective coverage set is computed before badge generation and stats ledger updates.
 
 ### Matching rules and precedence
 
@@ -285,14 +283,12 @@ This planned configuration is intentionally repository-root-relative. In other w
 
 ### Impact on published metrics
 
-Once implemented, the selected coverage set will be the single source of truth for:
+The selected coverage set is the single source of truth for:
 
 - the coverage badge (`badges/coverage.svg` / `badges/coverage.json`);
 - `badges/overview.json`;
 - PR preview coverage comparisons and deltas;
 - the historical growth-chart ledger (`stats/history.json` and `stats/history.svg`).
-
-Until the path-filter configuration is exposed in the action, the current default remains the repository-wide component scan described above.
 
 ---
 

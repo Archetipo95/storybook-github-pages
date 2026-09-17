@@ -22,6 +22,8 @@ export const DEFAULT_CONFIG = {
   generate_badges: true,
   badges_directory: 'badges',
   test_results_path: '',
+  coverage_include_paths: '',
+  coverage_ignore_paths: '',
   generate_stats_graph: true,
   stats_directory: 'stats',
   enable_passcode_gate: false,
@@ -176,6 +178,22 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
         );
       }
     }
+  }
+
+  for (const [field, value] of [
+    ['coverage_include_paths', config.coverage_include_paths],
+    ['coverage_ignore_paths', config.coverage_ignore_paths]
+  ]) {
+    if (value === undefined || value === null || value === '') continue;
+    const values = Array.isArray(value) ? value : String(value).split(/\r?\n|,/) ;
+    values.forEach(item => {
+      const pattern = String(item).trim();
+      if (!pattern) return;
+      const normalized = pattern.replace(/\\/g, '/').replace(/^\//, '');
+      if (normalized.startsWith('../') || normalized.includes('/../') || normalized.startsWith('/') || normalized.includes('://')) {
+        throw new Error(`Config ${field} pattern "${pattern}" must be a repository-root-relative glob.`);
+      }
+    });
   }
 
   if (config.generate_stats_graph !== undefined && typeof config.generate_stats_graph !== 'boolean') {
@@ -353,6 +371,18 @@ export function resolveConfiguration({
         : fileConfig?.test_results_path !== undefined && fileConfig.test_results_path !== ''
           ? String(fileConfig.test_results_path)
           : DEFAULT_CONFIG.test_results_path,
+    coverage_include_paths:
+      inputs.coverage_include_paths !== undefined && inputs.coverage_include_paths !== ''
+        ? String(inputs.coverage_include_paths)
+        : fileConfig?.coverage_include_paths !== undefined && fileConfig.coverage_include_paths !== ''
+          ? String(fileConfig.coverage_include_paths)
+          : DEFAULT_CONFIG.coverage_include_paths,
+    coverage_ignore_paths:
+      inputs.coverage_ignore_paths !== undefined && inputs.coverage_ignore_paths !== ''
+        ? String(inputs.coverage_ignore_paths)
+        : fileConfig?.coverage_ignore_paths !== undefined && fileConfig.coverage_ignore_paths !== ''
+          ? String(fileConfig.coverage_ignore_paths)
+          : DEFAULT_CONFIG.coverage_ignore_paths,
     generate_stats_graph:
       inputs.generate_stats_graph !== undefined && inputs.generate_stats_graph !== ''
         ? String(inputs.generate_stats_graph) === 'true'
