@@ -91,6 +91,14 @@ inputs:
     description: 'Optional repository-relative path to a JSON Storybook interaction test results file'
     required: false
     default: ''
+  coverage_include_paths:
+    description: 'Repository-root-relative glob patterns that narrow the component coverage denominator; leave blank for repository-wide scan'
+    required: false
+    default: ''
+  coverage_ignore_paths:
+    description: 'Repository-root-relative glob patterns removed from the final coverage set even when they match include rules'
+    required: false
+    default: ''
   generate_stats_graph:
     description: 'Whether to auto-generate hand-drawn growth chart (history.svg) and update metrics ledger (history.json)'
     required: false
@@ -152,6 +160,8 @@ runs:
             `SB_ENVIRONMENT_URL=${c.environment_url || ""}`,
             `SB_GENERATE_BADGES=${c.generate_badges}`, `SB_BADGES_DIRECTORY=${c.badges_directory || "badges"}`,
             `SB_TEST_RESULTS_PATH=${c.test_results_path || ""}`,
+            `SB_COVERAGE_INCLUDE_PATHS=${c.coverage_include_paths || ""}`,
+            `SB_COVERAGE_IGNORE_PATHS=${c.coverage_ignore_paths || ""}`,
             `SB_GENERATE_STATS_GRAPH=${c.generate_stats_graph}`, `SB_STATS_DIRECTORY=${c.stats_directory || "stats"}`,
             `SB_ENABLE_PASSCODE_GATE=${c.enable_passcode_gate}`, `SB_PASSCODE_SESSION_HOURS=${c.passcode_session_hours}`,
             `SB_SITE_URL=${c.site_url || ""}`, `SB_BASE_PATH=${c.base_path || ""}`, `SB_AUTO_BASE_URL=${c.auto_base_url}`
@@ -200,6 +210,8 @@ runs:
         SB_PATH: ${{ env.SB_PATH }}
         SB_BADGES_DIRECTORY: ${{ env.SB_BADGES_DIRECTORY }}
         SB_TEST_RESULTS_PATH: ${{ env.SB_TEST_RESULTS_PATH }}
+        SB_COVERAGE_INCLUDE_PATHS: ${{ env.SB_COVERAGE_INCLUDE_PATHS }}
+        SB_COVERAGE_IGNORE_PATHS: ${{ env.SB_COVERAGE_IGNORE_PATHS }}
         SB_SITE_URL: ${{ env.SB_SITE_URL }}
         SB_BASE_PATH: ${{ env.SB_BASE_PATH }}
         WORKSPACE_ROOT: ${{ github.workspace }}

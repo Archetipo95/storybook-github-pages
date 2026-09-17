@@ -22,6 +22,8 @@ export const DEFAULT_CONFIG = {
   generate_badges: true,
   badges_directory: 'badges',
   test_results_path: '',
+  coverage_include_paths: '',
+  coverage_ignore_paths: '',
   generate_stats_graph: true,
   stats_directory: 'stats',
   enable_passcode_gate: false,
@@ -178,6 +180,27 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
     }
   }
 
+  for (const [field, value] of [
+    ['coverage_include_paths', config.coverage_include_paths],
+    ['coverage_ignore_paths', config.coverage_ignore_paths]
+  ]) {
+    if (value === undefined || value === null || value === '') continue;
+    const values = Array.isArray(value) ? value : String(value).split(/\r?\n|,/);
+    values.forEach(item => {
+      const pattern = String(item).trim();
+      if (!pattern) return;
+      const normalized = pattern.replace(/\\/g, '/').replace(/^\//, '');
+      if (
+        normalized.startsWith('../') ||
+        normalized.includes('/../') ||
+        normalized.startsWith('/') ||
+        normalized.includes('://')
+      ) {
+        throw new Error(`Config ${field} pattern "${pattern}" must be a repository-root-relative glob.`);
+      }
+    });
+  }
+
   if (config.generate_stats_graph !== undefined && typeof config.generate_stats_graph !== 'boolean') {
     throw new Error('Config generate_stats_graph must be a boolean');
   }
@@ -221,8 +244,34 @@ export function parseSimpleYaml(content) {
   const result = {};
   let currentSection = null;
 
-  const lines = content.split('\n');
-  for (let line of lines) {
+  const lines = content.split(/\r?\n/);
+  const parseBlockScalar = (startIndex, { allowNested = false } = {}) => {
+    const block = [];
+    let index = startIndex + 1;
+
+    while (index < lines.length) {
+      const rawLine = lines[index];
+      if (!rawLine || !rawLine.trim()) {
+        block.push('');
+        index += 1;
+        continue;
+      }
+
+      const indent = rawLine.search(/\S/);
+      if (allowNested ? indent > 0 : indent >= 0) {
+        if (indent === 0) break;
+        block.push(rawLine.slice(indent));
+        index += 1;
+        continue;
+      }
+      break;
+    }
+
+    return { value: block.join('\n').replace(/\n$/, ''), nextIndex: index };
+  };
+
+  for (let index = 0; index < lines.length; index++) {
+    let line = lines[index];
     const commentIdx = line.indexOf('#');
     if (commentIdx !== -1) {
       line = line.slice(0, commentIdx);
@@ -237,7 +286,13 @@ export function parseSimpleYaml(content) {
       const colonIdx = trimmed.indexOf(':');
       if (colonIdx !== -1) {
         const key = trimmed.slice(0, colonIdx).trim();
-        const val = trimmed.slice(colonIdx + 1).trim();
+        let val = trimmed.slice(colonIdx + 1).trim();
+        if (val === '|' || val === '>' || /^([|>])([+-]?)$/.test(val)) {
+          const { value, nextIndex } = parseBlockScalar(index, { allowNested: false });
+          result[key] = value;
+          index = nextIndex - 1;
+          continue;
+        }
         if (val) {
           result[key] = parseValue(val);
         } else {
@@ -249,7 +304,13 @@ export function parseSimpleYaml(content) {
       const colonIdx = trimmed.indexOf(':');
       if (colonIdx !== -1) {
         const key = trimmed.slice(0, colonIdx).trim();
-        const val = trimmed.slice(colonIdx + 1).trim();
+        let val = trimmed.slice(colonIdx + 1).trim();
+        if (val === '|' || val === '>' || /^([|>])([+-]?)$/.test(val)) {
+          const { value, nextIndex } = parseBlockScalar(index, { allowNested: true });
+          result[currentSection][key] = value;
+          index = nextIndex - 1;
+          continue;
+        }
         result[currentSection][key] = parseValue(val);
       }
     }
@@ -353,6 +414,18 @@ export function resolveConfiguration({
         : fileConfig?.test_results_path !== undefined && fileConfig.test_results_path !== ''
           ? String(fileConfig.test_results_path)
           : DEFAULT_CONFIG.test_results_path,
+    coverage_include_paths:
+      inputs.coverage_include_paths !== undefined && inputs.coverage_include_paths !== ''
+        ? String(inputs.coverage_include_paths)
+        : fileConfig?.coverage_include_paths !== undefined && fileConfig.coverage_include_paths !== ''
+          ? String(fileConfig.coverage_include_paths)
+          : DEFAULT_CONFIG.coverage_include_paths,
+    coverage_ignore_paths:
+      inputs.coverage_ignore_paths !== undefined && inputs.coverage_ignore_paths !== ''
+        ? String(inputs.coverage_ignore_paths)
+        : fileConfig?.coverage_ignore_paths !== undefined && fileConfig.coverage_ignore_paths !== ''
+          ? String(fileConfig.coverage_ignore_paths)
+          : DEFAULT_CONFIG.coverage_ignore_paths,
     generate_stats_graph:
       inputs.generate_stats_graph !== undefined && inputs.generate_stats_graph !== ''
         ? String(inputs.generate_stats_graph) === 'true'
