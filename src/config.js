@@ -185,12 +185,17 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
     ['coverage_ignore_paths', config.coverage_ignore_paths]
   ]) {
     if (value === undefined || value === null || value === '') continue;
-    const values = Array.isArray(value) ? value : String(value).split(/\r?\n|,/) ;
+    const values = Array.isArray(value) ? value : String(value).split(/\r?\n|,/);
     values.forEach(item => {
       const pattern = String(item).trim();
       if (!pattern) return;
       const normalized = pattern.replace(/\\/g, '/').replace(/^\//, '');
-      if (normalized.startsWith('../') || normalized.includes('/../') || normalized.startsWith('/') || normalized.includes('://')) {
+      if (
+        normalized.startsWith('../') ||
+        normalized.includes('/../') ||
+        normalized.startsWith('/') ||
+        normalized.includes('://')
+      ) {
         throw new Error(`Config ${field} pattern "${pattern}" must be a repository-root-relative glob.`);
       }
     });

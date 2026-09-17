@@ -172,10 +172,7 @@ test('countWorkspaceComponents honors include and ignore repository-root glob fi
 
   assert.equal(countWorkspaceComponents(tmpDir), 4);
   assert.equal(countWorkspaceComponents(tmpDir, 6, ['src/components/**']), 2);
-  assert.equal(
-    countWorkspaceComponents(tmpDir, 6, ['**/src/components/**', 'generated/**'], ['**/vendor/**']),
-    3
-  );
+  assert.equal(countWorkspaceComponents(tmpDir, 6, ['**/src/components/**', 'generated/**'], ['**/vendor/**']), 3);
 
   const metrics = extractStorybookMetrics(tmpDir, tmpDir, {
     includePaths: ['**/src/components/**'],

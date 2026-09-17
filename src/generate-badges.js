@@ -145,7 +145,7 @@ const COMPONENT_EXTENSIONS = new Set(['.vue', '.jsx', '.tsx', '.svelte']);
 
 export function normalizeRepoPathFilters(value) {
   if (value === undefined || value === null || value === '') return [];
-  const candidates = Array.isArray(value) ? value : String(value).split(/\r?\n|,/) ;
+  const candidates = Array.isArray(value) ? value : String(value).split(/\r?\n|,/);
   return candidates
     .map(item => String(item).trim())
     .filter(Boolean)
@@ -206,7 +206,12 @@ export function matchesAnyRepoPathFilter(relativePath, patterns) {
 /**
  * Counts total framework component files in workspace to compare against covered components.
  */
-export function countWorkspaceComponents(workspaceRoot = process.cwd(), maxDepth = 6, includePaths = [], ignorePaths = []) {
+export function countWorkspaceComponents(
+  workspaceRoot = process.cwd(),
+  maxDepth = 6,
+  includePaths = [],
+  ignorePaths = []
+) {
   if (!workspaceRoot || !fs.existsSync(workspaceRoot)) return 0;
   const includePatterns = normalizeRepoPathFilters(includePaths);
   const ignorePatterns = normalizeRepoPathFilters(ignorePaths);
@@ -240,7 +245,8 @@ export function countWorkspaceComponents(workspaceRoot = process.cwd(), maxDepth
             !lowerName.endsWith('.d.ts')
           ) {
             const relativePath = path.relative(workspaceRoot, fullPath).replace(/\\/g, '/');
-            const matchesInclude = includePatterns.length === 0 || matchesAnyRepoPathFilter(relativePath, includePatterns);
+            const matchesInclude =
+              includePatterns.length === 0 || matchesAnyRepoPathFilter(relativePath, includePatterns);
             const matchesIgnore = matchesAnyRepoPathFilter(relativePath, ignorePatterns);
             if (matchesInclude && !matchesIgnore) {
               count++;
@@ -258,7 +264,11 @@ export function countWorkspaceComponents(workspaceRoot = process.cwd(), maxDepth
 /**
  * Extracts story counts and component counts from static Storybook output.
  */
-export function extractStorybookMetrics(staticDir, workspaceRoot = process.cwd(), { includePaths = [], ignorePaths = [] } = {}) {
+export function extractStorybookMetrics(
+  staticDir,
+  workspaceRoot = process.cwd(),
+  { includePaths = [], ignorePaths = [] } = {}
+) {
   let storiesCount = 0;
   let componentsCount = 0;
   let docsCount = 0;
