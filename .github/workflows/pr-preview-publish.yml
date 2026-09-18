@@ -383,7 +383,7 @@ jobs:
       - name: Validate provenance and publish
         id: publisher
         if: steps.branch_check.outputs.exists == 'true'
-        uses: Archetipo95/storybook-github-pages/preview-publisher@cbf1582e05e4995f6fcf2152a77f438232578e6d
+        uses: Archetipo95/storybook-github-pages/preview-publisher@1f6fdcabf844b5bfeeb9fa242b89f4b708585557
         with:
           bundle_dir: ${{ runner.temp }}/preview-bundle
           pages_repo: ${{ github.workspace }}/pages-repo
