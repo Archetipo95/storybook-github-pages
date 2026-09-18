@@ -64,6 +64,11 @@ on:
         required: false
         type: boolean
         default: true
+      trigger_pages_rebuild:
+        description: 'Explicitly request a GitHub Pages rebuild after publishing the preview; normally only needed for branch-based/legacy Pages setups'
+        required: false
+        type: boolean
+        default: false
       environment_name:
         description: 'GitHub deployment environment name for the preview deployment (defaults to pr-preview-<PR_NUMBER> when empty)'
         required: false
@@ -388,6 +393,7 @@ jobs:
           base_path: ${{ steps.config.outputs.base_path }}
           managed_directories: ${{ steps.config.outputs.managed_directories }}
           create_deployment: ${{ inputs.create_deployment }}
+          trigger_pages_rebuild: ${{ inputs.trigger_pages_rebuild }}
           environment_name: ${{ inputs.environment_name || format('pr-preview-{0}', needs.gate.outputs.pr_number) }}
           environment_url: ${{ inputs.environment_url }}
           enable_passcode_gate: ${{ inputs.enable_passcode_gate }}
