@@ -561,11 +561,14 @@ jobs:
     with:
       preview_root: '' # optional: override preview root; defaults to .storybook-pages.yml or 'pr-preview'
       pages_branch: 'gh-pages'
+      trigger_pages_rebuild: true # optional: required for branch-based/legacy Pages setups that do not auto-rebuild on gh-pages pushes
       enable_passcode_gate: true
       passcode_session_hours: 24
     secrets:
       passcode_hash: ${{ secrets.STORYBOOK_PREVIEW_PASSCODE_HASH }}
 ```
+
+`trigger_pages_rebuild` is only needed when your Pages setup does not automatically rebuild after a push to the Pages branch (for example, older branch-based/legacy Pages configurations using `gh-pages` as the source). In standard branch-based Pages setups GitHub usually rebuilds automatically after the publish commit, so the default `false` value is appropriate.
 
 Or call the composite action `preview-publisher` in a custom `workflow_run` job:
 
