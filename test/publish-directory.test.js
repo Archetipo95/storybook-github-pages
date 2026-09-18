@@ -69,10 +69,14 @@ test('publishDirectory sends an opt-in authenticated Pages rebuild request with 
 
   const originalFetch = global.fetch;
   const requests = [];
-  global.fetch = async (url, options) => {
+  global.fetch = async (url, options = {}) => {
     requests.push({ url, options });
-    if (url.includes('/pages/builds')) {
+    if (url.includes('/pages/builds') && options.method === 'POST') {
       return { ok: true, status: 201, json: async () => ({ status: 'queued' }) };
+    }
+    if (url.includes('/pages/builds')) {
+      const commitSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoClone }).toString().trim();
+      return { ok: true, status: 200, json: async () => [{ commit: commitSha, status: 'built' }] };
     }
     throw new Error(`Unexpected url: ${url}`);
   };
@@ -90,7 +94,8 @@ test('publishDirectory sends an opt-in authenticated Pages rebuild request with 
     });
 
     assert.equal(result.directory, 'storybook');
-    assert.equal(requests.length, 1);
+    assert.match(result.commitSha, /^[0-9a-f]{40}$/);
+    assert.equal(requests.length, 2);
     const rebuildReq = requests[0];
     assert.equal(rebuildReq.url, 'https://api.github.com/repos/my-org/my-repo/pages/builds');
     assert.equal(rebuildReq.options.method, 'POST');
@@ -204,7 +209,7 @@ test('publishDirectory surfaces opt-in Pages rebuild failures after push', async
         token: 'ghp_secret_token_123',
         repository: 'my-org/my-repo'
       }),
-      /Pages rebuild request failed \(403\) after successful push/
+      /Pages rebuild request failed \(403\) after pushing [0-9a-f]{40}/
     );
   } finally {
     global.fetch = originalFetch;

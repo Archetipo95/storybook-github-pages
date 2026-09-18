@@ -72,7 +72,7 @@ export async function publishDirectory({
     site_url: siteUrl,
     base_path: basePath
   });
-  await withSerializedBranchWrite({
+  const writeResult = await withSerializedBranchWrite({
     repo,
     branch,
     commitMessage: `Deploy Storybook${targetDirectory ? ` to ${targetDirectory}` : ''}`,
@@ -81,8 +81,8 @@ export async function publishDirectory({
       return true;
     }
   });
-  if (triggerPagesRebuild) {
-    await requestPagesRebuild({ token, repository });
+  if (triggerPagesRebuild && writeResult.changed) {
+    await requestPagesRebuild({ token, repository, commitSha: writeResult.commitSha });
   }
   const resolvedTarget = resolveDeploymentTarget({
     mode: 'directory',
@@ -102,6 +102,7 @@ export async function publishDirectory({
   return {
     branch,
     directory: targetDirectory,
+    commitSha: writeResult.commitSha,
     ...resolvedTarget,
     url: finalUrl
   };

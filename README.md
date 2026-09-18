@@ -568,7 +568,7 @@ jobs:
       passcode_hash: ${{ secrets.STORYBOOK_PREVIEW_PASSCODE_HASH }}
 ```
 
-`trigger_pages_rebuild` is only needed when your Pages setup does not automatically rebuild after a push to the Pages branch (for example, older branch-based/legacy Pages configurations using `gh-pages` as the source). In standard branch-based Pages setups GitHub usually rebuilds automatically after the publish commit, so the default `false` value is appropriate.
+`trigger_pages_rebuild` is only needed when your Pages setup does not automatically rebuild after a push to the Pages branch (for example, older branch-based/legacy Pages configurations using `gh-pages` as the source). When enabled, the publisher waits for GitHub Pages to report a successful build of the exact commit it pushed and fails if no matching build appears. In standard branch-based Pages setups GitHub usually rebuilds automatically after the publish commit, so the default `false` value is appropriate.
 
 Or call the composite action `preview-publisher` in a custom `workflow_run` job:
 

@@ -77,7 +77,11 @@ if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
           prNumber,
           description: `Preview cleanup for PR #${prNumber}`
         });
-        await requestPagesRebuild({ token: process.env.GITHUB_TOKEN, repository: process.env.GITHUB_REPOSITORY });
+        await requestPagesRebuild({
+          token: process.env.GITHUB_TOKEN,
+          repository: process.env.GITHUB_REPOSITORY,
+          commitSha: result.commitSha
+        });
         await updatePreviewCommentStatus({
           token: process.env.GITHUB_TOKEN,
           repository: process.env.GITHUB_REPOSITORY,

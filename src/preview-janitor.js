@@ -184,7 +184,7 @@ export async function runJanitor({
     }
   });
 
-  return { removed: remove, warned: warn, keep, ignored, changed: result.changed };
+  return { removed: remove, warned: warn, keep, ignored, changed: result.changed, commitSha: result.commitSha };
 }
 
 if (process.argv[1] && process.argv[1].endsWith('preview-janitor.js')) {
@@ -230,7 +230,11 @@ if (process.argv[1] && process.argv[1].endsWith('preview-janitor.js')) {
             description: `Preview cleanup for PR #${item.prNumber}`
           });
         }
-        await requestPagesRebuild({ token: process.env.GITHUB_TOKEN, repository: process.env.GITHUB_REPOSITORY });
+        await requestPagesRebuild({
+          token: process.env.GITHUB_TOKEN,
+          repository: process.env.GITHUB_REPOSITORY,
+          commitSha: result.commitSha
+        });
       }
       for (const item of result.warned) {
         await updatePreviewCommentStatus({
