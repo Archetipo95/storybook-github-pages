@@ -37,6 +37,8 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
   assert.match(content, /pages_branch:/, 'publish must support pages_branch input');
   assert.match(content, /site_url:/, 'publish must support site_url input');
   assert.match(content, /base_path:/, 'publish must support base_path input');
+  assert.match(content, /generate_stats_graph:/, 'publish must support generate_stats_graph input');
+  assert.match(content, /stats_directory:/, 'publish must support stats_directory input');
   assert.match(content, /managed_directories:/, 'publish must support managed_directories input');
   assert.match(content, /artifact_name:/, 'publish must support artifact_name input');
   assert.match(content, /enable_passcode_gate:/, 'publish must support passcode gate input');
@@ -89,6 +91,16 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
     /steps\.branch_check\.outputs\.exists == 'true'/,
     'checkout and publish steps must be guarded by Pages branch existence'
   );
+  assert.match(
+    publishJob,
+    /generate_stats_graph: \$\{\{ steps\.config\.outputs\.generate_stats_graph \}\}/,
+    'trusted publisher must receive the resolved stats regeneration setting'
+  );
+  assert.match(
+    publishJob,
+    /stats_directory: \$\{\{ steps\.config\.outputs\.stats_directory \}\}/,
+    'trusted publisher must receive the resolved stats directory'
+  );
 });
 
 test('pr-preview-publish pins a preview-publisher action schema that supports the passcode gate', () => {
@@ -104,6 +116,8 @@ test('pr-preview-publish pins a preview-publisher action schema that supports th
   assert.match(action, /enable_passcode_gate:/, 'pinned preview-publisher must accept enable_passcode_gate');
   assert.match(action, /passcode_hash:/, 'pinned preview-publisher must accept passcode_hash');
   assert.match(action, /passcode_session_hours:/, 'pinned preview-publisher must accept passcode_session_hours');
+  assert.match(action, /generate_stats_graph:/, 'pinned preview-publisher must accept generate_stats_graph');
+  assert.match(action, /stats_directory:/, 'pinned preview-publisher must accept stats_directory');
 });
 
 test('pr-preview-cleanup workflow never checks out the pull request head and stays metadata-only', () => {

@@ -13,6 +13,7 @@ import { publishDirectory } from './publish-directory.js';
 import { buildCommentBody, upsertPreviewComment } from './preview-comment.js';
 import { createDeployment, updateDeploymentStatus } from './github-deployments.js';
 import { injectAuthGate } from './inject-auth-gate.js';
+import { generateStatsGraph } from './generate-stats.js';
 
 /**
  * Reads and parses the metadata file bundled inside the downloaded build
@@ -73,6 +74,8 @@ export async function publishPreview({
   siteUrl = '',
   basePath = '',
   triggerPagesRebuild = false,
+  generateStatsGraph: generateStatsGraphEnabled = true,
+  statsDirectory = 'stats',
   enablePasscodeGate = false,
   passcodeHash = '',
   passcodeSessionHours = 24,
@@ -150,12 +153,28 @@ export async function publishPreview({
     throw new Error(`Preview content digest mismatch: expected ${metadata.contentDigest}, got ${contentDigest}`);
   }
 
+  const baseRef = trustedContext?.baseRef ?? metadata.baseRef;
+  const baseDirectory = resolveBaseDirectoryForRef(baseRef, { default_branch: 'main' });
+  const basePagesRepo = baseDirectory ? path.join(pagesRepo, baseDirectory) : pagesRepo;
+  const baseMetricsPath = pagesRepo ? resolveBaseMetricsPath({ pagesRepo, baseRef, defaultBranch: 'main' }) : null;
+
   let publishResult;
   try {
     if (enablePasscodeGate) {
       await injectAuthGate(contentDir, {
         passcodeHash,
         sessionHours: Number(passcodeSessionHours)
+      });
+    }
+    if (generateStatsGraphEnabled) {
+      generateStatsGraph({
+        staticDir: contentDir,
+        workspaceRoot: contentDir,
+        pagesRepo: basePagesRepo,
+        statsDirectory,
+        siteUrl,
+        basePath,
+        commitSha: metadata.headSha
       });
     }
     publishResult = await publishDirectory({
@@ -185,9 +204,6 @@ export async function publishPreview({
     throw error;
   }
 
-  const baseRef = trustedContext?.baseRef ?? metadata.baseRef;
-  const baseDirectory = resolveBaseDirectoryForRef(baseRef, { default_branch: 'main' });
-  const baseMetricsPath = pagesRepo ? resolveBaseMetricsPath({ pagesRepo, baseRef, defaultBranch: 'main' }) : null;
   const previewUrl =
     publishResult.url ||
     (() => {
@@ -301,6 +317,8 @@ if (process.argv[1] && process.argv[1].endsWith('preview-publish.js')) {
     siteUrl: process.env.SITE_URL || '',
     basePath: process.env.BASE_PATH || '',
     triggerPagesRebuild: process.env.TRIGGER_PAGES_REBUILD === 'true',
+    generateStatsGraph: process.env.GENERATE_STATS_GRAPH !== 'false',
+    statsDirectory: process.env.SB_STATS_DIRECTORY || 'stats',
     enablePasscodeGate: process.env.ENABLE_PASSCODE_GATE === 'true',
     passcodeHash: process.env.PASSCODE_HASH || '',
     passcodeSessionHours: process.env.PASSCODE_SESSION_HOURS || 24,

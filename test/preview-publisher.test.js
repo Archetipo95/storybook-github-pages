@@ -99,10 +99,14 @@ test('preview-publisher action.yml schema, inputs, and outputs are well-formed',
   assert.match(content, /trusted_base_ref:/);
   assert.match(content, /expected_artifact_name:/);
   assert.match(content, /current_head_sha:/);
+  assert.match(content, /generate_stats_graph:/);
+  assert.match(content, /stats_directory:/);
   assert.match(content, /enable_passcode_gate:/);
   assert.match(content, /passcode_hash:/);
   assert.match(content, /passcode_session_hours:/);
   assert.match(content, /TRIGGER_PAGES_REBUILD: \$\{\{ inputs\.trigger_pages_rebuild \}\}/);
+  assert.match(content, /GENERATE_STATS_GRAPH: \$\{\{ inputs\.generate_stats_graph \}\}/);
+  assert.match(content, /SB_STATS_DIRECTORY: \$\{\{ inputs\.stats_directory \}\}/);
 
   // Outputs
   assert.match(content, /page_url:/);
@@ -113,6 +117,10 @@ test('preview-publisher action.yml schema, inputs, and outputs are well-formed',
   assert.match(
     fs.readFileSync(path.join(process.cwd(), 'src/preview-publish.js'), 'utf8'),
     /triggerPagesRebuild: process\.env\.TRIGGER_PAGES_REBUILD === 'true'/
+  );
+  assert.match(
+    fs.readFileSync(path.join(process.cwd(), 'src/preview-publish.js'), 'utf8'),
+    /generateStatsGraph: process\.env\.GENERATE_STATS_GRAPH !== 'false'/
   );
 });
 
