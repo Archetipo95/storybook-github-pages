@@ -116,6 +116,8 @@ test('pr-preview-publish pins a preview-publisher action schema that supports th
   assert.match(action, /enable_passcode_gate:/, 'pinned preview-publisher must accept enable_passcode_gate');
   assert.match(action, /passcode_hash:/, 'pinned preview-publisher must accept passcode_hash');
   assert.match(action, /passcode_session_hours:/, 'pinned preview-publisher must accept passcode_session_hours');
+  assert.match(action, /generate_stats_graph:/, 'pinned preview-publisher must accept generate_stats_graph');
+  assert.match(action, /stats_directory:/, 'pinned preview-publisher must accept stats_directory');
 });
 
 test('pr-preview-cleanup workflow never checks out the pull request head and stays metadata-only', () => {
