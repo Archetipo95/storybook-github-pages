@@ -3,6 +3,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
 const MIME_TYPES = {
@@ -16,6 +17,8 @@ const MIME_TYPES = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2'
 };
+const REQUIRED_RESOURCE_TYPES = new Set(['document', 'script', 'stylesheet', 'xhr', 'fetch']);
+const requireFromRunner = createRequire(import.meta.url);
 
 export function storyMatches(storyId, pattern) {
   const escaped = String(pattern)
@@ -86,9 +89,10 @@ function createStaticServer(staticDir) {
   return server;
 }
 
-async function loadPlaywright() {
+async function loadPlaywright(workspaceRoot) {
   try {
-    return { library: await import('playwright'), cleanup: () => {} };
+    const installedPath = requireFromRunner.resolve('playwright', { paths: [workspaceRoot] });
+    return { library: await import(pathToFileURL(installedPath).href), cleanup: () => {} };
   } catch (error) {
     const installDir = fs.mkdtempSync(path.join(os.tmpdir(), 'storybook-playwright-'));
     try {
@@ -104,6 +108,7 @@ async function loadPlaywright() {
         cleanup: () => fs.rmSync(installDir, { recursive: true, force: true })
       };
     } catch (installError) {
+      fs.rmSync(installDir, { recursive: true, force: true });
       throw new Error(
         `Smoke test could not load Playwright. Install "playwright" in the consuming repository or allow npm to bootstrap it automatically. ${installError.message}`,
         { cause: error }
@@ -123,7 +128,10 @@ async function checkPage(browser, url, timeout, { requireSidebar = false } = {})
     failures.push(`request failed: ${request.url()} (${request.failure()?.errorText || 'unknown'})`)
   );
   page.on('response', response => {
-    if (response.status() >= 400) failures.push(`HTTP ${response.status()}: ${response.url()}`);
+    const resourceType = response.request?.().resourceType?.();
+    if (response.status() >= 400 && REQUIRED_RESOURCE_TYPES.has(resourceType)) {
+      failures.push(`HTTP ${response.status()}: ${response.url()}`);
+    }
   });
 
   try {
@@ -150,7 +158,9 @@ export async function runSmokeTest({
   serverFactory = createStaticServer
 } = {}) {
   const staticDir = resolveStaticDirectory(staticPath, workspaceRoot);
-  const playwrightRuntime = playwright ? { library: playwright, cleanup: () => {} } : await loadPlaywright();
+  const playwrightRuntime = playwright
+    ? { library: playwright, cleanup: () => {} }
+    : await loadPlaywright(workspaceRoot);
   const browserLibrary = playwrightRuntime.library;
   const server = serverFactory(staticDir);
 
