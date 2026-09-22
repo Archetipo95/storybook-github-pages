@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Reusable Workflow Resolver Checkout (#122)**: The `PR Preview Publish` reusable workflow's `gate` job now explicitly checks out this repository (pinned to a commit) before importing its pull-request-identity resolver, instead of relying on an ambient `actions/checkout` that resolves to the *caller's* repository when invoked via `workflow_call`. This fixes a v1.9.1 regression where any consumer repository failed with `Cannot find module '.../src/resolve-run-context.js'`.
+- **Reusable Workflow Resolver Checkout (#122)**: The `PR Preview Publish` reusable workflow's `gate` job now explicitly checks out this repository (pinned to a commit) before importing its pull-request-identity resolver, instead of relying on an ambient `actions/checkout` that resolves to the _caller's_ repository when invoked via `workflow_call`. This fixes a v1.9.1 regression where any consumer repository failed with `Cannot find module '.../src/resolve-run-context.js'`.
 
 ## [1.9.1] - 2026-09-22
 
