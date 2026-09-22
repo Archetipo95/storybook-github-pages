@@ -497,6 +497,7 @@ export function generateStatsGraph({
   siteUrl = '',
   basePath = '',
   commitSha = process.env.GITHUB_SHA || '',
+  currentSnapshot = null,
   theme = 'auto'
 } = {}) {
   if (!staticDir || typeof staticDir !== 'string') {
@@ -553,10 +554,25 @@ export function generateStatsGraph({
     }
   }
 
-  // 2. Extract current metrics
-  const metrics = extractStorybookMetrics(staticAbs, workspaceRoot);
+  // 2. Determine the current snapshot to append to history. When the caller
+  // supplies `currentSnapshot` (the trusted publisher does, from the
+  // artifact the untrusted build already computed against the real PR
+  // source), use it verbatim instead of recomputing: at publish time
+  // `staticDir`/`workspaceRoot` are only the built static output, not the
+  // PR's source tree, so a fresh scan would silently undercount
+  // `totalComponents`/`coveragePercent`.
+  const metrics = currentSnapshot
+    ? {
+        storiesCount: Number(currentSnapshot.stories || 0),
+        componentsCount: Number(currentSnapshot.components || 0),
+        totalComponents: currentSnapshot.totalComponents,
+        coveragePercent: currentSnapshot.coveragePercent,
+        docsCount: Number(currentSnapshot.docs || 0),
+        storybookVersion: currentSnapshot.version || ''
+      }
+    : extractStorybookMetrics(staticAbs, workspaceRoot);
 
-  const currentSnapshot = {
+  const snapshotForLedger = currentSnapshot || {
     timestamp: new Date().toISOString(),
     date: new Date().toISOString().slice(0, 10),
     commit: commitSha ? commitSha.slice(0, 7) : '',
@@ -570,7 +586,7 @@ export function generateStatsGraph({
 
   const updatedHistory = updateHistoryLedger({
     existingHistory,
-    currentSnapshot
+    currentSnapshot: snapshotForLedger
   });
 
   // 3. Write history.json

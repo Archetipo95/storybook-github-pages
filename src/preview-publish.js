@@ -42,6 +42,27 @@ export function readBundleMetadata(bundleDir) {
  * rejection path (fork, stale run, provenance mismatch) is returned/thrown
  * before any write-capable operation runs.
  */
+/**
+ * Reads the exact "current PR" snapshot the untrusted build already wrote
+ * into the artifact's own `<statsDirectory>/history.json` (a single entry,
+ * computed by `generate-stats.js` against the real PR source tree - which
+ * the trusted publisher must never check out or execute). Returns null when
+ * absent/malformed so the caller can skip regeneration entirely rather than
+ * recompute against the built static output, which lacks source files and
+ * would silently misreport `totalComponents`/`coveragePercent`.
+ */
+export function readArtifactCurrentSnapshot(contentDir, statsDirectory = 'stats') {
+  const historyPath = path.join(contentDir, statsDirectory, 'history.json');
+  if (!fs.existsSync(historyPath)) return null;
+  try {
+    const raw = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
+    if (Array.isArray(raw) && raw.length > 0) return raw[raw.length - 1];
+  } catch {
+    // Malformed artifact stats file - treat as absent.
+  }
+  return null;
+}
+
 export function resolveBaseMetricsPath({
   pagesRepo,
   baseRef,
@@ -167,15 +188,22 @@ export async function publishPreview({
       });
     }
     if (generateStatsGraphEnabled) {
-      generateStatsGraph({
-        staticDir: contentDir,
-        workspaceRoot: contentDir,
-        pagesRepo: basePagesRepo,
-        statsDirectory,
-        siteUrl,
-        basePath,
-        commitSha: metadata.headSha
-      });
+      // Use the exact current-PR snapshot the untrusted build already
+      // computed against the real PR source tree; never recompute it here
+      // against `contentDir`, which is only the built static output (no
+      // source files), or against any checked-out branch content.
+      const artifactSnapshot = readArtifactCurrentSnapshot(contentDir, statsDirectory);
+      if (artifactSnapshot) {
+        generateStatsGraph({
+          staticDir: contentDir,
+          pagesRepo: basePagesRepo,
+          statsDirectory,
+          siteUrl,
+          basePath,
+          commitSha: metadata.headSha,
+          currentSnapshot: artifactSnapshot
+        });
+      }
     }
     publishResult = await publishDirectory({
       repo: pagesRepo,
