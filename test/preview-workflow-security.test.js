@@ -37,6 +37,8 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
   assert.match(content, /pages_branch:/, 'publish must support pages_branch input');
   assert.match(content, /site_url:/, 'publish must support site_url input');
   assert.match(content, /base_path:/, 'publish must support base_path input');
+  assert.match(content, /generate_stats_graph:/, 'publish must support generate_stats_graph input');
+  assert.match(content, /stats_directory:/, 'publish must support stats_directory input');
   assert.match(content, /managed_directories:/, 'publish must support managed_directories input');
   assert.match(content, /artifact_name:/, 'publish must support artifact_name input');
   assert.match(content, /enable_passcode_gate:/, 'publish must support passcode gate input');
@@ -88,6 +90,16 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
     publishJob,
     /steps\.branch_check\.outputs\.exists == 'true'/,
     'checkout and publish steps must be guarded by Pages branch existence'
+  );
+  assert.match(
+    publishJob,
+    /generate_stats_graph: \$\{\{ steps\.config\.outputs\.generate_stats_graph \}\}/,
+    'trusted publisher must receive the resolved stats regeneration setting'
+  );
+  assert.match(
+    publishJob,
+    /stats_directory: \$\{\{ steps\.config\.outputs\.stats_directory \}\}/,
+    'trusted publisher must receive the resolved stats directory'
   );
 });
 

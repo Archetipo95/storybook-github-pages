@@ -44,14 +44,14 @@ function initBarePagesRepo() {
   return cloneDir;
 }
 
-function makeBundle({ isForkOverride, headSha = SHA_A, target } = {}) {
+function makeBundle({ isForkOverride, headSha = SHA_A, target, baseRef = 'main' } = {}) {
   const bundleDir = makeTempDir('storybook-preview-bundle-');
   const metadata = buildPreviewMetadata({
     repository: 'octo/widgets',
     runId: 55,
     runAttempt: 1,
     prNumber: 42,
-    baseRef: 'main',
+    baseRef,
     headRepository: isForkOverride ? 'fork/widgets' : 'octo/widgets',
     headSha,
     artifactName: 'storybook-preview-pr-42-run-55',
@@ -201,6 +201,66 @@ test('publishPreview publishes a same-repo, current-head preview and posts an id
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('publishPreview regenerates preview stats from trusted base Pages history', async () => {
+  const { bundleDir, metadata } = makeBundle({ baseRef: 'preprod' });
+  const contentDir = path.join(bundleDir, 'storybook');
+  fs.writeFileSync(
+    path.join(contentDir, 'index.json'),
+    JSON.stringify({
+      entries: {
+        'button--primary': { id: 'button--primary', title: 'Components/Button', type: 'story' },
+        'card--default': { id: 'card--default', title: 'Components/Card', type: 'story' }
+      }
+    })
+  );
+  fs.mkdirSync(path.join(contentDir, 'stats'), { recursive: true });
+  fs.writeFileSync(
+    path.join(contentDir, 'stats', 'history.json'),
+    JSON.stringify([{ date: '2026-09-20', commit: 'artifact', stories: 2, components: 2 }])
+  );
+  fs.writeFileSync(path.join(contentDir, 'stats', 'history.svg'), '<svg>artifact-only</svg>');
+  metadata.contentDigest = digestDirectory(contentDir);
+  fs.writeFileSync(path.join(bundleDir, 'preview-metadata.json'), JSON.stringify(metadata, null, 2));
+
+  const pagesRepo = initBarePagesRepo();
+  fs.mkdirSync(path.join(pagesRepo, 'stats'), { recursive: true });
+  fs.writeFileSync(
+    path.join(pagesRepo, 'stats', 'history.json'),
+    JSON.stringify([{ date: '2026-09-01', commit: 'rootwrong', stories: 99, components: 99 }])
+  );
+  fs.mkdirSync(path.join(pagesRepo, 'preprod', 'stats'), { recursive: true });
+  fs.writeFileSync(
+    path.join(pagesRepo, 'preprod', 'stats', 'history.json'),
+    JSON.stringify([
+      { date: '2026-09-01', commit: '1111111', stories: 5, components: 2 },
+      { date: '2026-09-10', commit: '2222222', stories: 8, components: 3 }
+    ])
+  );
+
+  const result = await publishPreview({
+    bundleDir,
+    pagesRepo,
+    trustedContext: trustedContextFor(metadata),
+    currentHeadSha: SHA_A,
+    siteUrl: 'https://octo.github.io/widgets'
+  });
+
+  assert.equal(result.action, 'published');
+  assert.equal(result.baseDirectory, 'preprod');
+
+  const publishedHistory = JSON.parse(
+    fs.readFileSync(path.join(pagesRepo, 'pr-preview', 'pr-42', 'stats', 'history.json'), 'utf8')
+  );
+  assert.deepEqual(
+    publishedHistory.map(entry => entry.commit),
+    ['1111111', '2222222', SHA_A.slice(0, 7)]
+  );
+  assert.equal(publishedHistory[2].stories, 2);
+  assert.equal(publishedHistory[2].components, 2);
+  assert.notEqual(publishedHistory[0].commit, 'rootwrong');
+  assert.ok(fs.existsSync(path.join(pagesRepo, 'pr-preview', 'pr-42', 'stats', 'history.svg')));
 });
 
 test('publishPreview includes badges, coverage diff, and stats graph in PR comment when generated', async () => {

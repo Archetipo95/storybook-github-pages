@@ -58,6 +58,16 @@ on:
         required: false
         type: string
         default: ''
+      generate_stats_graph:
+        description: 'Whether to regenerate preview stats from trusted Pages history before publishing'
+        required: false
+        type: boolean
+        default: true
+      stats_directory:
+        description: 'Directory within the static build output to store stats graph and ledger'
+        required: false
+        type: string
+        default: ''
       managed_directories:
         description: 'Comma-separated managed directories preserved during root publication'
         required: false
@@ -289,6 +299,8 @@ jobs:
           INPUT_PAGES_BRANCH: ${{ inputs.pages_branch }}
           INPUT_SITE_URL: ${{ inputs.site_url }}
           INPUT_BASE_PATH: ${{ inputs.base_path }}
+          INPUT_GENERATE_STATS_GRAPH: ${{ inputs.generate_stats_graph }}
+          INPUT_STATS_DIRECTORY: ${{ inputs.stats_directory }}
           INPUT_MANAGED_DIRECTORIES: ${{ inputs.managed_directories }}
           REPOSITORY: ${{ github.repository }}
         run: |
@@ -301,18 +313,24 @@ jobs:
                   pages_branch: process.env.INPUT_PAGES_BRANCH,
                   site_url: process.env.INPUT_SITE_URL,
                   base_path: process.env.INPUT_BASE_PATH,
+                  generate_stats_graph: process.env.INPUT_GENERATE_STATS_GRAPH,
+                  stats_directory: process.env.INPUT_STATS_DIRECTORY,
                   managed_directories: process.env.INPUT_MANAGED_DIRECTORIES
                 }});
                 console.log(`preview_root=${c.preview_root}`);
                 console.log(`pages_branch=${c.pages_branch}`);
                 console.log(`site_url=${c.site_url}`);
                 console.log(`base_path=${c.base_path}`);
+                console.log(`generate_stats_graph=${c.generate_stats_graph}`);
+                console.log(`stats_directory=${c.stats_directory}`);
                 console.log(`managed_directories=${Array.isArray(c.managed_directories) ? c.managed_directories.join(",") : c.managed_directories || ""}`);
               } else {
                 let file_preview_root = undefined;
                 let file_pages_branch = undefined;
                 let file_site_url = undefined;
                 let file_base_path = undefined;
+                let file_generate_stats_graph = undefined;
+                let file_stats_directory = undefined;
                 let file_managed_directories = undefined;
                 if (existsSync(".storybook-pages.yml")) {
                   const {readFileSync} = await import("node:fs");
@@ -330,6 +348,12 @@ jobs:
                     }
                     if (file_base_path === undefined && trimmed.startsWith("base_path:")) {
                       file_base_path = trimmed.slice("base_path:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                    if (file_generate_stats_graph === undefined && trimmed.startsWith("generate_stats_graph:")) {
+                      file_generate_stats_graph = trimmed.slice("generate_stats_graph:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                    if (file_stats_directory === undefined && trimmed.startsWith("stats_directory:")) {
+                      file_stats_directory = trimmed.slice("stats_directory:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
                     }
                     if (file_managed_directories === undefined && trimmed.startsWith("managed_directories:")) {
                       file_managed_directories = trimmed.slice("managed_directories:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
@@ -369,6 +393,14 @@ jobs:
                 const base_path = (rawBasePath !== undefined && rawBasePath !== "")
                   ? rawBasePath
                   : (file_base_path !== undefined ? file_base_path : "");
+                const rawGenerateStatsGraph = process.env.INPUT_GENERATE_STATS_GRAPH;
+                const generate_stats_graph = (rawGenerateStatsGraph !== undefined && rawGenerateStatsGraph !== "")
+                  ? rawGenerateStatsGraph
+                  : (file_generate_stats_graph !== undefined ? file_generate_stats_graph : "true");
+                const rawStatsDirectory = process.env.INPUT_STATS_DIRECTORY;
+                const stats_directory = (rawStatsDirectory !== undefined && rawStatsDirectory !== "")
+                  ? rawStatsDirectory
+                  : (file_stats_directory !== undefined ? file_stats_directory : "stats");
                 const rawManagedDirs = process.env.INPUT_MANAGED_DIRECTORIES;
                 const managed_directories = (rawManagedDirs !== undefined && rawManagedDirs !== "")
                   ? rawManagedDirs
@@ -377,6 +409,8 @@ jobs:
                 console.log(`pages_branch=${pages_branch}`);
                 console.log(`site_url=${site_url}`);
                 console.log(`base_path=${base_path}`);
+                console.log(`generate_stats_graph=${generate_stats_graph}`);
+                console.log(`stats_directory=${stats_directory}`);
                 console.log(`managed_directories=${managed_directories}`);
               }
             });
@@ -426,6 +460,8 @@ jobs:
           preview_root: ${{ steps.config.outputs.preview_root }}
           site_url: ${{ steps.config.outputs.site_url }}
           base_path: ${{ steps.config.outputs.base_path }}
+          generate_stats_graph: ${{ steps.config.outputs.generate_stats_graph }}
+          stats_directory: ${{ steps.config.outputs.stats_directory }}
           managed_directories: ${{ steps.config.outputs.managed_directories }}
           create_deployment: ${{ inputs.create_deployment }}
           trigger_pages_rebuild: ${{ inputs.trigger_pages_rebuild }}
