@@ -16,6 +16,7 @@ Security-hardened GitHub Action and reusable workflows for building, validating,
 - **Bitovi Compatible**: Preserves interface compatibility with `bitovi/github-actions-storybook-to-github-pages` inputs (`checkout`, `path`, `install_command`, `build_command`) for zero-friction migration.
 - **Reusable Workflow & Composite Action**: Offers a primary reusable workflow for turnkey pipelines and a composite action for existing pipelines.
 - **Pinned Dependencies**: All third-party GitHub Actions are pinned to full 40-character commit SHAs.
+- **Native Caching**: The reusable workflow caches npm, Yarn, pnpm, or Bun dependencies and Storybook compilation output in its read-only build job.
 - **Directory Deployments**: Trusted publishers atomically update a directory on a Pages branch while preserving other environments and root `.nojekyll`.
 - **PR Preview Lifecycle**: Unprivileged per-PR builds, a trusted `workflow_run` publisher with strict provenance/stale-run validation, an idempotent bot preview comment with live badges, base vs PR delta comparison table, collapsible growth chart, metadata-only close cleanup, and a scheduled/manual retention janitor.
 - **Dynamic SVG Badges**: Automatically generates Shields.io-style SVG badges (Component Coverage %, Story count, Component count, Storybook version, optional interaction tests, and state-aware Status/Build) and JSON endpoints (`badges/`) for your documentation and README.
@@ -177,37 +178,45 @@ jobs:
 
 ### Action / Workflow Inputs
 
-| Input                         | Type      | Default            | Description                                                                                                                               |
-| ----------------------------- | --------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `path`                        | `string`  | `storybook-static` | Path to the directory containing built static Storybook files                                                                             |
-| `package_manager`             | `string`  | `npm`              | Reusable workflow: `npm`, `yarn`, `pnpm`, or `bun`; composite action: `npm`, `yarn`, or `pnpm`                                            |
-| `checkout`                    | `string`  | `'true'`           | Whether to check out the repository automatically (Action only)                                                                           |
-| `install_command`             | `string`  | `''`               | Bitovi compatibility / custom dependency installation command                                                                             |
-| `build_command`               | `string`  | `''`               | Bitovi compatibility / custom Storybook build command                                                                                     |
-| `custom_install_command`      | `string`  | `''`               | Alias for `install_command`                                                                                                               |
-| `custom_build_command`        | `string`  | `''`               | Alias for `build_command`                                                                                                                 |
-| `publish`                     | `string`  | `'true'`           | Whether to upload and deploy the Pages artifact                                                                                           |
-| `artifact_name`               | `string`  | `github-pages`     | GitHub Pages artifact name                                                                                                                |
-| `environment`                 | `string`  | `github-pages`     | GitHub Pages deployment environment name                                                                                                  |
-| `mode`                        | `string`  | `artifact`         | `artifact` or trusted branch-backed `directory`                                                                                           |
-| `pages_branch`                | `string`  | `gh-pages`         | Pages branch used by directory mode                                                                                                       |
-| `target_directory`            | `string`  | `''`               | Relative directory to replace; empty means the production root                                                                            |
-| `site_url`                    | `string`  | `''`               | Canonical site URL used for deployment metadata                                                                                           |
-| `base_path`                   | `string`  | `''`               | URL base path; derived from `target_directory` when empty                                                                                 |
-| `trigger_pages_rebuild`       | `boolean` | `false`            | Whether to explicitly request a Pages rebuild after a directory publish; normally unnecessary for branch-based Pages                      |
-| `preview_root`                | `string`  | `pr-preview`       | Root directory (on the Pages branch) under which PR previews are published, as `<preview_root>/pr-<number>`                               |
-| `preview_retention_days`      | `number`  | `30`               | Days an _open_ PR's preview may remain before the janitor prunes it; closed-PR previews are always eligible for removal regardless of age |
-| `warning_days_before_cleanup` | `number`  | `3`                | Days before cleanup to warn in the bot PR comment; `0` disables warnings                                                                  |
-| `managed_directories`         | `string`  | `''`               | Comma-separated directories preserved during root publication in directory mode (e.g. `pr-preview`)                                       |
-| `generate_badges`             | `boolean` | `true`             | Whether to automatically generate SVG/JSON component and story count badges                                                               |
-| `badges_directory`            | `string`  | `badges`           | Relative directory inside the static output where generated badges are hosted                                                             |
-| `test_results_path`           | `string`  | `''`               | Optional repository-relative path to a JSON interaction test results file (for example, `.storybook/test-results.json`)                   |
-| `generate_stats_graph`        | `boolean` | `true`             | Whether to automatically generate hand-drawn growth chart (`history.svg`) and update metrics ledger (`history.json`)                      |
-| `stats_directory`             | `string`  | `stats`            | Relative directory inside the static output where generated stats graph and history ledger are hosted                                     |
-| `enable_passcode_gate`        | `boolean` | `false`            | Inject a client-side passcode prompt into `index.html` and `iframe.html`                                                                  |
-| `passcode_session_hours`      | `number`  | `24`               | Duration of a successful browser session                                                                                                  |
-| `passcode_hash`               | `secret`  | —                  | SHA-256 hash of the passcode; provide as a workflow secret (composite action input)                                                       |
-| `auto_base_url`               | `boolean` | `true`             | Automatically inject the repository or preview base URL into Storybook builds unless an explicit base option is provided                  |
+| Input                         | Type      | Default              | Description                                                                                                                               |
+| ----------------------------- | --------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`                        | `string`  | `storybook-static`   | Path to the directory containing built static Storybook files                                                                             |
+| `package_manager`             | `string`  | `npm`                | Reusable workflow: `npm`, `yarn`, `pnpm`, or `bun`; composite action: `npm`, `yarn`, or `pnpm`                                            |
+| `cache`                       | `boolean` | `true`               | Reusable workflow only: restore and save dependency plus Storybook compilation caches in its read-only build job                          |
+| `cache_key_prefix`            | `string`  | `storybook-gh-pages` | Reusable workflow only: prefix for Bun and Storybook compilation cache keys                                                               |
+| `checkout`                    | `string`  | `'true'`             | Whether to check out the repository automatically (Action only)                                                                           |
+| `install_command`             | `string`  | `''`                 | Bitovi compatibility / custom dependency installation command                                                                             |
+| `build_command`               | `string`  | `''`                 | Bitovi compatibility / custom Storybook build command                                                                                     |
+| `custom_install_command`      | `string`  | `''`                 | Alias for `install_command`                                                                                                               |
+| `custom_build_command`        | `string`  | `''`                 | Alias for `build_command`                                                                                                                 |
+| `publish`                     | `string`  | `'true'`             | Whether to upload and deploy the Pages artifact                                                                                           |
+| `artifact_name`               | `string`  | `github-pages`       | GitHub Pages artifact name                                                                                                                |
+| `environment`                 | `string`  | `github-pages`       | GitHub Pages deployment environment name                                                                                                  |
+| `mode`                        | `string`  | `artifact`           | `artifact` or trusted branch-backed `directory`                                                                                           |
+| `pages_branch`                | `string`  | `gh-pages`           | Pages branch used by directory mode                                                                                                       |
+| `target_directory`            | `string`  | `''`                 | Relative directory to replace; empty means the production root                                                                            |
+| `site_url`                    | `string`  | `''`                 | Canonical site URL used for deployment metadata                                                                                           |
+| `base_path`                   | `string`  | `''`                 | URL base path; derived from `target_directory` when empty                                                                                 |
+| `trigger_pages_rebuild`       | `boolean` | `false`              | Whether to explicitly request a Pages rebuild after a directory publish; normally unnecessary for branch-based Pages                      |
+| `preview_root`                | `string`  | `pr-preview`         | Root directory (on the Pages branch) under which PR previews are published, as `<preview_root>/pr-<number>`                               |
+| `preview_retention_days`      | `number`  | `30`                 | Days an _open_ PR's preview may remain before the janitor prunes it; closed-PR previews are always eligible for removal regardless of age |
+| `warning_days_before_cleanup` | `number`  | `3`                  | Days before cleanup to warn in the bot PR comment; `0` disables warnings                                                                  |
+| `managed_directories`         | `string`  | `''`                 | Comma-separated directories preserved during root publication in directory mode (e.g. `pr-preview`)                                       |
+| `generate_badges`             | `boolean` | `true`               | Whether to automatically generate SVG/JSON component and story count badges                                                               |
+| `badges_directory`            | `string`  | `badges`             | Relative directory inside the static output where generated badges are hosted                                                             |
+| `test_results_path`           | `string`  | `''`                 | Optional repository-relative path to a JSON interaction test results file (for example, `.storybook/test-results.json`)                   |
+| `generate_stats_graph`        | `boolean` | `true`               | Whether to automatically generate hand-drawn growth chart (`history.svg`) and update metrics ledger (`history.json`)                      |
+| `stats_directory`             | `string`  | `stats`              | Relative directory inside the static output where generated stats graph and history ledger are hosted                                     |
+| `enable_passcode_gate`        | `boolean` | `false`              | Inject a client-side passcode prompt into `index.html` and `iframe.html`                                                                  |
+| `passcode_session_hours`      | `number`  | `24`                 | Duration of a successful browser session                                                                                                  |
+| `passcode_hash`               | `secret`  | —                    | SHA-256 hash of the passcode; provide as a workflow secret (composite action input)                                                       |
+| `auto_base_url`               | `boolean` | `true`               | Automatically inject the repository or preview base URL into Storybook builds unless an explicit base option is provided                  |
+
+### Build caching
+
+The reusable workflow enables caching by default in its `contents: read` build job. `actions/setup-node` provides native dependency caching for `npm`, Yarn, and pnpm; Bun uses its package cache. A separate cache restores Storybook builder output from `node_modules/.cache/storybook`, `.cache/storybook`, and `.storybook/.cache`.
+
+Set `cache: false` to disable all reusable-workflow caches, or set `cache_key_prefix` when independent cache namespaces are needed. Cache keys include the runner OS and lockfile or Storybook source/configuration hashes. The untrusted PR preview build deliberately never uses a cache, so forked pull requests cannot share build state with trusted publishing workflows. The deploy-capable composite action also does not manage caches; use the reusable workflow when a read-only cached build is required.
 
 ### Outputs
 
