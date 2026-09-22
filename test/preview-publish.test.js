@@ -288,6 +288,71 @@ test("publishPreview merges trusted base Pages history with the artifact's own c
   assert.ok(fs.existsSync(path.join(pagesRepo, 'pr-preview', 'pr-42', 'stats', 'history.svg')));
 });
 
+test('publishPreview uses the artifact current-PR snapshot verbatim even when its stamped commit differs from the trusted head SHA', async () => {
+  // Regression for a hypothesis raised while diagnosing the live v1.9.3
+  // regression: selection of the artifact's current-PR snapshot must not
+  // depend on its `commit` field matching the trusted head SHA in any way -
+  // it is read positionally (the artifact's own last history entry) and
+  // used as-is. Stamp the snapshot with a commit that is unrelated to both
+  // `currentHeadSha` and `metadata.headSha` (SHA_A) to prove this.
+  const { bundleDir, metadata } = makeBundle({ baseRef: 'main' });
+  const contentDir = path.join(bundleDir, 'storybook');
+  fs.mkdirSync(path.join(contentDir, 'stats'), { recursive: true });
+  fs.writeFileSync(
+    path.join(contentDir, 'stats', 'history.json'),
+    JSON.stringify([
+      {
+        date: '2026-09-22',
+        commit: 'deadbee', // deliberately unrelated to SHA_A / metadata.headSha
+        version: 'v10.6.0',
+        components: 6,
+        totalComponents: 7,
+        coveragePercent: 86,
+        stories: 26,
+        docs: 6
+      }
+    ])
+  );
+  fs.writeFileSync(path.join(contentDir, 'stats', 'history.svg'), '<svg>artifact-only</svg>');
+  metadata.contentDigest = digestDirectory(contentDir);
+  fs.writeFileSync(path.join(bundleDir, 'preview-metadata.json'), JSON.stringify(metadata, null, 2));
+
+  const pagesRepo = initBarePagesRepo();
+  fs.mkdirSync(path.join(pagesRepo, 'stats'), { recursive: true });
+  fs.writeFileSync(
+    path.join(pagesRepo, 'stats', 'history.json'),
+    JSON.stringify([
+      { date: '2026-09-10', commit: '3333333', stories: 20, components: 3, totalComponents: 6, coveragePercent: 50 },
+      { date: '2026-09-18', commit: '4444444', stories: 24, components: 4, totalComponents: 6, coveragePercent: 67 }
+    ])
+  );
+
+  const result = await publishPreview({
+    bundleDir,
+    pagesRepo,
+    trustedContext: trustedContextFor(metadata),
+    currentHeadSha: SHA_A,
+    siteUrl: 'https://octo.github.io/widgets'
+  });
+
+  assert.equal(result.action, 'published');
+
+  const publishedHistory = JSON.parse(
+    fs.readFileSync(path.join(pagesRepo, 'pr-preview', 'pr-42', 'stats', 'history.json'), 'utf8')
+  );
+  const latest = publishedHistory[publishedHistory.length - 1];
+  assert.equal(latest.commit, 'deadbee', 'the artifact snapshot commit must be preserved verbatim, unmodified');
+  assert.equal(latest.components, 6);
+  assert.equal(latest.totalComponents, 7);
+  assert.equal(latest.coveragePercent, 86);
+  assert.equal(latest.stories, 26);
+  assert.equal(latest.docs, 6);
+  assert.deepEqual(
+    publishedHistory.map(entry => entry.commit),
+    ['3333333', '4444444', 'deadbee']
+  );
+});
+
 test('publishPreview skips stats regeneration when the artifact has no current-PR snapshot, rather than fabricating one', async () => {
   const { bundleDir, metadata } = makeBundle({ baseRef: 'main' });
   const contentDir = path.join(bundleDir, 'storybook');

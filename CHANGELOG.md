@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Stale `preview-publisher` Internal Pin Reintroduced the Pre-#124 Recompute Bug**: `.github/workflows/pr-preview-publish.yml` pinned the `preview-publisher` composite action to a commit predating #124's stats-snapshot-preservation fix. Because GitHub Actions resolves a SHA-pinned sub-action independently of the reusable workflow's own tag, every v1.9.2/v1.9.3 consumer kept running the old recompute logic and continued to see coverage collapse to 100% on PR previews, even though the fix had already shipped. Repinned `preview-publisher` to a commit that contains the #124 fix, and added a content-level regression test (`test/action-pin-integrity.test.js`) that inspects the pinned commit's actual `src/preview-publish.js`/`src/generate-stats.js` source for the fix markers, rather than only checking the pinned commit exists.
+
 ## [1.9.3] - 2026-09-22
 
 ### Fixed
