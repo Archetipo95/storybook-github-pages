@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-09-22
+
+### Fixed
+
+- **PR Preview Stats History (#120)**: Trusted preview publishing now regenerates growth statistics only after provenance and digest validation, using the Pages history for the pull request's base ref instead of artifact-provided or unrelated root history. Custom `stats_directory` and `generate_stats_graph` settings are forwarded through the reusable workflow.
+
+### Changed
+
+- **Internal Action Pins (#120)**: Refreshed the reusable deployment, preview cleanup, preview janitor, and preview publisher workflows to reviewed implementation commits containing the v1.9.0 release and stats-history fix.
+
 ## [1.9.0] - 2026-09-22
 
 ### Fixed
