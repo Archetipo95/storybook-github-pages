@@ -9,13 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-09-22
+
 ### Fixed
 
 - **Explicit Pages Rebuild Verification (#109)**: Explicit rebuilds now wait for GitHub Pages to successfully build the exact commit pushed to the Pages branch, failing with diagnostics when the build is missing, errored, or cannot be queried.
+- **PR Preview Identity Provenance (#115)**: Trusted preview publication now derives the pull request number from the run's exact uploaded artifact and cross-checks it against GitHub's associated pull requests, avoiding ambiguous `pull_requests[0]` resolution when multiple pull requests share a head SHA.
 
 ### Added
 
+- **Reusable Workflow Build Caching (#43)**: Added opt-out dependency caching for npm, Yarn, pnpm, and Bun plus Storybook compilation caches, with configurable cache key prefixes. Untrusted PR preview builds remain cache-free.
 - **Trusted PR Preview Passcode Gate**: Added optional `enable_passcode_gate`, `passcode_session_hours`, and trusted `passcode_hash` inputs to the reusable PR preview publisher and `preview-publisher` action. The hash stays in the trusted publisher context, while the existing gate injector runs only after provenance and content-digest validation and immediately before publication.
+
+### Changed
+
+- **GitHub Actions Dependency Updates**: Updated the Pages artifact upload and deployment actions to v5 and refreshed the Prettier development dependency to 3.9.7. Internal publisher, preview cleanup, and preview janitor pins were advanced to the reviewed release commit.
 
 ## [1.8.3] - 2026-09-15
 
