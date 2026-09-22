@@ -83,6 +83,28 @@ test('workflow resolves configuration before setup and uses resolved deployment 
   assert.doesNotMatch(content, /TARGET_DIRECTORY: \$\{\{ inputs\.target_directory \}\}/);
 });
 
+test('reusable workflow caches dependencies and Storybook output only in its read-only build job', () => {
+  const workflow = fs.readFileSync(path.join(process.cwd(), '.github/workflows/deploy-storybook.yml'), 'utf8');
+  const preview = fs.readFileSync(path.join(process.cwd(), '.github/workflows/pr-preview-build.yml'), 'utf8');
+  const buildJob = workflow.match(/build-and-upload:[\s\S]*?(?=^  deploy:)/m)?.[0];
+
+  assert.ok(buildJob, 'build-and-upload job not found');
+  assert.match(
+    workflow,
+    /cache:\s*\n\s*description: 'Whether to restore and save dependency and Storybook compilation caches/
+  );
+  assert.match(workflow, /cache_key_prefix:\s*\n\s*description: 'Prefix for Bun and Storybook compilation cache keys'/);
+  assert.match(buildJob, /cache: \$\{\{ inputs\.cache && steps\.config\.outputs\.package_manager \|\| '' \}\}/);
+  assert.match(buildJob, /Restore Bun dependency cache/);
+  assert.match(buildJob, /~\/\.bun\/install\/cache/);
+  assert.match(buildJob, /Restore Storybook compilation cache/);
+  assert.match(buildJob, /node_modules\/\.cache\/storybook/);
+  assert.match(buildJob, /\.cache\/storybook/);
+  assert.match(buildJob, /\.storybook\/\.cache/);
+  assert.match(buildJob, /actions\/cache@5a3ec84eff668545956fd18022155c47e93e2684/);
+  assert.doesNotMatch(preview, /uses: actions\/cache/);
+});
+
 test('Bun setup is SHA-pinned and restricted to the read-only reusable build job', () => {
   const action = fs.readFileSync(path.join(process.cwd(), 'action.yml'), 'utf8');
   const workflow = fs.readFileSync(path.join(process.cwd(), '.github/workflows/deploy-storybook.yml'), 'utf8');

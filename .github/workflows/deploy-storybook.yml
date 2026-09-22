@@ -13,6 +13,16 @@ on:
         required: false
         type: string
         default: ''
+      cache:
+        description: 'Whether to restore and save dependency and Storybook compilation caches in the read-only build job'
+        required: false
+        type: boolean
+        default: true
+      cache_key_prefix:
+        description: 'Prefix for Bun and Storybook compilation cache keys'
+        required: false
+        type: string
+        default: 'storybook-gh-pages'
       install_command:
         description: 'Custom command to install dependencies'
         required: false
@@ -185,10 +195,32 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '20'
+          cache: ${{ inputs.cache && steps.config.outputs.package_manager || '' }}
 
       - name: Set up Bun
         if: ${{ steps.config.outputs.package_manager == 'bun' }}
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+      - name: Restore Bun dependency cache
+        if: ${{ inputs.cache && steps.config.outputs.package_manager == 'bun' }}
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-${{ inputs.cache_key_prefix }}-bun-${{ hashFiles('**/bun.lock', '**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ inputs.cache_key_prefix }}-bun-
+
+      - name: Restore Storybook compilation cache
+        if: ${{ inputs.cache }}
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            node_modules/.cache/storybook
+            .cache/storybook
+            .storybook/.cache
+          key: ${{ runner.os }}-${{ inputs.cache_key_prefix }}-storybook-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx', '**/*.vue', '**/*.svelte', '**/*.mdx', '.storybook/**') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ inputs.cache_key_prefix }}-storybook-
 
       - name: Run custom install command
         if: ${{ steps.config.outputs.install_command != '' }}
