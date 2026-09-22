@@ -265,7 +265,7 @@ jobs:
 
       - name: Upload Pages artifact
         if: ${{ steps.config.outputs.mode == 'artifact' }}
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: ${{ steps.config.outputs.path }}
           name: ${{ steps.config.outputs.artifact_name }}
@@ -319,7 +319,7 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deploy-pages
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
         with:
           artifact_name: ${{ needs.build-and-upload.outputs.artifact_name }}
 
@@ -384,7 +384,7 @@ jobs:
           BASE_PATH: ${{ needs.build-and-upload.outputs.base_path }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        uses: Archetipo95/storybook-github-pages/publisher@1f6fdcabf844b5bfeeb9fa242b89f4b708585557
+        uses: Archetipo95/storybook-github-pages/publisher@c44afaf293a8dd6e8c395d7725dc77ae95217893
         with:
           pages_repo: ${{ github.workspace }}/pages-repo
           source_directory: ${{ github.workspace }}/storybook-static
