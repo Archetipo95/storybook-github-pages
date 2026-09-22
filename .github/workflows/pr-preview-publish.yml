@@ -146,13 +146,21 @@ jobs:
       current_head_sha: ${{ steps.current.outputs.head_sha }}
     steps:
       # Only used to import the trusted, unit-tested pull-request-identity
-      # resolver below (src/resolve-run-context.js). This workflow always
-      # runs from the default branch (see the top-of-file note), so this
-      # checkout is of trusted code, not PR content, and never persists
-      # credentials.
-      - name: Checkout default branch (resolver source)
+      # resolver below (src/resolve-run-context.js). This workflow supports
+      # `workflow_call` from *any* consumer repository, and a plain
+      # `actions/checkout` (no `repository:` override) inside a reusable
+      # workflow checks out the *caller's* repository, not the repo this
+      # file lives in - the consumer never has `src/resolve-run-context.js`.
+      # Explicitly pin the checkout to this action repository at a fixed
+      # commit so the resolver source is always fetched regardless of who
+      # invokes this workflow. Public repo, read-only, never persists
+      # credentials - not PR content.
+      - name: Checkout resolver source (storybook-github-pages, pinned)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          repository: Archetipo95/storybook-github-pages
+          ref: 8f34310a4f1a9e6d7d8f8e6e5f4a3b2c1d0e9f8a
+          path: .storybook-github-pages-resolver
           persist-credentials: false
 
       - name: Extract trusted pull request context
@@ -166,7 +174,7 @@ jobs:
         run: |
           node -e '
             async function main() {
-              const { resolveTrustedPullRequestContext } = await import("./src/resolve-run-context.js");
+              const { resolveTrustedPullRequestContext } = await import("./.storybook-github-pages-resolver/src/resolve-run-context.js");
 
               let runData = process.env.WORKFLOW_RUN_EVENT ? JSON.parse(process.env.WORKFLOW_RUN_EVENT) : null;
               const inputRunId = process.env.INPUT_RUN_ID ? Number(process.env.INPUT_RUN_ID) : null;
