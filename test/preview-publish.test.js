@@ -203,7 +203,7 @@ test('publishPreview publishes a same-repo, current-head preview and posts an id
   }
 });
 
-test('publishPreview merges trusted base Pages history with the artifact\'s own current-PR snapshot instead of recomputing it', async () => {
+test("publishPreview merges trusted base Pages history with the artifact's own current-PR snapshot instead of recomputing it", async () => {
   const { bundleDir, metadata } = makeBundle({ baseRef: 'preprod' });
   const contentDir = path.join(bundleDir, 'storybook');
   // The built static output only reflects 2 stories/2 components here - if
