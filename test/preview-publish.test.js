@@ -203,9 +203,13 @@ test('publishPreview publishes a same-repo, current-head preview and posts an id
   }
 });
 
-test('publishPreview regenerates preview stats from trusted base Pages history', async () => {
+test('publishPreview merges trusted base Pages history with the artifact\'s own current-PR snapshot instead of recomputing it', async () => {
   const { bundleDir, metadata } = makeBundle({ baseRef: 'preprod' });
   const contentDir = path.join(bundleDir, 'storybook');
+  // The built static output only reflects 2 stories/2 components here - if
+  // the trusted publisher ever recomputed metrics from this directory (as it
+  // wrongly did before this fix), it would misreport totals relative to what
+  // the untrusted build actually measured against the real PR source tree.
   fs.writeFileSync(
     path.join(contentDir, 'index.json'),
     JSON.stringify({
@@ -216,9 +220,23 @@ test('publishPreview regenerates preview stats from trusted base Pages history',
     })
   );
   fs.mkdirSync(path.join(contentDir, 'stats'), { recursive: true });
+  // This is the artifact's own one-point snapshot the untrusted build wrote
+  // from the real PR source tree (see preview-build/action.yml): 6 covered
+  // components out of 7 total (86%), 26 stories, 6 docs.
   fs.writeFileSync(
     path.join(contentDir, 'stats', 'history.json'),
-    JSON.stringify([{ date: '2026-09-20', commit: 'artifact', stories: 2, components: 2 }])
+    JSON.stringify([
+      {
+        date: '2026-09-20',
+        commit: SHA_A.slice(0, 7),
+        version: 'v9.0.0',
+        components: 6,
+        totalComponents: 7,
+        coveragePercent: 86,
+        stories: 26,
+        docs: 6
+      }
+    ])
   );
   fs.writeFileSync(path.join(contentDir, 'stats', 'history.svg'), '<svg>artifact-only</svg>');
   metadata.contentDigest = digestDirectory(contentDir);
@@ -234,8 +252,8 @@ test('publishPreview regenerates preview stats from trusted base Pages history',
   fs.writeFileSync(
     path.join(pagesRepo, 'preprod', 'stats', 'history.json'),
     JSON.stringify([
-      { date: '2026-09-01', commit: '1111111', stories: 5, components: 2 },
-      { date: '2026-09-10', commit: '2222222', stories: 8, components: 3 }
+      { date: '2026-09-01', commit: '1111111', stories: 10, components: 3, totalComponents: 6, coveragePercent: 50 },
+      { date: '2026-09-10', commit: '2222222', stories: 18, components: 4, totalComponents: 6, coveragePercent: 67 }
     ])
   );
 
@@ -257,10 +275,46 @@ test('publishPreview regenerates preview stats from trusted base Pages history',
     publishedHistory.map(entry => entry.commit),
     ['1111111', '2222222', SHA_A.slice(0, 7)]
   );
-  assert.equal(publishedHistory[2].stories, 2);
-  assert.equal(publishedHistory[2].components, 2);
   assert.notEqual(publishedHistory[0].commit, 'rootwrong');
+
+  const latest = publishedHistory[publishedHistory.length - 1];
+  // Must match the artifact's exact snapshot (6/7, 86%), not a recompute
+  // from the built output's index.json (which would have yielded 2/2, 100%).
+  assert.equal(latest.components, 6);
+  assert.equal(latest.totalComponents, 7);
+  assert.equal(latest.coveragePercent, 86);
+  assert.equal(latest.stories, 26);
+  assert.equal(latest.docs, 6);
   assert.ok(fs.existsSync(path.join(pagesRepo, 'pr-preview', 'pr-42', 'stats', 'history.svg')));
+});
+
+test('publishPreview skips stats regeneration when the artifact has no current-PR snapshot, rather than fabricating one', async () => {
+  const { bundleDir, metadata } = makeBundle({ baseRef: 'main' });
+  const contentDir = path.join(bundleDir, 'storybook');
+  fs.writeFileSync(path.join(contentDir, 'index.json'), JSON.stringify({ entries: {} }));
+  metadata.contentDigest = digestDirectory(contentDir);
+  fs.writeFileSync(path.join(bundleDir, 'preview-metadata.json'), JSON.stringify(metadata, null, 2));
+
+  const pagesRepo = initBarePagesRepo();
+  fs.mkdirSync(path.join(pagesRepo, 'stats'), { recursive: true });
+  fs.writeFileSync(
+    path.join(pagesRepo, 'stats', 'history.json'),
+    JSON.stringify([{ date: '2026-09-01', commit: '1111111', stories: 5, components: 2 }])
+  );
+
+  const result = await publishPreview({
+    bundleDir,
+    pagesRepo,
+    trustedContext: trustedContextFor(metadata),
+    currentHeadSha: SHA_A,
+    siteUrl: 'https://octo.github.io/widgets'
+  });
+
+  assert.equal(result.action, 'published');
+  assert.ok(
+    !fs.existsSync(path.join(pagesRepo, 'pr-preview', 'pr-42', 'stats', 'history.json')),
+    'stats must not be regenerated when there is no trusted current-PR snapshot to merge'
+  );
 });
 
 test('publishPreview includes badges, coverage diff, and stats graph in PR comment when generated', async () => {
