@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.3] - 2026-09-22
+
+### Fixed
+
+- **Preview Stats Snapshot Preservation (#124)**: Trusted preview publishing no longer recomputes current-PR component/coverage metrics from the checked-out (source-less) static output directory, which previously undercounted `totalComponents` and reported inflated coverage. It now reuses the untrusted build's own accurate current-PR snapshot from the artifact's `stats/history.json`, merging it with the trusted base Pages history. Stats regeneration is skipped, rather than fabricated, when the artifact has no snapshot.
+
 ## [1.9.2] - 2026-09-22
 
 ### Fixed
