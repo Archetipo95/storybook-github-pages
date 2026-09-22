@@ -16,7 +16,10 @@ test('repository-root action retains the documented feature-parity inputs', () =
     'generate_badges:',
     'generate_stats_graph:',
     'enable_passcode_gate:',
-    'create_deployment:'
+    'create_deployment:',
+    'smoke_test:',
+    'smoke_test_stories:',
+    'smoke_test_timeout_ms:'
   ]) {
     assert.match(action, new RegExp(`\\n  ${input}`));
   }

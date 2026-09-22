@@ -83,6 +83,18 @@ inputs:
     description: 'Directory within the static build output to store stats graph and ledger'
     required: false
     default: 'stats'
+  smoke_test:
+    description: 'Whether to run an opt-in Playwright smoke test before packaging'
+    required: false
+    default: 'false'
+  smoke_test_stories:
+    description: 'Comma-separated story id globs to smoke test, or all'
+    required: false
+    default: 'all'
+  smoke_test_timeout_ms:
+    description: 'Per-page Playwright navigation timeout in milliseconds'
+    required: false
+    default: '30000'
 
 outputs:
   artifact_name:
@@ -132,6 +144,16 @@ runs:
         # or redirected by this untrusted build-job action.
         echo "artifact_name=storybook-preview-pr-${PR_NUMBER}-run-${RUN_ID}" >> "$GITHUB_OUTPUT"
         echo "bundle_dir=${RUNNER_TEMP}/storybook-preview-bundle" >> "$GITHUB_OUTPUT"
+
+    - name: Run Storybook smoke test
+      if: ${{ inputs.smoke_test == 'true' }}
+      shell: bash
+      env:
+        SOURCE_PATH: ${{ inputs.source_path }}
+        WORKSPACE_ROOT: ${{ github.workspace }}
+        SMOKE_TEST_STORIES: ${{ inputs.smoke_test_stories }}
+        SMOKE_TEST_TIMEOUT_MS: ${{ inputs.smoke_test_timeout_ms }}
+      run: node "${{ github.action_path }}/../src/smoke-test.js" "$SOURCE_PATH" "$WORKSPACE_ROOT" "$SMOKE_TEST_STORIES" "$SMOKE_TEST_TIMEOUT_MS"
 
     - name: Validate static Storybook output
       shell: bash

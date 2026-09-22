@@ -119,6 +119,18 @@ inputs:
     description: 'Hours before the browser session expires'
     required: false
     default: '24'
+  smoke_test:
+    description: 'Whether to run an opt-in Playwright smoke test before publishing'
+    required: false
+    default: 'false'
+  smoke_test_stories:
+    description: 'Comma-separated story id globs to smoke test, or all'
+    required: false
+    default: 'all'
+  smoke_test_timeout_ms:
+    description: 'Per-page Playwright navigation timeout in milliseconds'
+    required: false
+    default: '30000'
   auto_base_url:
     description: 'Whether to compute and inject the Storybook base URL for the deployment target'
     required: false
@@ -164,6 +176,7 @@ runs:
             `SB_COVERAGE_IGNORE_PATHS=${c.coverage_ignore_paths || ""}`,
             `SB_GENERATE_STATS_GRAPH=${c.generate_stats_graph}`, `SB_STATS_DIRECTORY=${c.stats_directory || "stats"}`,
             `SB_ENABLE_PASSCODE_GATE=${c.enable_passcode_gate}`, `SB_PASSCODE_SESSION_HOURS=${c.passcode_session_hours}`,
+            `SB_SMOKE_TEST=${c.smoke_test}`, `SB_SMOKE_TEST_STORIES=${c.smoke_test_stories}`, `SB_SMOKE_TEST_TIMEOUT_MS=${c.smoke_test_timeout_ms}`,
             `SB_SITE_URL=${c.site_url || ""}`, `SB_BASE_PATH=${c.base_path || ""}`, `SB_AUTO_BASE_URL=${c.auto_base_url}`
           ];
           const {appendFileSync} = await import("node:fs");
@@ -229,6 +242,16 @@ runs:
         WORKSPACE_ROOT: ${{ github.workspace }}
         GITHUB_SHA: ${{ github.sha }}
       run: node "${{ github.action_path }}/src/generate-stats.js" "$SB_PATH" "$WORKSPACE_ROOT"
+
+    - name: Run Storybook smoke test
+      if: ${{ env.SB_SMOKE_TEST == 'true' }}
+      shell: bash
+      env:
+        SB_PATH: ${{ env.SB_PATH }}
+        WORKSPACE_ROOT: ${{ github.workspace }}
+        SB_SMOKE_TEST_STORIES: ${{ env.SB_SMOKE_TEST_STORIES }}
+        SB_SMOKE_TEST_TIMEOUT_MS: ${{ env.SB_SMOKE_TEST_TIMEOUT_MS }}
+      run: node "${{ github.action_path }}/src/smoke-test.js" "$SB_PATH" "$WORKSPACE_ROOT" "$SB_SMOKE_TEST_STORIES" "$SB_SMOKE_TEST_TIMEOUT_MS"
 
     - name: Validate static artifact
       shell: bash

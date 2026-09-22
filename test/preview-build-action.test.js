@@ -21,7 +21,7 @@ function makeStorybookSource() {
 function extractConfigStepScript() {
   const content = fs.readFileSync(path.join(process.cwd(), 'preview-build/action.yml'), 'utf8');
   const stepMatch = content.match(
-    /- name: Resolve bundle configuration[\s\S]*?run: \|\n([\s\S]*?)\n\n    - name: Validate static Storybook output/
+    /- name: Resolve bundle configuration[\s\S]*?run: \|\n([\s\S]*?)\n\n    - name: Run Storybook smoke test/
   );
   assert.ok(stepMatch, 'could not locate the "Resolve bundle configuration" step script in preview-build/action.yml');
   return stepMatch[1];

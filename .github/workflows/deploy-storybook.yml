@@ -118,6 +118,21 @@ on:
         required: false
         type: number
         default: 24
+      smoke_test:
+        description: 'Whether to run an opt-in Playwright smoke test before publishing'
+        required: false
+        type: boolean
+        default: false
+      smoke_test_stories:
+        description: 'Comma-separated story id globs to smoke test, or all'
+        required: false
+        type: string
+        default: 'all'
+      smoke_test_timeout_ms:
+        description: 'Per-page Playwright navigation timeout in milliseconds'
+        required: false
+        type: number
+        default: 30000
     secrets:
       passcode_hash:
         description: 'SHA-256 hash of the Storybook passcode'
@@ -268,6 +283,10 @@ jobs:
           TEST_RESULTS_PATH: ${{ steps.config.outputs.test_results_path }}
           SITE_URL: ${{ steps.config.outputs.site_url }}
           BASE_PATH: ${{ steps.config.outputs.base_path }}
+
+      - name: Run Storybook smoke test
+        if: ${{ steps.config.outputs.smoke_test == 'true' }}
+        run: node src/smoke-test.js "${{ steps.config.outputs.path }}" "${{ github.workspace }}" "${{ steps.config.outputs.smoke_test_stories }}" "${{ steps.config.outputs.smoke_test_timeout_ms }}"
 
       - name: Validate static artifact
         run: |

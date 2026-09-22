@@ -210,7 +210,18 @@ jobs:
 | `enable_passcode_gate`        | `boolean` | `false`              | Inject a client-side passcode prompt into `index.html` and `iframe.html`                                                                  |
 | `passcode_session_hours`      | `number`  | `24`                 | Duration of a successful browser session                                                                                                  |
 | `passcode_hash`               | `secret`  | —                    | SHA-256 hash of the passcode; provide as a workflow secret (composite action input)                                                       |
+| `smoke_test`                  | `boolean` | `false`              | Run a local Playwright smoke test against the built Storybook before validation and publishing                                            |
+| `smoke_test_stories`          | `string`  | `all`                | Comma-separated story id globs to exercise after the manager and canvas checks                                                            |
+| `smoke_test_timeout_ms`       | `number`  | `30000`              | Per-page browser navigation timeout in milliseconds                                                                                       |
 | `auto_base_url`               | `boolean` | `true`               | Automatically inject the repository or preview base URL into Storybook builds unless an explicit base option is provided                  |
+
+When `smoke_test` is enabled, the action serves the static output only on
+`127.0.0.1`, opens the manager and canvas with Playwright, and fails on
+uncaught page errors, console errors, failed requests, HTTP errors, or a
+missing Storybook sidebar. It uses an installed `playwright` package when
+available; otherwise it downloads Playwright and Chromium into a temporary
+directory for the run. Story globs are matched against `stories.json` or
+`index.json` entry ids.
 
 ### Build caching
 
