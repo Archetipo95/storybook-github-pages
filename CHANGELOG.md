@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Optional Playwright Smoke-Test Gate (#48)**: Added `smoke_test`, `smoke_test_stories`, and `smoke_test_timeout_ms` inputs. When enabled, built Storybook output is served on loopback and checked with Playwright for manager/sidebar mounting, canvas loading, browser errors, failed requests, and selected story ids before validation or publishing.
+
 ## [1.9.4] - 2026-09-22
 
 ### Fixed

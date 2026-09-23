@@ -28,6 +28,9 @@ export const DEFAULT_CONFIG = {
   stats_directory: 'stats',
   enable_passcode_gate: false,
   passcode_session_hours: 24,
+  smoke_test: false,
+  smoke_test_stories: 'all',
+  smoke_test_timeout_ms: 30000,
   auto_base_url: true,
   build: {
     install_command: null,
@@ -218,6 +221,20 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
     const hours = Number(config.passcode_session_hours);
     if (!Number.isFinite(hours) || hours <= 0) {
       throw new Error('Config passcode_session_hours must be a positive number');
+    }
+  }
+  if (config.smoke_test !== undefined && typeof config.smoke_test !== 'boolean') {
+    throw new Error('Config smoke_test must be a boolean');
+  }
+  if (config.smoke_test_stories !== undefined) {
+    if (typeof config.smoke_test_stories !== 'string' || config.smoke_test_stories.trim() === '') {
+      throw new Error('Config smoke_test_stories must be a non-empty string');
+    }
+  }
+  if (config.smoke_test_timeout_ms !== undefined) {
+    const timeout = Number(config.smoke_test_timeout_ms);
+    if (!Number.isInteger(timeout) || timeout <= 0) {
+      throw new Error('Config smoke_test_timeout_ms must be a positive integer');
     }
   }
 
@@ -443,6 +460,21 @@ export function resolveConfiguration({
       inputs.passcode_session_hours !== undefined && inputs.passcode_session_hours !== ''
         ? inputs.passcode_session_hours
         : (fileConfig?.passcode_session_hours ?? DEFAULT_CONFIG.passcode_session_hours)
+    ),
+    smoke_test:
+      inputs.smoke_test !== undefined && inputs.smoke_test !== ''
+        ? String(inputs.smoke_test) === 'true'
+        : fileConfig?.smoke_test !== undefined
+          ? Boolean(fileConfig.smoke_test)
+          : DEFAULT_CONFIG.smoke_test,
+    smoke_test_stories:
+      inputs.smoke_test_stories !== undefined && inputs.smoke_test_stories !== ''
+        ? String(inputs.smoke_test_stories)
+        : fileConfig?.smoke_test_stories || DEFAULT_CONFIG.smoke_test_stories,
+    smoke_test_timeout_ms: Number(
+      inputs.smoke_test_timeout_ms !== undefined && inputs.smoke_test_timeout_ms !== ''
+        ? inputs.smoke_test_timeout_ms
+        : (fileConfig?.smoke_test_timeout_ms ?? DEFAULT_CONFIG.smoke_test_timeout_ms)
     ),
     auto_base_url:
       inputs.auto_base_url !== undefined && inputs.auto_base_url !== ''

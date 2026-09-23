@@ -164,6 +164,32 @@ test('validateConfig - accepts 0 or positive preview_retention_days and rejects 
   assert.throws(() => validateConfig({ preview_retention_days: 'many' }), /preview_retention_days/);
 });
 
+test('validateConfig - validates smoke test settings', () => {
+  assert.equal(
+    validateConfig({ smoke_test: true, smoke_test_stories: 'button--*', smoke_test_timeout_ms: 5000 }),
+    true
+  );
+  assert.throws(() => validateConfig({ smoke_test: 'yes' }), /Config smoke_test must be a boolean/);
+  assert.throws(
+    () => validateConfig({ smoke_test_stories: '' }),
+    /Config smoke_test_stories must be a non-empty string/
+  );
+  assert.throws(
+    () => validateConfig({ smoke_test_timeout_ms: 0 }),
+    /Config smoke_test_timeout_ms must be a positive integer/
+  );
+});
+
+test('resolveConfiguration - applies smoke test defaults and overrides', () => {
+  const resolved = resolveConfiguration({
+    inputs: { smoke_test: 'true', smoke_test_stories: 'button--*', smoke_test_timeout_ms: '5000' },
+    configFilePath: path.join(os.tmpdir(), 'missing-smoke-test.yml')
+  });
+  assert.equal(resolved.smoke_test, true);
+  assert.equal(resolved.smoke_test_stories, 'button--*');
+  assert.equal(resolved.smoke_test_timeout_ms, 5000);
+});
+
 test('validateConfig - accepts warning_days_before_cleanup and rejects invalid values', () => {
   assert.equal(validateConfig({ warning_days_before_cleanup: 3 }), true);
   assert.equal(validateConfig({ warning_days_before_cleanup: 0 }), true);
