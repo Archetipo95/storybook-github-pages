@@ -1,12 +1,34 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
-import { runSmokeTest, storyMatches } from '../src/smoke-test.js';
+import { runSmokeTest, storyMatches, toEsmEntryIfAvailable } from '../src/smoke-test.js';
 
 test('storyMatches supports exact ids and wildcard patterns', () => {
   assert.equal(storyMatches('button--primary', 'button--primary'), true);
   assert.equal(storyMatches('button--primary', 'button--*'), true);
   assert.equal(storyMatches('input--primary', 'button--*'), false);
+});
+
+test('toEsmEntryIfAvailable prefers a sibling .mjs entry so package.json "exports" conditions are not bypassed', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'esm-entry-'));
+  try {
+    const cjsPath = path.join(dir, 'index.js');
+    fs.writeFileSync(cjsPath, 'module.exports = {};');
+
+    // No sibling .mjs: falls back to the resolved (CJS) path.
+    assert.equal(toEsmEntryIfAvailable(cjsPath), cjsPath);
+
+    // Sibling .mjs present (as in playwright's dual CJS/ESM package): prefer it,
+    // since importing the CJS entry's file:// URL directly bypasses "exports"
+    // conditions and loses top-level named exports like `chromium`.
+    const esmPath = path.join(dir, 'index.mjs');
+    fs.writeFileSync(esmPath, 'export const chromium = {};');
+    assert.equal(toEsmEntryIfAvailable(cjsPath), esmPath);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('runSmokeTest checks manager and iframe pages on loopback', async () => {
@@ -90,5 +112,15 @@ test('runSmokeTest rejects a static path outside the workspace', async () => {
       playwright: { chromium: { launch: async () => ({}) } }
     }),
     /escapes the workspace root/
+  );
+});
+
+test('sample-storybook fixture includes a story sidebar element so the manager/sidebar smoke-test assertion has something to find', () => {
+  const indexPath = path.join(process.cwd(), 'test', 'fixtures', 'sample-storybook', 'index.html');
+  const content = fs.readFileSync(indexPath, 'utf8');
+  assert.match(
+    content,
+    /id="storybook-explorer-tree"|data-testid="storybook-explorer-tree"|role="tree"/,
+    "fixture index.html must expose a sidebar element matching the smoke test's manager locator"
   );
 });

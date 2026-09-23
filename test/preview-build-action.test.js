@@ -123,6 +123,22 @@ test('preview-build reference workflow dogfoods the public action instead of inl
   );
 });
 
+test('pr-preview-build reference workflow exercises the opt-in Playwright smoke-test gate on both public actions', () => {
+  const content = fs.readFileSync(path.join(process.cwd(), '.github/workflows/pr-preview-build.yml'), 'utf8');
+
+  const rootActionStep = content.match(/uses:\s*\.\/\n([\s\S]*?)(?=\n {6}- name:|\n {2}- name:|$)/);
+  assert.ok(rootActionStep, 'could not locate the root composite action ("uses: ./") step');
+  assert.match(rootActionStep[1], /smoke_test:\s*'true'/, 'root composite action step must enable smoke_test');
+
+  const previewBuildStep = content.match(/uses:\s*\.\/preview-build\n([\s\S]*?)$/);
+  assert.ok(previewBuildStep, 'could not locate the preview-build composite action step');
+  assert.match(
+    previewBuildStep[1],
+    /smoke_test:\s*'true'/,
+    'preview-build composite action step must enable smoke_test'
+  );
+});
+
 test('preview-metadata CLI emits the artifact contract fields to $GITHUB_OUTPUT for the composite action', () => {
   const sourceDir = makeStorybookSource();
   const outputDir = makeTempDir('preview-build-bundle-');
