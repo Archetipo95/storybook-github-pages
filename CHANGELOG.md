@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.6] - 2026-09-23
+
 ### Fixed
 
 - **Reference/demo workflows now exercise the smoke-test gate**: `pr-preview-build.yml` enables `smoke_test: 'true'` on both the root composite action and the `preview-build` action so every PR to this repository actually runs the opt-in Playwright smoke test end to end, instead of only shipping the feature unused. The bundled `test/fixtures/sample-storybook` fixture now includes a minimal story-sidebar element so the smoke test's manager/sidebar assertion has something to find. Also fixed a bug where the smoke test's Playwright bootstrap loader imported the CJS entry point by file path, bypassing `package.json` `"exports"` conditions and losing the top-level `chromium` export, causing every real (non-mocked) smoke test run to fail with "Cannot read properties of undefined (reading 'launch')".
