@@ -89,17 +89,27 @@ function createStaticServer(staticDir) {
   return server;
 }
 
+// playwright ships a dual CJS/ESM build ("require" -> index.js, "import" ->
+// index.mjs). Resolving or constructing a path to the package always lands on
+// the CJS entry, but importing that file directly via its file:// URL bypasses
+// package.json "exports" conditions and loses the top-level `chromium` export.
+// Prefer the sibling ESM entry so the real package API is loaded either way.
+export function toEsmEntryIfAvailable(resolvedPath) {
+  const esmPath = resolvedPath.replace(/\.js$/, '.mjs');
+  return fs.existsSync(esmPath) ? esmPath : resolvedPath;
+}
+
 async function loadPlaywright(workspaceRoot) {
   try {
     const installedPath = requireFromRunner.resolve('playwright', { paths: [workspaceRoot] });
-    return { library: await import(pathToFileURL(installedPath).href), cleanup: () => {} };
+    return { library: await import(pathToFileURL(toEsmEntryIfAvailable(installedPath)).href), cleanup: () => {} };
   } catch (error) {
     const installDir = fs.mkdtempSync(path.join(os.tmpdir(), 'storybook-playwright-'));
     try {
       execFileSync('npm', ['install', '--prefix', installDir, '--no-save', '--no-package-lock', 'playwright'], {
         stdio: 'inherit'
       });
-      const playwrightPath = path.join(installDir, 'node_modules', 'playwright', 'index.js');
+      const playwrightPath = toEsmEntryIfAvailable(path.join(installDir, 'node_modules', 'playwright', 'index.js'));
       execFileSync(path.join(installDir, 'node_modules', '.bin', 'playwright'), ['install', 'chromium'], {
         stdio: 'inherit'
       });
