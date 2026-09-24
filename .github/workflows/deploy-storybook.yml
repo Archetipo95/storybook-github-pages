@@ -158,7 +158,7 @@ permissions:
 jobs:
   build-and-upload:
     name: Build & Validate Storybook
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:
@@ -334,7 +334,7 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build-and-upload
     if: ${{ needs.build-and-upload.result == 'success' && needs.build-and-upload.outputs.mode == 'artifact' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: ${{ needs.build-and-upload.outputs.environment_name || needs.build-and-upload.outputs.environment || 'github-pages' }}
       url: ${{ needs.build-and-upload.outputs.environment_url || steps.deploy-pages.outputs.page_url }}
@@ -404,7 +404,7 @@ jobs:
     name: Publish Storybook directory
     needs: build-and-upload
     if: ${{ needs.build-and-upload.result == 'success' && needs.build-and-upload.outputs.mode == 'directory' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       pages: write
