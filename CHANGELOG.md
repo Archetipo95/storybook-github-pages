@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.7] - 2026-09-24
+
+### Added
+
+- **Lean Testing Strategy and Demo Canary Flow**: Documented the native `node:test` testing strategy, added focused smoke-test coverage for Storybook story glob selection and missing-story failures, and added a release checklist that validates candidate refs through the external `storybook-vue-demo` Action Canary workflow before tagging.
+
 ## [1.9.6] - 2026-09-23
 
 ### Fixed
