@@ -13,6 +13,15 @@ function makeTempDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
 
+function makeGitHubFiles(prefix) {
+  const tempDir = makeTempDir(prefix);
+  const outputFilePath = path.join(tempDir, 'github_output');
+  const summaryFilePath = path.join(tempDir, 'github_step_summary');
+  fs.writeFileSync(outputFilePath, '');
+  fs.writeFileSync(summaryFilePath, '');
+  return { outputFilePath, summaryFilePath };
+}
+
 function git(cwd, ...args) {
   return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
     .toString()
@@ -127,11 +136,7 @@ test('preview-publisher action.yml schema, inputs, and outputs are well-formed',
 test('preview-publisher CLI invocation publishes preview, writes output, and preserves unrelated files', () => {
   const { bundleDir, metadata } = makeBundle({ prNumber: 50 });
   const { cloneDir: pagesRepo } = initBarePagesRepo();
-  const tempDir = makeTempDir('cli-env-');
-  const outputFilePath = path.join(tempDir, 'github_output');
-  const summaryFilePath = path.join(tempDir, 'github_summary');
-  fs.writeFileSync(outputFilePath, '');
-  fs.writeFileSync(summaryFilePath, '');
+  const { outputFilePath, summaryFilePath } = makeGitHubFiles('cli-env-');
 
   const scriptPath = path.join(process.cwd(), 'src/preview-publish.js');
   const env = {
@@ -188,9 +193,7 @@ test('preview-publisher CLI invocation handles fork skip and stale skip cleanly 
   // 1. Fork PR skip
   {
     const { bundleDir, metadata } = makeBundle({ prNumber: 51, headRepo: 'external-fork/design-system' });
-    const tempDir = makeTempDir('fork-env-');
-    const outputFilePath = path.join(tempDir, 'github_output');
-    fs.writeFileSync(outputFilePath, '');
+    const { outputFilePath, summaryFilePath } = makeGitHubFiles('fork-env-');
 
     const env = {
       ...process.env,
@@ -207,7 +210,8 @@ test('preview-publisher CLI invocation handles fork skip and stale skip cleanly 
       EXPECTED_ARTIFACT_NAME: metadata.artifactName,
       CURRENT_HEAD_SHA: SHA_VALID,
       GITHUB_REPOSITORY: 'acme/design-system',
-      GITHUB_OUTPUT: outputFilePath
+      GITHUB_OUTPUT: outputFilePath,
+      GITHUB_STEP_SUMMARY: summaryFilePath
     };
 
     const run = spawnSync('node', [scriptPath], { env, encoding: 'utf8' });
@@ -219,9 +223,7 @@ test('preview-publisher CLI invocation handles fork skip and stale skip cleanly 
   // 2. Stale PR skip
   {
     const { bundleDir, metadata } = makeBundle({ prNumber: 52 });
-    const tempDir = makeTempDir('stale-env-');
-    const outputFilePath = path.join(tempDir, 'github_output');
-    fs.writeFileSync(outputFilePath, '');
+    const { outputFilePath, summaryFilePath } = makeGitHubFiles('stale-env-');
 
     const env = {
       ...process.env,
@@ -238,7 +240,8 @@ test('preview-publisher CLI invocation handles fork skip and stale skip cleanly 
       EXPECTED_ARTIFACT_NAME: metadata.artifactName,
       CURRENT_HEAD_SHA: SHA_STALE, // PR head moved to another commit
       GITHUB_REPOSITORY: 'acme/design-system',
-      GITHUB_OUTPUT: outputFilePath
+      GITHUB_OUTPUT: outputFilePath,
+      GITHUB_STEP_SUMMARY: summaryFilePath
     };
 
     const run = spawnSync('node', [scriptPath], { env, encoding: 'utf8' });
@@ -270,7 +273,8 @@ test('preview-publisher CLI invocation rejects tampering and exits with non-zero
     TRUSTED_BASE_REF: metadata.baseRef,
     EXPECTED_ARTIFACT_NAME: metadata.artifactName,
     CURRENT_HEAD_SHA: SHA_VALID,
-    GITHUB_REPOSITORY: 'acme/design-system'
+    GITHUB_REPOSITORY: 'acme/design-system',
+    GITHUB_STEP_SUMMARY: ''
   };
 
   const run = spawnSync('node', [scriptPath], { env, encoding: 'utf8' });
@@ -299,7 +303,8 @@ test('preview-publisher injects the trusted passcode gate after digest validatio
     ENABLE_PASSCODE_GATE: 'true',
     PASSCODE_HASH: hash,
     PASSCODE_SESSION_HOURS: '12',
-    GITHUB_REPOSITORY: 'acme/design-system'
+    GITHUB_REPOSITORY: 'acme/design-system',
+    GITHUB_STEP_SUMMARY: ''
   };
 
   const run = spawnSync('node', [path.join(process.cwd(), 'src/preview-publish.js')], {
@@ -331,7 +336,8 @@ test('preview-publisher leaves the artifact unchanged when the passcode gate is 
     TRUSTED_BASE_REF: metadata.baseRef,
     EXPECTED_ARTIFACT_NAME: metadata.artifactName,
     CURRENT_HEAD_SHA: SHA_VALID,
-    GITHUB_REPOSITORY: 'acme/design-system'
+    GITHUB_REPOSITORY: 'acme/design-system',
+    GITHUB_STEP_SUMMARY: ''
   };
 
   const run = spawnSync('node', [path.join(process.cwd(), 'src/preview-publish.js')], {
@@ -346,9 +352,7 @@ test('preview-publisher leaves the artifact unchanged when the passcode gate is 
 test('preview-publisher supports repository-root layout preview_root: ""', () => {
   const { bundleDir, metadata } = makeBundle({ prNumber: 54, previewRoot: '' });
   const { cloneDir: pagesRepo } = initBarePagesRepo();
-  const tempDir = makeTempDir('root-layout-');
-  const outputFilePath = path.join(tempDir, 'github_output');
-  fs.writeFileSync(outputFilePath, '');
+  const { outputFilePath, summaryFilePath } = makeGitHubFiles('root-layout-');
 
   const scriptPath = path.join(process.cwd(), 'src/preview-publish.js');
   const env = {
@@ -369,7 +373,8 @@ test('preview-publisher supports repository-root layout preview_root: ""', () =>
     EXPECTED_ARTIFACT_NAME: metadata.artifactName,
     CURRENT_HEAD_SHA: SHA_VALID,
     GITHUB_REPOSITORY: 'acme/design-system',
-    GITHUB_OUTPUT: outputFilePath
+    GITHUB_OUTPUT: outputFilePath,
+    GITHUB_STEP_SUMMARY: summaryFilePath
   };
 
   const run = spawnSync('node', [scriptPath], { env, encoding: 'utf8' });
