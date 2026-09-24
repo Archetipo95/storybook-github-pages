@@ -915,6 +915,13 @@ Keep test coverage focused on the action/workflow surface:
 
 Do not add Jest or Vitest to this action repository unless native `node:test` stops covering a concrete need. Consumer-level validation belongs in [`Archetipo95/storybook-vue-demo`](https://github.com/Archetipo95/storybook-vue-demo), which exercises this action from a real Vue/Vite/Storybook project. Before a release, run this repository's CI and validate the candidate ref in the demo repository.
 
+Release checklist:
+
+1. Confirm this repository's CI is green.
+2. Run the `storybook-vue-demo` Action Canary workflow against the candidate branch, tag, or SHA.
+3. Cut and publish the release tag.
+4. Update the demo repository's stable action refs after the tag exists.
+
 ---
 
 ## License & Attribution
