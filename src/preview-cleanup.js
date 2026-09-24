@@ -57,6 +57,22 @@ export async function requestCleanupPagesRebuild({
   }
 }
 
+export async function requestCleanupCommentUpdate({
+  token,
+  repository,
+  prNumber,
+  updateStatus = updatePreviewCommentStatus
+}) {
+  try {
+    await updateStatus({ token, repository, prNumber, expired: true });
+    return { ok: true };
+  } catch (error) {
+    const message = `Preview cleanup removed the directory, but the optional preview comment update failed: ${error.message}`;
+    console.warn(message);
+    return { ok: false, message };
+  }
+}
+
 if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
   const config = resolveConfiguration({
     inputs: {
@@ -98,11 +114,10 @@ if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
           repository: process.env.GITHUB_REPOSITORY,
           commitSha: result.commitSha
         });
-        await updatePreviewCommentStatus({
+        await requestCleanupCommentUpdate({
           token: process.env.GITHUB_TOKEN,
           repository: process.env.GITHUB_REPOSITORY,
-          prNumber: process.env.PR_NUMBER,
-          expired: true
+          prNumber: process.env.PR_NUMBER
         });
       }
       if (process.env.GITHUB_STEP_SUMMARY) {
