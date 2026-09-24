@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.9] - 2026-09-24
+
+### Fixed
+
+- Prevent preview metadata test fixtures from leaking synthetic PR numbers and SHAs into real CI job summaries.
+- Make reusable PR preview cleanup tolerate missing numeric `pr_number` inputs and optional post-cleanup Pages/comment update failures.
+- Update the reusable cleanup workflow's internal `preview-cleanup` pin so consumers receive the resilient cleanup behavior.
+
 ## [1.9.8] - 2026-09-24
 
 ### Fixed
