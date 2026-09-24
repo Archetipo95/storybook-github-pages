@@ -43,7 +43,14 @@ updateJson('package-lock.json', lock => {
   if (lock.packages?.['']) lock.packages[''].version = version;
 });
 
-for (const file of ['README.md', '.github/ISSUE_TEMPLATE/bug_report.yml']) {
+for (const file of [
+  'README.md',
+  'docs/usage.md',
+  'docs/pr-previews.md',
+  'docs/security.md',
+  'docs/migration.md',
+  '.github/ISSUE_TEMPLATE/bug_report.yml'
+]) {
   replaceProjectTags(file);
 }
 
