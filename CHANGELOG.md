@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.11] - 2026-09-24
+
+### Changed
+
+- Update the reusable PR preview publish workflow's internal `preview-publisher` pin so PR preview graphs also use compact stats graph rendering.
+
 ## [1.9.10] - 2026-09-24
 
 ### Changed
