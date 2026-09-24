@@ -12,7 +12,7 @@ permissions:
 jobs:
   test-and-validate:
     name: Run Tests & Action Validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
