@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.10] - 2026-09-24
+
+### Changed
+
+- Render `stats/history.svg` with metric-changing snapshots plus the latest snapshot, while keeping `stats/history.json` as the complete deployment ledger.
+
 ## [1.9.9] - 2026-09-24
 
 ### Fixed
