@@ -3,11 +3,19 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
+function releaseVersion() {
+  return JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')).version;
+}
+
+function releaseTagPattern(suffix = '') {
+  return new RegExp(`v${releaseVersion().replaceAll('.', '\\.')}${suffix}`);
+}
+
 test('release validation - package.json runtime dependency cleanliness', () => {
   const pkgPath = path.join(process.cwd(), 'package.json');
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 
-  assert.equal(pkg.version, '1.9.7', 'package.json version must be set to 1.9.7 for stable release');
+  assert.match(pkg.version, /^\d+\.\d+\.\d+$/, 'package.json version must be a stable semver release');
   assert.ok(
     !pkg.dependencies || Object.keys(pkg.dependencies).length === 0,
     'storybook-github-pages must have zero runtime npm dependencies for maximum reproducibility'
@@ -88,28 +96,32 @@ test('release validation - immutable release tag recommended in README and issue
 
   assert.match(
     readme,
-    /uses:\s*Archetipo95\/storybook-github-pages\/\.github\/workflows\/deploy-storybook\.yml@v1\.9\.7/,
-    'README reusable workflow example must use immutable release tag @v1.9.7'
+    new RegExp(
+      `uses:\\s*Archetipo95/storybook-github-pages/\\.github/workflows/deploy-storybook\\.yml@${releaseTagPattern().source}`
+    ),
+    `README reusable workflow example must use immutable release tag @v${releaseVersion()}`
   );
   assert.match(
     readme,
-    /uses:\s*Archetipo95\/storybook-github-pages@v1\.9\.7/,
-    'README composite action example must use immutable release tag @v1.9.7'
+    new RegExp(`uses:\\s*Archetipo95/storybook-github-pages@${releaseTagPattern().source}`),
+    `README composite action example must use immutable release tag @v${releaseVersion()}`
   );
   assert.match(
     readme,
-    /replace `bitovi\/github-actions-storybook-to-github-pages@v1\.0\.3` with `Archetipo95\/storybook-github-pages@v1\.9\.7`/,
-    'README migration guide must specify immutable release tag @v1.9.7'
+    new RegExp(
+      `replace \`bitovi/github-actions-storybook-to-github-pages@v1\\.0\\.3\` with \`Archetipo95/storybook-github-pages@${releaseTagPattern().source}\``
+    ),
+    `README migration guide must specify immutable release tag @v${releaseVersion()}`
   );
   assert.match(
     readme,
-    /Immutable release tags \(for example, `@v1\.9\.7`\)/,
+    new RegExp(`Immutable release tags \\(for example, \`@${releaseTagPattern().source}\`\\)`),
     'README support matrix must recommend current immutable release tags'
   );
   assert.match(
     bugReport,
-    /uses:\s*Archetipo95\/storybook-github-pages@v1\.9\.7/,
-    'Bug report template must use immutable release tag @v1.9.7'
+    new RegExp(`uses:\\s*Archetipo95/storybook-github-pages@${releaseTagPattern().source}`),
+    `Bug report template must use immutable release tag @v${releaseVersion()}`
   );
 });
 
@@ -139,8 +151,8 @@ test('release validation - directory mode integration documents dedicated publis
   // Directory mode requires publisher action
   assert.match(
     readme,
-    /uses:\s*Archetipo95\/storybook-github-pages\/publisher@v1\.9\.7/,
-    'README Option 3 directory mode pipeline must use publisher@v1.9.7'
+    new RegExp(`uses:\\s*Archetipo95/storybook-github-pages/publisher@${releaseTagPattern().source}`),
+    `README Option 3 directory mode pipeline must use publisher@v${releaseVersion()}`
   );
   assert.match(
     readme,

@@ -504,12 +504,12 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
-      # Replace with your real install/build commands (or the main `Archetipo95/storybook-github-pages@v1.5.0`
+      # Replace with your real install/build commands (or the main `Archetipo95/storybook-github-pages@v1.9.7`
       # composite action with `publish: 'false'`) so `storybook-static` contains your actual build output.
       - run: npm ci && npm run build-storybook
 
       - name: Package and upload preview bundle
-        uses: Archetipo95/storybook-github-pages/preview-build@v1.5.0
+        uses: Archetipo95/storybook-github-pages/preview-build@v1.9.7
         with:
           source_path: storybook-static # your built static Storybook output directory
 ```
@@ -532,7 +532,7 @@ permissions:
 
 jobs:
   publish:
-    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-publish.yml@v1.5.0
+    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-publish.yml@v1.9.7
     with:
       pages_branch: 'gh-pages'
 ```
@@ -577,7 +577,7 @@ permissions:
 
 jobs:
   publish:
-    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-publish.yml@v1.5.0
+    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-publish.yml@v1.9.7
     with:
       preview_root: '' # optional: override preview root; defaults to .storybook-pages.yml or 'pr-preview'
       pages_branch: 'gh-pages'
@@ -622,7 +622,7 @@ steps:
       token: ${{ secrets.GITHUB_TOKEN }}
 
   - name: Validate provenance and publish preview
-    uses: Archetipo95/storybook-github-pages/preview-publisher@v1.5.0
+    uses: Archetipo95/storybook-github-pages/preview-publisher@v1.9.7
     with:
       bundle_dir: ${{ runner.temp }}/preview-bundle
       pages_repo: pages-repo
@@ -665,7 +665,7 @@ permissions:
 
 jobs:
   cleanup:
-    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-cleanup.yml@v1.5.0
+    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-cleanup.yml@v1.9.7
     with:
       preview_root: '' # optional: override preview root; defaults to .storybook-pages.yml or 'pr-preview'
       pages_branch: 'gh-pages'
@@ -682,7 +682,7 @@ steps:
       path: pages-repo
       token: ${{ secrets.GITHUB_TOKEN }}
   - name: Remove preview directory
-    uses: Archetipo95/storybook-github-pages/preview-cleanup@v1.5.0
+    uses: Archetipo95/storybook-github-pages/preview-cleanup@v1.9.7
     with:
       pages_repo: pages-repo
       pages_branch: gh-pages
@@ -713,7 +713,7 @@ permissions:
 
 jobs:
   janitor:
-    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-janitor.yml@v1.5.0
+    uses: Archetipo95/storybook-github-pages/.github/workflows/pr-preview-janitor.yml@v1.9.7
     with:
       preview_root: ''
       pages_branch: 'gh-pages'
@@ -731,7 +731,7 @@ steps:
       path: pages-repo
       token: ${{ secrets.GITHUB_TOKEN }}
   - name: Prune stale previews
-    uses: Archetipo95/storybook-github-pages/preview-janitor@v1.5.0
+    uses: Archetipo95/storybook-github-pages/preview-janitor@v1.9.7
     with:
       pages_repo: pages-repo
       pages_branch: gh-pages
@@ -917,10 +917,11 @@ Do not add Jest or Vitest to this action repository unless native `node:test` st
 
 Release checklist:
 
-1. Confirm this repository's CI is green.
-2. Run the `storybook-vue-demo` Action Canary workflow against the candidate branch, tag, or SHA.
-3. Cut and publish the release tag.
-4. Update the demo repository's stable action refs after the tag exists.
+1. Run `npm run prepare-release -- <version>` and review the generated changelog entry.
+2. Confirm this repository's CI is green.
+3. Run the `storybook-vue-demo` Action Canary workflow against the candidate branch, tag, or SHA.
+4. Cut and publish the release tag.
+5. Update the demo repository's stable action refs after the tag exists.
 
 ---
 
