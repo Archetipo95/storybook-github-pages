@@ -41,6 +41,22 @@ export async function removePreviewDirectory({ repo, branch = 'gh-pages', previe
   return { target, ...result };
 }
 
+export async function requestCleanupPagesRebuild({
+  token,
+  repository,
+  commitSha,
+  requestRebuild = requestPagesRebuild
+}) {
+  try {
+    await requestRebuild({ token, repository, commitSha });
+    return { ok: true };
+  } catch (error) {
+    const message = `Preview cleanup removed the directory, but the optional Pages rebuild failed: ${error.message}`;
+    console.warn(message);
+    return { ok: false, message };
+  }
+}
+
 if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
   const config = resolveConfiguration({
     inputs: {
@@ -77,7 +93,7 @@ if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
           prNumber,
           description: `Preview cleanup for PR #${prNumber}`
         });
-        await requestPagesRebuild({
+        await requestCleanupPagesRebuild({
           token: process.env.GITHUB_TOKEN,
           repository: process.env.GITHUB_REPOSITORY,
           commitSha: result.commitSha

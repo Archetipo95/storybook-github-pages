@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { removePreviewDirectory } from '../src/preview-cleanup.js';
+import { removePreviewDirectory, requestCleanupPagesRebuild } from '../src/preview-cleanup.js';
 
 function makeTempDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -153,4 +153,18 @@ test('removePreviewDirectory safely skips when repo directory does not exist', a
   });
   assert.equal(result.changed, false);
   assert.equal(result.skipped, true);
+});
+
+test('requestCleanupPagesRebuild reports Pages rebuild failures without failing cleanup', async () => {
+  const result = await requestCleanupPagesRebuild({
+    token: 'token',
+    repository: 'octo/widgets',
+    commitSha: 'a'.repeat(40),
+    requestRebuild: async () => {
+      throw new Error('Page build failed.');
+    }
+  });
+
+  assert.equal(result.ok, false);
+  assert.match(result.message, /optional Pages rebuild failed: Page build failed/);
 });
