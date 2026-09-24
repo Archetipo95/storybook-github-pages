@@ -175,6 +175,22 @@ test('preview-publisher pin content includes the current-PR snapshot preservatio
   );
 });
 
+test('preview-publisher pin content includes compact stats graph rendering', () => {
+  const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/pr-preview-publish.yml'), 'utf8');
+  const match = workflow.match(/Archetipo95\/storybook-github-pages\/preview-publisher@([a-f0-9]{40})/);
+  assert.ok(match, 'expected a SHA-pinned preview-publisher reference in pr-preview-publish.yml');
+  const sha = match[1];
+
+  const generateStatsSrc = execFileSync('git', ['show', `${sha}:src/generate-stats.js`], {
+    cwd: repoRoot
+  }).toString();
+  assert.match(
+    generateStatsSrc,
+    /compactHistoryForChart/,
+    `pinned commit ${sha} predates compact stats graph rendering and will render every no-op deploy point`
+  );
+});
+
 test('preview-cleanup pin content includes best-effort optional post-cleanup updates', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/pr-preview-cleanup.yml'), 'utf8');
   const match = workflow.match(/Archetipo95\/storybook-github-pages\/preview-cleanup@([a-f0-9]{40})/);
