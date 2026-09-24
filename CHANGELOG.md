@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.8] - 2026-09-24
+
+### Fixed
+
+- **Preview Cleanup Rebuild Resilience**: Closing a PR still removes its preview directory and updates preview metadata, but a transient GitHub Pages rebuild failure for that intermediate cleanup commit is now reported as an explicit warning instead of failing the whole cleanup workflow. This avoids false-negative cleanup runs when a production deploy immediately follows and succeeds.
+
 ## [1.9.7] - 2026-09-24
 
 ### Added
