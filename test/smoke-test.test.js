@@ -66,6 +66,67 @@ test('runSmokeTest checks manager and iframe pages on loopback', async () => {
   assert.match(urls[1], /\/iframe\.html$/);
 });
 
+test('runSmokeTest opens only stories matching the requested metadata globs', async () => {
+  const urls = [];
+  const page = {
+    on() {},
+    async goto(url) {
+      urls.push(url);
+    },
+    async waitForLoadState() {},
+    locator() {
+      return { count: async () => 1 };
+    },
+    async close() {}
+  };
+  const browser = {
+    async newPage() {
+      return page;
+    },
+    async close() {}
+  };
+
+  await runSmokeTest({
+    staticPath: 'test/fixtures/sample-storybook',
+    workspaceRoot: process.cwd(),
+    stories: 'example-button--*',
+    playwright: { chromium: { launch: async () => browser } },
+    timeoutMs: 1000
+  });
+
+  assert.equal(urls.length, 3);
+  assert.match(urls[2], /\/iframe\.html\?id=example-button--primary$/);
+});
+
+test('runSmokeTest fails clearly when requested stories do not exist in metadata', async () => {
+  const page = {
+    on() {},
+    async goto() {},
+    async waitForLoadState() {},
+    locator() {
+      return { count: async () => 1 };
+    },
+    async close() {}
+  };
+  const browser = {
+    async newPage() {
+      return page;
+    },
+    async close() {}
+  };
+
+  await assert.rejects(
+    runSmokeTest({
+      staticPath: 'test/fixtures/sample-storybook',
+      workspaceRoot: process.cwd(),
+      stories: 'missing-*',
+      playwright: { chromium: { launch: async () => browser } },
+      timeoutMs: 1000
+    }),
+    /found no stories matching "missing-\*"/
+  );
+});
+
 test('runSmokeTest ignores missing optional assets but fails missing runtime resources', async () => {
   const response = (resourceType, status) => ({
     status: () => status,

@@ -899,6 +899,24 @@ Vite and Rollup often generate vendor chunks with leading underscores (e.g. `_pl
 
 ---
 
+## Development & Testing
+
+This repository uses native Node.js tests:
+
+```bash
+npm test
+```
+
+Keep test coverage focused on the action/workflow surface:
+
+- use unit tests for pure JavaScript logic such as config parsing, artifact validation, preview metadata, publishing decisions, badges/stats, cleanup, and janitor behavior;
+- use contract tests for `action.yml`, reusable workflow inputs, permissions, and pinned third-party actions;
+- use the lightweight Storybook fixture in `test/fixtures/sample-storybook` for smoke/integration behavior.
+
+Do not add Jest or Vitest to this action repository unless native `node:test` stops covering a concrete need. Consumer-level validation belongs in [`Archetipo95/storybook-vue-demo`](https://github.com/Archetipo95/storybook-vue-demo), which exercises this action from a real Vue/Vite/Storybook project. Before a release, run this repository's CI and validate the candidate ref in the demo repository.
+
+---
+
 ## License & Attribution
 
 This project is licensed under the [MIT License](LICENSE).
