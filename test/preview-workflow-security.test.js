@@ -128,6 +128,11 @@ test('pr-preview-cleanup workflow never checks out the pull request head and sta
   assert.match(content, /preview_root:/, 'cleanup must support preview_root input');
   assert.match(content, /pages_branch:/, 'cleanup must support pages_branch input');
   assert.match(content, /pr_number:/, 'cleanup must support pr_number input');
+  assert.match(
+    content,
+    /inputs\.pr_number > 0 && inputs\.pr_number \|\| github\.event\.pull_request\.number/,
+    'cleanup must treat the default workflow_call pr_number=0 as missing and fall back to event metadata'
+  );
   assert.doesNotMatch(
     content,
     /ref: \$\{\{ github\.event\.pull_request\.head/,

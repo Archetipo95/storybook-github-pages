@@ -140,4 +140,4 @@ jobs:
           pages_repo: ${{ github.workspace }}/pages-repo
           pages_branch: ${{ steps.config.outputs.pages_branch || inputs.pages_branch || 'gh-pages' }}
           preview_root: ${{ steps.config.outputs.preview_root }}
-          pr_number: ${{ inputs.pr_number || github.event.pull_request.number }}
+          pr_number: ${{ inputs.pr_number > 0 && inputs.pr_number || github.event.pull_request.number }}
