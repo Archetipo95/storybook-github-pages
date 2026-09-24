@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import {
   removePreviewDirectory,
   requestCleanupCommentUpdate,
@@ -157,6 +157,30 @@ test('removePreviewDirectory safely skips when repo directory does not exist', a
   });
   assert.equal(result.changed, false);
   assert.equal(result.skipped, true);
+});
+
+test('preview-cleanup CLI removes a preview and writes a step summary without a token', () => {
+  const { cloneDir } = initBarePagesRepo({ withPreview: true });
+  const summaryPath = path.join(makeTempDir('cleanup-cli-summary-'), 'summary.md');
+  fs.writeFileSync(summaryPath, '');
+
+  const run = spawnSync('node', [path.join(process.cwd(), 'src/preview-cleanup.js')], {
+    env: {
+      ...process.env,
+      PAGES_REPO: cloneDir,
+      PAGES_BRANCH: 'gh-pages',
+      PREVIEW_ROOT: 'pr-preview',
+      PR_NUMBER: '5',
+      GITHUB_STEP_SUMMARY: summaryPath,
+      GITHUB_TOKEN: ''
+    },
+    encoding: 'utf8'
+  });
+
+  assert.equal(run.status, 0, `Process failed:\n${run.stdout}\n${run.stderr}`);
+  assert.match(run.stdout, /"changed":true/);
+  assert.ok(!fs.existsSync(path.join(cloneDir, 'pr-preview', 'pr-5')));
+  assert.match(fs.readFileSync(summaryPath, 'utf8'), /Removed `pr-preview\/pr-5`/);
 });
 
 test('requestCleanupPagesRebuild reports Pages rebuild failures without failing cleanup', async () => {

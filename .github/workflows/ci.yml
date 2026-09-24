@@ -34,6 +34,9 @@ jobs:
       - name: Run unit test suite
         run: npm test
 
+      - name: Report code coverage
+        run: npm run test:coverage
+
       - name: Check code formatting and linting
         run: |
           npm run format

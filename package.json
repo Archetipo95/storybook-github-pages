@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage test/*.test.js",
     "lint": "eslint src/ test/*.test.js",
     "format": "prettier --check \"**/*.{js,json,yml,yaml,md}\"",
     "format:fix": "prettier --write \"**/*.{js,json,yml,yaml,md}\"",
