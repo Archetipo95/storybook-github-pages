@@ -9,6 +9,7 @@
     "lint": "eslint src/ test/*.test.js",
     "format": "prettier --check \"**/*.{js,json,yml,yaml,md}\"",
     "format:fix": "prettier --write \"**/*.{js,json,yml,yaml,md}\"",
+    "prepare-release": "node scripts/prepare-release.js",
     "validate-artifact": "node src/validate-artifact.js",
     "validate-config": "node src/config.js",
     "generate-badges": "node src/generate-badges.js"
