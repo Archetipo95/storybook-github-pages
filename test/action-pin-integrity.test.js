@@ -189,6 +189,21 @@ test('preview-publisher pin content includes compact stats graph rendering', () 
     /compactHistoryForChart/,
     `pinned commit ${sha} predates compact stats graph rendering and will render every no-op deploy point`
   );
+  assert.doesNotMatch(
+    generateStatsSrc,
+    /Stories \(\$\{latestEntry\.stories\}\)|stories-line|storiesPoints/,
+    `pinned commit ${sha} still renders the stories series in PR preview graphs`
+  );
+  assert.match(
+    generateStatsSrc,
+    /--total-color: #dc2626/,
+    `pinned commit ${sha} does not render total components as the red series`
+  );
+  assert.match(
+    generateStatsSrc,
+    /--components-color: #16a34a/,
+    `pinned commit ${sha} does not render covered components as the green series`
+  );
 });
 
 test('preview-cleanup pin content includes best-effort optional post-cleanup updates', () => {
