@@ -78,6 +78,8 @@ When `generate_stats_graph` is enabled (default), `storybook-github-pages` gener
 - `stats/history.svg` — Hand-drawn SVG growth chart showing historical component coverage, stories count, and components count trajectories over time. Supports dark-mode viewing with vintage hand-drawn styling and responsive layout.
 - `stats/history.json` — Historical commit ledger appending metrics (`timestamp`, `commitSha`, `stories`, `components`, `totalComponents`, `coveragePercent`) on every deployment.
 
+The ledger keeps every deployment snapshot for auditability. The SVG chart renders only metric-changing snapshots plus the latest snapshot, so repeated no-op deploys do not add visual noise.
+
 Embed the growth chart in your `README.md`:
 
 ```markdown

@@ -112,6 +112,30 @@ export function roughCurve(points, { roughness = 0.8, random = Math.random } = {
 }
 
 /**
+ * Keeps the chart focused on metric changes while preserving the latest snapshot.
+ */
+export function compactHistoryForChart(history = []) {
+  const compact = [];
+
+  for (const entry of history) {
+    const previous = compact[compact.length - 1];
+    const changed =
+      !previous ||
+      previous.stories !== entry.stories ||
+      previous.components !== entry.components ||
+      previous.totalComponents !== entry.totalComponents ||
+      previous.coveragePercent !== entry.coveragePercent;
+
+    if (changed) compact.push(entry);
+  }
+
+  const latest = history[history.length - 1];
+  if (latest && compact[compact.length - 1] !== latest) compact.push(latest);
+
+  return compact;
+}
+
+/**
  * Renders a complete hand-drawn growth chart SVG.
  */
 export function renderHandDrawnChartSvg({
@@ -151,10 +175,11 @@ export function renderHandDrawnChartSvg({
     version: entry.version || ''
   }));
 
-  const hasTotalComponents = validHistory.some(d => d.totalComponents !== undefined && d.totalComponents > 0);
+  const chartHistory = compactHistoryForChart(validHistory);
+  const hasTotalComponents = chartHistory.some(d => d.totalComponents !== undefined && d.totalComponents > 0);
 
   // Determine Y domain
-  const maxVal = Math.max(5, ...validHistory.map(d => Math.max(d.stories, d.components, d.totalComponents || 0)));
+  const maxVal = Math.max(5, ...chartHistory.map(d => Math.max(d.stories, d.components, d.totalComponents || 0)));
   // Round maxVal up to nice round number
   const yMax = Math.ceil(maxVal * 1.15);
 
@@ -169,17 +194,17 @@ export function renderHandDrawnChartSvg({
   }
 
   // Calculate coordinates for series
-  const n = validHistory.length;
+  const n = chartHistory.length;
   const getX = idx => {
     if (n === 1) return padding.left + plotWidth / 2;
     return padding.left + (idx / (n - 1)) * plotWidth;
   };
   const getY = val => padding.top + plotHeight - (val / yMax) * plotHeight;
 
-  const storiesPoints = validHistory.map((d, i) => ({ x: getX(i), y: getY(d.stories), ...d }));
-  const componentsPoints = validHistory.map((d, i) => ({ x: getX(i), y: getY(d.components), ...d }));
+  const storiesPoints = chartHistory.map((d, i) => ({ x: getX(i), y: getY(d.stories), ...d }));
+  const componentsPoints = chartHistory.map((d, i) => ({ x: getX(i), y: getY(d.components), ...d }));
   const totalComponentsPoints = hasTotalComponents
-    ? validHistory.map((d, i) => ({
+    ? chartHistory.map((d, i) => ({
         x: getX(i),
         y: getY(d.totalComponents !== undefined ? d.totalComponents : d.components),
         ...d
@@ -223,7 +248,7 @@ export function renderHandDrawnChartSvg({
 
   const xTicks = xTickIndices.map(idx => ({
     x: getX(idx),
-    label: validHistory[idx].date,
+    label: chartHistory[idx].date,
     tickD: roughLine(getX(idx), padding.top + plotHeight, getX(idx), padding.top + plotHeight + 6, {
       roughness: 0.8,
       overshoot: 1,

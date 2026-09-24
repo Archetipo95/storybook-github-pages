@@ -7,6 +7,7 @@ import {
   roughLine,
   roughRect,
   roughCurve,
+  compactHistoryForChart,
   renderHandDrawnChartSvg,
   updateHistoryLedger,
   generateStatsGraph
@@ -60,6 +61,37 @@ test('renderHandDrawnChartSvg renders complete SVG with title, axes, and series'
   assert.ok(svg.includes('2026-09-01'));
   assert.ok(svg.includes('2026-09-13'));
   assert.ok(svg.includes('</svg>'));
+});
+
+test('compactHistoryForChart keeps metric changes and latest snapshot only', () => {
+  const history = [
+    { date: '2026-09-01', stories: 16, components: 4, totalComponents: 6, coveragePercent: 67 },
+    { date: '2026-09-02', stories: 16, components: 4, totalComponents: 6, coveragePercent: 67 },
+    { date: '2026-09-03', stories: 17, components: 4, totalComponents: 6, coveragePercent: 67 },
+    { date: '2026-09-04', stories: 17, components: 4, totalComponents: 6, coveragePercent: 67 }
+  ];
+
+  assert.deepEqual(
+    compactHistoryForChart(history).map(entry => entry.date),
+    ['2026-09-01', '2026-09-03', '2026-09-04']
+  );
+});
+
+test('renderHandDrawnChartSvg omits no-op publish dates from chart ticks', () => {
+  const svg = renderHandDrawnChartSvg({
+    history: [
+      { date: '2026-09-01', stories: 16, components: 4, totalComponents: 6, coveragePercent: 67 },
+      { date: '2026-09-02', stories: 16, components: 4, totalComponents: 6, coveragePercent: 67 },
+      { date: '2026-09-03', stories: 17, components: 4, totalComponents: 6, coveragePercent: 67 },
+      { date: '2026-09-04', stories: 17, components: 4, totalComponents: 6, coveragePercent: 67 }
+    ]
+  });
+
+  assert.ok(svg.includes('2026-09-01'));
+  assert.ok(!svg.includes('2026-09-02'));
+  assert.ok(svg.includes('2026-09-03'));
+  assert.ok(svg.includes('2026-09-04'));
+  assert.ok(svg.includes('Stories (17)'));
 });
 
 test('updateHistoryLedger appends new snapshot and handles deduplication on same commit', () => {
