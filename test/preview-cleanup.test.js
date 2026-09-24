@@ -4,7 +4,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { removePreviewDirectory, requestCleanupPagesRebuild } from '../src/preview-cleanup.js';
+import {
+  removePreviewDirectory,
+  requestCleanupCommentUpdate,
+  requestCleanupPagesRebuild
+} from '../src/preview-cleanup.js';
 
 function makeTempDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -167,4 +171,18 @@ test('requestCleanupPagesRebuild reports Pages rebuild failures without failing 
 
   assert.equal(result.ok, false);
   assert.match(result.message, /optional Pages rebuild failed: Page build failed/);
+});
+
+test('requestCleanupCommentUpdate reports comment update failures without failing cleanup', async () => {
+  const result = await requestCleanupCommentUpdate({
+    token: 'token',
+    repository: 'octo/widgets',
+    prNumber: 18,
+    updateStatus: async () => {
+      throw new Error('Resource not accessible by integration');
+    }
+  });
+
+  assert.equal(result.ok, false);
+  assert.match(result.message, /optional preview comment update failed: Resource not accessible by integration/);
 });
