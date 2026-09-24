@@ -174,3 +174,24 @@ test('preview-publisher pin content includes the current-PR snapshot preservatio
     `pinned commit ${sha} predates #124: generateStatsGraph has no currentSnapshot bypass for the trusted publisher`
   );
 });
+
+test('preview-cleanup pin content includes best-effort optional post-cleanup updates', () => {
+  const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/pr-preview-cleanup.yml'), 'utf8');
+  const match = workflow.match(/Archetipo95\/storybook-github-pages\/preview-cleanup@([a-f0-9]{40})/);
+  assert.ok(match, 'expected a SHA-pinned preview-cleanup reference in pr-preview-cleanup.yml');
+  const sha = match[1];
+
+  const previewCleanupSrc = execFileSync('git', ['show', `${sha}:src/preview-cleanup.js`], {
+    cwd: repoRoot
+  }).toString();
+  assert.match(
+    previewCleanupSrc,
+    /requestCleanupPagesRebuild/,
+    `pinned commit ${sha} predates the best-effort Pages rebuild handling`
+  );
+  assert.match(
+    previewCleanupSrc,
+    /requestCleanupCommentUpdate/,
+    `pinned commit ${sha} predates the best-effort preview comment update handling`
+  );
+});
