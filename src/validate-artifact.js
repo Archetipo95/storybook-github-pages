@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { validateCompressedSidecars } from './compress-assets.js';
 
 export function validateArtifactDirectory(targetPath, workspaceRoot = process.cwd()) {
   const rootAbs = path.resolve(workspaceRoot);
@@ -85,11 +86,15 @@ export function validateArtifactDirectory(targetPath, workspaceRoot = process.cw
     }
   }
 
+  // 7. Pre-compressed sidecars (.gz/.br) must decompress to the exact bytes of their original asset
+  const { checked: compressedSidecars } = validateCompressedSidecars(targetReal);
+
   return {
     valid: true,
     resolvedPath: targetReal,
     fileCount: files.length,
-    files
+    files,
+    compressedSidecars
   };
 }
 

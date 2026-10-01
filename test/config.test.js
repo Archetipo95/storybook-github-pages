@@ -459,3 +459,24 @@ test('resolveConfiguration - defaults generate_stats_graph and stats_directory, 
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
+
+test('validateConfig - validates pre-compression settings', () => {
+  assert.equal(validateConfig({ precompress: true, compress_algorithms: 'gzip,brotli' }), true);
+  assert.throws(() => validateConfig({ precompress: 'yes' }), /Config precompress must be a boolean/);
+  assert.throws(() => validateConfig({ compress_algorithms: 'zstd' }), /Unsupported compression algorithm "zstd"/);
+  assert.throws(() => validateConfig({ compress_algorithms: ' , ' }), /at least one/);
+});
+
+test('resolveConfiguration - applies pre-compression defaults and overrides', () => {
+  const missing = path.join(os.tmpdir(), 'missing-precompress.yml');
+  const defaults = resolveConfiguration({ inputs: {}, configFilePath: missing });
+  assert.equal(defaults.precompress, false);
+  assert.equal(defaults.compress_algorithms, 'gzip,brotli');
+
+  const resolved = resolveConfiguration({
+    inputs: { precompress: 'true', compress_algorithms: 'brotli' },
+    configFilePath: missing
+  });
+  assert.equal(resolved.precompress, true);
+  assert.equal(resolved.compress_algorithms, 'brotli');
+});

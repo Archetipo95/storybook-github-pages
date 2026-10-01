@@ -133,6 +133,16 @@ on:
         required: false
         type: number
         default: 30000
+      precompress:
+        description: 'Whether to write maximum-level .gz/.br sidecar files next to compressible static assets before publishing'
+        required: false
+        type: boolean
+        default: false
+      compress_algorithms:
+        description: 'Comma-separated pre-compression algorithms: gzip, brotli'
+        required: false
+        type: string
+        default: 'gzip,brotli'
     secrets:
       passcode_hash:
         description: 'SHA-256 hash of the Storybook passcode'
@@ -307,6 +317,13 @@ jobs:
           PASSCODE_HASH: ${{ secrets.passcode_hash }}
           PASSCODE_SESSION_HOURS: ${{ steps.config.outputs.passcode_session_hours }}
         run: node src/inject-auth-gate.js "$TARGET_PATH"
+
+      - name: Pre-compress static assets
+        if: ${{ steps.config.outputs.precompress == 'true' }}
+        env:
+          TARGET_PATH: ${{ steps.config.outputs.path }}
+          COMPRESS_ALGORITHMS: ${{ steps.config.outputs.compress_algorithms }}
+        run: node src/compress-assets.js "$TARGET_PATH" "$COMPRESS_ALGORITHMS"
 
       - name: Ensure .nojekyll exists
         run: |

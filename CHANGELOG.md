@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Gzip & Brotli Static Pre-Compression (#51)**: Added opt-in `precompress` and `compress_algorithms` inputs to the composite action and reusable workflow. When enabled, `src/compress-assets.js` writes maximum-level `.gz`/`.br` sidecars for compressible assets of at least 1 KiB using built-in `node:zlib`, and `src/validate-artifact.js` now verifies that any sidecar decompresses to the exact checksum of its original and has safe permissions.
+
 ## [1.10.0] - 2026-10-01
 
 ### Changed

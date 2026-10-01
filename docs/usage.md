@@ -186,6 +186,8 @@ jobs:
 | `smoke_test`                  | `boolean` | `false`              | Run a local Playwright smoke test against the built Storybook before validation and publishing                                            |
 | `smoke_test_stories`          | `string`  | `all`                | Comma-separated story id globs to exercise after the manager and canvas checks                                                            |
 | `smoke_test_timeout_ms`       | `number`  | `30000`              | Per-page browser navigation timeout in milliseconds                                                                                       |
+| `precompress`                 | `boolean` | `false`              | Write maximum-level `.gz` and `.br` sidecars next to compressible assets after the passcode gate is injected and before publishing        |
+| `compress_algorithms`         | `string`  | `gzip,brotli`        | Comma-separated pre-compression algorithms (`gzip`, `brotli`)                                                                             |
 | `auto_base_url`               | `boolean` | `true`               | Automatically inject the repository or preview base URL into Storybook builds unless an explicit base option is provided                  |
 
 When `smoke_test` is enabled, the action serves the static output only on
@@ -195,6 +197,21 @@ missing Storybook sidebar. It uses an installed `playwright` package when
 available; otherwise it downloads Playwright and Chromium into a temporary
 directory for the run. Story globs are matched against `stories.json` or
 `index.json` entry ids.
+
+When `precompress` is enabled, the action uses Node.js `node:zlib` (Gzip
+level 9, Brotli quality 11) to write `<file>.gz` and/or `<file>.br` sidecars
+for `.js`, `.mjs`, `.css`, `.html`, `.svg`, `.json`, and `.map` files of at
+least 1 KiB. Images, fonts, symlinks, and files that would not shrink are
+skipped. Compression runs as the last content step (after badges, stats, and
+the passcode gate), and every sidecar is decompressed and checked against the
+SHA-256 of its original; artifact validation also rejects stale, corrupt,
+orphaned, non-world-readable, or executable sidecars.
+
+GitHub Pages itself compresses responses on the fly and does not serve these
+sidecars through `Accept-Encoding` negotiation, and the sidecars increase the
+uploaded artifact size. Enable `precompress` when a CDN, reverse proxy, or
+mirror in front of the published files (for example nginx `gzip_static` /
+`brotli_static`) serves pre-compressed variants.
 
 ### Build caching
 

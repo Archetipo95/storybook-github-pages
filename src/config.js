@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { parseAlgorithms } from './compress-assets.js';
 
 export const DEFAULT_CONFIG = {
   version: 1,
@@ -31,6 +32,8 @@ export const DEFAULT_CONFIG = {
   smoke_test: false,
   smoke_test_stories: 'all',
   smoke_test_timeout_ms: 30000,
+  precompress: false,
+  compress_algorithms: 'gzip,brotli',
   auto_base_url: true,
   build: {
     install_command: null,
@@ -235,6 +238,19 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
     const timeout = Number(config.smoke_test_timeout_ms);
     if (!Number.isInteger(timeout) || timeout <= 0) {
       throw new Error('Config smoke_test_timeout_ms must be a positive integer');
+    }
+  }
+  if (config.precompress !== undefined && typeof config.precompress !== 'boolean') {
+    throw new Error('Config precompress must be a boolean');
+  }
+  if (config.compress_algorithms !== undefined) {
+    if (typeof config.compress_algorithms !== 'string') {
+      throw new Error('Config compress_algorithms must be a comma-separated string');
+    }
+    try {
+      parseAlgorithms(config.compress_algorithms);
+    } catch (err) {
+      throw new Error(`Config ${err.message}`);
     }
   }
 
@@ -476,6 +492,16 @@ export function resolveConfiguration({
         ? inputs.smoke_test_timeout_ms
         : (fileConfig?.smoke_test_timeout_ms ?? DEFAULT_CONFIG.smoke_test_timeout_ms)
     ),
+    precompress:
+      inputs.precompress !== undefined && inputs.precompress !== ''
+        ? String(inputs.precompress) === 'true'
+        : fileConfig?.precompress !== undefined
+          ? Boolean(fileConfig.precompress)
+          : DEFAULT_CONFIG.precompress,
+    compress_algorithms:
+      inputs.compress_algorithms !== undefined && inputs.compress_algorithms !== ''
+        ? String(inputs.compress_algorithms)
+        : fileConfig?.compress_algorithms || DEFAULT_CONFIG.compress_algorithms,
     auto_base_url:
       inputs.auto_base_url !== undefined && inputs.auto_base_url !== ''
         ? String(inputs.auto_base_url) === 'true'
