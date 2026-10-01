@@ -39,6 +39,7 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
   assert.match(content, /base_path:/, 'publish must support base_path input');
   assert.match(content, /generate_stats_graph:/, 'publish must support generate_stats_graph input');
   assert.match(content, /stats_directory:/, 'publish must support stats_directory input');
+  assert.match(content, /badges_directory:/, 'publish must support badges_directory input');
   assert.match(content, /managed_directories:/, 'publish must support managed_directories input');
   assert.match(content, /artifact_name:/, 'publish must support artifact_name input');
   assert.match(content, /enable_passcode_gate:/, 'publish must support passcode gate input');
@@ -100,6 +101,11 @@ test('pr-preview-publish workflow gates on success/event/repository and requires
     publishJob,
     /stats_directory: \$\{\{ steps\.config\.outputs\.stats_directory \}\}/,
     'trusted publisher must receive the resolved stats directory'
+  );
+  assert.match(
+    publishJob,
+    /badges_directory: \$\{\{ steps\.config\.outputs\.badges_directory \}\}/,
+    'trusted publisher must receive the resolved badges directory'
   );
 });
 

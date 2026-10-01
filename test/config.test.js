@@ -461,6 +461,38 @@ test('resolveConfiguration - defaults generate_stats_graph and stats_directory, 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
+test('validateConfig - validates audit settings', () => {
+  assert.equal(
+    validateConfig({
+      audit_bundle_size: true,
+      bundle_size_max_mb: '12.5'
+    }),
+    true
+  );
+  assert.throws(() => validateConfig({ audit_bundle_size: 'yes' }), /audit_bundle_size must be a boolean/);
+  assert.throws(() => validateConfig({ bundle_size_max_mb: '-1' }), /bundle_size_max_mb must be a positive number/);
+});
+
+test('resolveConfiguration - audits are off by default and honor input and file overrides', () => {
+  const missing = path.join(os.tmpdir(), 'missing-audit-config.yml');
+  const defaults = resolveConfiguration({ inputs: {}, configFilePath: missing });
+  assert.equal(defaults.audit_bundle_size, false);
+  assert.equal(defaults.bundle_size_max_mb, '');
+
+  const fromInputs = resolveConfiguration({
+    inputs: { audit_bundle_size: true, bundle_size_max_mb: '20' },
+    configFilePath: missing
+  });
+  assert.equal(fromInputs.audit_bundle_size, true);
+  assert.equal(fromInputs.bundle_size_max_mb, '20');
+
+  const configFilePath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'audit-config-')), '.storybook-pages.yml');
+  fs.writeFileSync(configFilePath, 'audit_bundle_size: true\nbundle_size_max_mb: 8\n');
+  const fromFile = resolveConfiguration({ inputs: { audit_bundle_size: '' }, configFilePath });
+  assert.equal(fromFile.audit_bundle_size, true);
+  assert.equal(fromFile.bundle_size_max_mb, '8');
+});
+
 test('validateRelativeDirectory rejects paths that normalize to the parent directory', () => {
   for (const value of ['..', 'a/..', 'a/../..', 'feature/../..', 'a\\..\\..', 'a/b/../../..', './..']) {
     assert.throws(() => validateRelativeDirectory(value, 'field', { allowEmpty: true }), /unsafe/, value);

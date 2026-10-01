@@ -31,6 +31,7 @@ The PR preview comment provides a rich overview for reviewers:
 
 - **Live Badge Row**: Real-time badges for Coverage %, Stories count, Documented Components count, and Build Status.
 - **Metrics & Coverage Comparison Table**: Compares Base branch vs PR Preview metrics with computed diff deltas (e.g., `+19%` 🟢 component coverage improvement, `+10` stories 📈).
+- **Bundle Size** (opt-in): When the build enables `audit_bundle_size` on `preview-build`, the comment includes a bundle size table, recomputed by the trusted publisher and compared with the base branch. See [Bundle size](bundle-size.md).
 - **Collapsible Growth Chart**: An expandable `<details>` section embedding the hand-drawn `stats/history.svg` growth graph.
 - **Provenance Footer**: Built commit SHA, workflow run link, and clear update timestamping.
 
