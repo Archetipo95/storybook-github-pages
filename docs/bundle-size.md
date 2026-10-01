@@ -49,3 +49,10 @@ publisher does not trust the sizes in the artifact: the artifact's
 recomputes the sizes from the digest-verified content. It also compares them
 with the base branch's `audit/bundle-size.json` on the Pages branch when that
 file exists. Asset names are sanitized before they are rendered in the comment.
+
+The publisher leaves the badges and stats folders out of the recomputed size,
+because the build audits before writing them. If your build uses a custom
+`badges_directory`, set the same value on the `preview-publisher` action so the
+PR and base totals stay comparable. If the audit fails, the publisher logs a
+warning and posts the comment without the bundle size table; the preview is
+still published.

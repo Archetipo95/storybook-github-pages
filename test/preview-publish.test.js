@@ -682,3 +682,40 @@ test('collectPreviewAudits returns nothing when the build did not audit', () => 
     baseBundleReport: null
   });
 });
+
+test('collectPreviewAudits excludes a custom badges directory from the recomputed size', () => {
+  const contentDir = makeTempDir('preview-audit-badges-');
+  fs.writeFileSync(path.join(contentDir, 'index.html'), '<html>preview</html>');
+  fs.mkdirSync(path.join(contentDir, 'shields'));
+  fs.writeFileSync(path.join(contentDir, 'shields', 'stories.svg'), '<svg/>');
+  fs.mkdirSync(path.join(contentDir, 'audit'));
+  fs.writeFileSync(path.join(contentDir, 'audit', 'bundle-size.json'), '{}');
+
+  assert.equal(collectPreviewAudits({ contentDir }).bundleReport.totalFiles, 2);
+  assert.equal(collectPreviewAudits({ contentDir, badgesDirectory: 'shields' }).bundleReport.totalFiles, 1);
+});
+
+test('collectPreviewAudits never throws; a failed audit only drops the comment section', t => {
+  if (process.getuid?.() === 0) {
+    t.skip('permission checks do not apply to root');
+    return;
+  }
+  const contentDir = makeTempDir('preview-audit-error-');
+  fs.writeFileSync(path.join(contentDir, 'index.html'), '<html>preview</html>');
+  fs.mkdirSync(path.join(contentDir, 'audit'));
+  fs.writeFileSync(path.join(contentDir, 'audit', 'bundle-size.json'), '{}');
+  const locked = path.join(contentDir, 'locked');
+  fs.mkdirSync(locked);
+  fs.chmodSync(locked, 0o000);
+
+  const originalWarn = console.warn;
+  const warnings = [];
+  console.warn = message => warnings.push(message);
+  try {
+    assert.deepEqual(collectPreviewAudits({ contentDir }), { bundleReport: null, baseBundleReport: null });
+    assert.match(warnings[0], /Bundle size audit skipped/);
+  } finally {
+    console.warn = originalWarn;
+    fs.chmodSync(locked, 0o755);
+  }
+});
