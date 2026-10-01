@@ -133,6 +133,16 @@ on:
         required: false
         type: number
         default: 30000
+      audit_bundle_size:
+        description: 'Whether to audit static asset sizes and append a bundle size scorecard to the job summary'
+        required: false
+        type: boolean
+        default: false
+      bundle_size_max_mb:
+        description: 'Optional total static output budget in megabytes; the build fails when the audit exceeds it'
+        required: false
+        type: string
+        default: ''
     secrets:
       passcode_hash:
         description: 'SHA-256 hash of the Storybook passcode'
@@ -259,6 +269,16 @@ jobs:
             eval "$(node -e 'import("./src/base-url.js").then(({computeBaseUrl, augmentBuildCommand, buildEnvironment}) => { const baseUrl = computeBaseUrl({repository: process.env.REPOSITORY, siteUrl: process.env.SITE_URL, basePath: process.env.BASE_PATH, eventName: process.env.EVENT_NAME, prNumber: process.env.PR_NUMBER}); const command = augmentBuildCommand(process.env.BUILD_COMMAND, baseUrl); console.log(`CMD=${JSON.stringify(command)}`); for (const [key, value] of Object.entries(buildEnvironment(baseUrl))) console.log(`export ${key}=${JSON.stringify(value)}`); })')"
           fi
           eval "$CMD"
+
+      # The audit runs before badges/stats are written so it measures the
+      # Storybook build output only.
+      - name: Audit Storybook bundle size
+        if: ${{ steps.config.outputs.audit_bundle_size == 'true' }}
+        env:
+          TARGET_PATH: ${{ steps.config.outputs.path }}
+          SB_BUNDLE_SIZE_MAX_MB: ${{ steps.config.outputs.bundle_size_max_mb }}
+          WORKSPACE_ROOT: ${{ github.workspace }}
+        run: node src/audit-static.js "$TARGET_PATH" "$WORKSPACE_ROOT"
 
       - name: Generate Storybook badges
         if: ${{ steps.config.outputs.generate_badges == 'true' }}

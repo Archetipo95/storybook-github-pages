@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Bundle Size Audit**: New opt-in `audit_bundle_size` and `bundle_size_max_mb` inputs on the reusable workflow, composite action, `preview-build` action and `.storybook-pages.yml`. The audit (`src/audit-static.js`, no dependencies) reports total and estimated gzip size, a per-type breakdown (JavaScript, CSS, fonts, images and more) and the 10 largest assets in `$GITHUB_STEP_SUMMARY`, saves `audit/bundle-size.json`, and fails the build when the budget is exceeded. PR preview comments show the bundle size, recomputed by the trusted publisher and compared with the base branch.
 - CodeQL code scanning for JavaScript and GitHub Actions workflows.
 - `Release Tags` workflow that creates the `vX.Y.Z` tag automatically when a version bump lands on `main` (after tests pass and the lockfile and changelog agree) and keeps the major tag on the newest release.
 - Test that fails when a `run:` script interpolates `${{ }}` values directly instead of passing them through `env:`.

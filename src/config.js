@@ -32,6 +32,8 @@ export const DEFAULT_CONFIG = {
   smoke_test_stories: 'all',
   smoke_test_timeout_ms: 30000,
   auto_base_url: true,
+  audit_bundle_size: false,
+  bundle_size_max_mb: '',
   build: {
     install_command: null,
     build_command: null
@@ -237,6 +239,16 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
     const timeout = Number(config.smoke_test_timeout_ms);
     if (!Number.isInteger(timeout) || timeout <= 0) {
       throw new Error('Config smoke_test_timeout_ms must be a positive integer');
+    }
+  }
+
+  if (config.audit_bundle_size !== undefined && typeof config.audit_bundle_size !== 'boolean') {
+    throw new Error('Config audit_bundle_size must be a boolean');
+  }
+  if (config.bundle_size_max_mb !== undefined && config.bundle_size_max_mb !== '') {
+    const mb = Number(config.bundle_size_max_mb);
+    if (!Number.isFinite(mb) || mb <= 0) {
+      throw new Error('Config bundle_size_max_mb must be a positive number');
     }
   }
 
@@ -492,6 +504,18 @@ export function resolveConfiguration({
         : fileConfig?.auto_base_url !== undefined
           ? Boolean(fileConfig.auto_base_url)
           : DEFAULT_CONFIG.auto_base_url,
+    audit_bundle_size:
+      inputs.audit_bundle_size !== undefined && inputs.audit_bundle_size !== ''
+        ? String(inputs.audit_bundle_size) === 'true'
+        : fileConfig?.audit_bundle_size !== undefined
+          ? Boolean(fileConfig.audit_bundle_size)
+          : DEFAULT_CONFIG.audit_bundle_size,
+    bundle_size_max_mb:
+      inputs.bundle_size_max_mb !== undefined && inputs.bundle_size_max_mb !== ''
+        ? String(inputs.bundle_size_max_mb)
+        : fileConfig?.bundle_size_max_mb !== undefined && fileConfig.bundle_size_max_mb !== ''
+          ? String(fileConfig.bundle_size_max_mb)
+          : DEFAULT_CONFIG.bundle_size_max_mb,
     build: {
       install_command:
         inputs.install_command ||
