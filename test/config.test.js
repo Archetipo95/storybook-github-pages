@@ -477,3 +477,29 @@ test('resolveBaseDirectoryForRef never maps a base ref outside the Pages branch'
     /ref_to_directory/
   );
 });
+
+test('parseSimpleYaml rejects keys that would pollute Object.prototype', () => {
+  for (const content of [
+    '__proto__:\n  polluted: true\n',
+    'build:\n  __proto__: x\n',
+    'constructor: x\n',
+    'build:\n  prototype: x\n'
+  ]) {
+    assert.throws(() => parseSimpleYaml(content), /is not allowed/, content);
+  }
+  assert.equal({}.polluted, undefined);
+});
+
+test('validateConfig rejects a pages_branch that git would read as an option', () => {
+  assert.throws(() => validateConfig({ pages_branch: '--upload-pack=x' }), /Invalid pages_branch/);
+  assert.throws(() => validateConfig({ pages_branch: '-b' }), /Invalid pages_branch/);
+});
+
+test('resolveBaseDirectoryForRef trims long slash runs in linear time', () => {
+  const ref = `${'/'.repeat(50000)}feature${'/'.repeat(50000)}x`;
+  const started = Date.now();
+  assert.throws(() => resolveBaseDirectoryForRef(`${'/'.repeat(50000)}x/..${'/'.repeat(50000)}`), /unsafe/);
+  assert.equal(resolveBaseDirectoryForRef(`//feature/x//`, { default_branch: 'main' }), 'feature/x');
+  resolveBaseDirectoryForRef(ref, { default_branch: 'main' });
+  assert.ok(Date.now() - started < 1000, 'slash trimming must not be quadratic');
+});

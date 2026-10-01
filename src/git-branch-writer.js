@@ -7,6 +7,22 @@ const RETRIES = 3;
 const PAGES_BUILD_TIMEOUT_MS = 120000;
 const PAGES_BUILD_POLL_INTERVAL_MS = 2000;
 
+// Branch names reach `git` as arguments; a leading `-` would be parsed as an
+// option and `..` as a revision range, so both are rejected at the sink.
+const SAFE_BRANCH_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9._/-]*$/;
+
+export function assertSafeBranchName(branch) {
+  if (
+    typeof branch !== 'string' ||
+    !SAFE_BRANCH_PATTERN.test(branch) ||
+    branch.includes('..') ||
+    branch.endsWith('/')
+  ) {
+    throw new Error(`Unsafe Pages branch name: "${branch}"`);
+  }
+  return branch;
+}
+
 export function run(command, args, cwd) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -110,6 +126,7 @@ export async function requestPagesRebuild({
  * the local repo path and must return `true` if it changed anything.
  */
 export async function withSerializedBranchWrite({ repo, branch, mutate, commitMessage }) {
+  assertSafeBranchName(branch);
   const release = await acquireLock(repo);
   try {
     let lastError;
