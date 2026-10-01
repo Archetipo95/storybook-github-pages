@@ -95,6 +95,22 @@ inputs:
     description: 'Per-page Playwright navigation timeout in milliseconds'
     required: false
     default: '30000'
+  audit_bundle_size:
+    description: 'Whether to audit static asset sizes; the trusted publisher then adds a bundle size table to the PR comment'
+    required: false
+    default: 'false'
+  bundle_size_max_mb:
+    description: 'Optional total static output budget in megabytes; the build fails when the audit exceeds it'
+    required: false
+    default: ''
+  audit_lighthouse:
+    description: 'Whether to run an opt-in Lighthouse audit; scores are added to the job summary and PR comment'
+    required: false
+    default: 'false'
+  lighthouse_min_score:
+    description: 'Optional minimum Lighthouse score (0-100) every category must reach; the build fails otherwise'
+    required: false
+    default: ''
 
 outputs:
   artifact_name:
@@ -161,6 +177,26 @@ runs:
         SOURCE_PATH: ${{ inputs.source_path }}
         WORKSPACE_ROOT: ${{ github.workspace }}
       run: node "${{ github.action_path }}/../src/validate-artifact.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
+
+    # Audits run before badges/stats are written so the scorecard measures the
+    # Storybook build output only.
+    - name: Audit Storybook bundle size
+      if: ${{ inputs.audit_bundle_size == 'true' }}
+      shell: bash
+      env:
+        SOURCE_PATH: ${{ inputs.source_path }}
+        SB_BUNDLE_SIZE_MAX_MB: ${{ inputs.bundle_size_max_mb }}
+        WORKSPACE_ROOT: ${{ github.workspace }}
+      run: node "${{ github.action_path }}/../src/audit-static.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
+
+    - name: Run Lighthouse audit
+      if: ${{ inputs.audit_lighthouse == 'true' }}
+      shell: bash
+      env:
+        SOURCE_PATH: ${{ inputs.source_path }}
+        SB_LIGHTHOUSE_MIN_SCORE: ${{ inputs.lighthouse_min_score }}
+        WORKSPACE_ROOT: ${{ github.workspace }}
+      run: node "${{ github.action_path }}/../src/audit-lighthouse.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
 
     - name: Generate Storybook badges
       if: ${{ inputs.generate_badges != 'false' }}

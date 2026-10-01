@@ -227,3 +227,42 @@ test('upsertPreviewComment rejects invalid PR numbers before making any request'
     mock.restore();
   }
 });
+
+test('buildCommentBody appends bundle size and Lighthouse sections when audits are present', () => {
+  const bundleReport = {
+    totalFiles: 2,
+    totalBytes: 4096,
+    totalGzipBytes: 1024,
+    categories: {
+      js: { files: 1, bytes: 3072, gzipBytes: 800 },
+      html: { files: 1, bytes: 1024, gzipBytes: 224 }
+    },
+    largest: [{ path: 'assets/<evil>|.js', bytes: 3072, gzipBytes: 800 }],
+    budget: null
+  };
+  const body = buildCommentBody({
+    prNumber: 7,
+    previewUrl: 'https://octo.github.io/widgets/pr-preview/pr-7/',
+    headSha: SHA,
+    runId: 1,
+    repository: 'octo/widgets',
+    bundleReport,
+    lighthouseReport: { scores: { performance: 91, accessibility: 64, 'best-practices': 100, seo: 30 } }
+  });
+  assert.match(body, /### 📦 Bundle Size/);
+  assert.match(body, /`assets\/_evil__\.js`/);
+  assert.doesNotMatch(body, /<evil>/);
+  assert.match(body, /### 🚦 Lighthouse/);
+  assert.match(body, /\| Accessibility \| 🟠 64 \|/);
+});
+
+test('buildCommentBody omits audit sections by default', () => {
+  const body = buildCommentBody({
+    prNumber: 7,
+    previewUrl: 'https://octo.github.io/widgets/pr-preview/pr-7/',
+    headSha: SHA,
+    runId: 1,
+    repository: 'octo/widgets'
+  });
+  assert.doesNotMatch(body, /Bundle Size|Lighthouse/);
+});

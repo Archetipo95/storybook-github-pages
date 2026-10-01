@@ -187,6 +187,10 @@ jobs:
 | `smoke_test_stories`          | `string`  | `all`                | Comma-separated story id globs to exercise after the manager and canvas checks                                                            |
 | `smoke_test_timeout_ms`       | `number`  | `30000`              | Per-page browser navigation timeout in milliseconds                                                                                       |
 | `auto_base_url`               | `boolean` | `true`               | Automatically inject the repository or preview base URL into Storybook builds unless an explicit base option is provided                  |
+| `audit_bundle_size`           | `boolean` | `false`              | Report total, gzip-estimated and per-type asset sizes in the job summary ([Audits](audits.md))                                            |
+| `bundle_size_max_mb`          | `string`  | `''`                 | Optional total static output budget in megabytes; the build fails when exceeded                                                           |
+| `audit_lighthouse`            | `boolean` | `false`              | Run a Lighthouse audit of the built Storybook and report its scores in the job summary ([Audits](audits.md))                              |
+| `lighthouse_min_score`        | `string`  | `''`                 | Optional minimum Lighthouse score (0-100) every category must reach; the build fails otherwise                                            |
 
 When `smoke_test` is enabled, the action serves the static output only on
 `127.0.0.1`, opens the manager and canvas with Playwright, and fails on

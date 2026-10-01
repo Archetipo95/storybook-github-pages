@@ -4,7 +4,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { readBundleMetadata, publishPreview, resolveBaseMetricsPath } from '../src/preview-publish.js';
+import {
+  readBundleMetadata,
+  publishPreview,
+  resolveBaseMetricsPath,
+  collectPreviewAudits
+} from '../src/preview-publish.js';
 import { buildPreviewMetadata, digestDirectory } from '../src/preview-metadata.js';
 import { buildMarker } from '../src/preview-comment.js';
 
@@ -637,4 +642,50 @@ test('publishPreview honors an explicit ENVIRONMENT_URL override for both pendin
     else process.env.ENVIRONMENT_URL = originalEnvironmentUrl;
     global.fetch = originalFetch;
   }
+});
+
+test('collectPreviewAudits recomputes bundle sizes instead of trusting the artifact report', () => {
+  const contentDir = makeTempDir('preview-audit-content-');
+  fs.writeFileSync(path.join(contentDir, 'index.html'), '<html>preview</html>');
+  fs.writeFileSync(path.join(contentDir, 'main.js'), 'console.log(1);');
+  fs.mkdirSync(path.join(contentDir, 'badges'));
+  fs.writeFileSync(path.join(contentDir, 'badges', 'stories.svg'), '<svg/>');
+  fs.mkdirSync(path.join(contentDir, 'audit'));
+  fs.writeFileSync(
+    path.join(contentDir, 'audit', 'bundle-size.json'),
+    JSON.stringify({ totalBytes: 1, totalGzipBytes: 1, totalFiles: 1, budget: { maxMb: 2 } })
+  );
+  fs.writeFileSync(
+    path.join(contentDir, 'audit', 'lighthouse.json'),
+    JSON.stringify({ scores: { performance: 88, seo: '<script>' } })
+  );
+
+  const basePagesRepo = makeTempDir('preview-audit-base-');
+  fs.mkdirSync(path.join(basePagesRepo, 'audit'));
+  fs.writeFileSync(
+    path.join(basePagesRepo, 'audit', 'bundle-size.json'),
+    JSON.stringify({ totalBytes: 10, totalGzipBytes: 5, totalFiles: 1 })
+  );
+
+  const audits = collectPreviewAudits({ contentDir, basePagesRepo });
+  assert.equal(audits.bundleReport.totalFiles, 2, 'audit and badges directories are excluded');
+  assert.equal(
+    audits.bundleReport.totalBytes,
+    '<html>preview</html>'.length + 'console.log(1);'.length,
+    'sizes are recomputed from the verified content'
+  );
+  assert.equal(audits.bundleReport.budget.maxMb, 2);
+  assert.equal(audits.baseBundleReport.totalBytes, 10);
+  assert.equal(audits.lighthouseReport.scores.performance, 88);
+  assert.equal(audits.lighthouseReport.scores.seo, null);
+});
+
+test('collectPreviewAudits returns nothing when the build did not audit', () => {
+  const contentDir = makeTempDir('preview-audit-none-');
+  fs.writeFileSync(path.join(contentDir, 'index.html'), '<html>preview</html>');
+  assert.deepEqual(collectPreviewAudits({ contentDir }), {
+    bundleReport: null,
+    baseBundleReport: null,
+    lighthouseReport: null
+  });
 });

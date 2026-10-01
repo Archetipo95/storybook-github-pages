@@ -14,6 +14,43 @@ import { buildCommentBody, upsertPreviewComment } from './preview-comment.js';
 import { createDeployment, updateDeploymentStatus } from './github-deployments.js';
 import { injectAuthGate } from './inject-auth-gate.js';
 import { generateStatsGraph } from './generate-stats.js';
+import { auditBundleSize, readBundleReport, AUDIT_DIRECTORY } from './audit-static.js';
+import { sanitizeLighthouseReport, LIGHTHOUSE_REPORT_FILENAME } from './audit-lighthouse.js';
+
+/**
+ * Builds the audit section inputs for the PR comment. The untrusted build
+ * only signals that auditing was enabled by shipping `audit/bundle-size.json`;
+ * the sizes themselves are recomputed here from the digest-verified content
+ * (before the publisher adds its own files) rather than trusted. Lighthouse
+ * scores cannot be recomputed without running a browser, so they are taken
+ * from the artifact but strictly validated to integers in [0, 100].
+ */
+export function collectPreviewAudits({ contentDir, basePagesRepo = null, statsDirectory = 'stats' }) {
+  let bundleReport = null;
+  const artifactBundleReport = readBundleReport(contentDir);
+  if (artifactBundleReport) {
+    const maxMb = artifactBundleReport.budget?.maxMb;
+    bundleReport = auditBundleSize({
+      staticDir: contentDir,
+      maxMb: Number.isFinite(maxMb) && maxMb > 0 ? maxMb : null,
+      // Generated metadata, not Storybook output; the build audits before
+      // writing these, so exclude them to keep both numbers comparable.
+      excludeDirectories: ['badges', statsDirectory]
+    });
+  }
+  const baseBundleReport = bundleReport && basePagesRepo ? readBundleReport(basePagesRepo) : null;
+
+  let lighthouseReport = null;
+  const lighthousePath = path.join(contentDir, AUDIT_DIRECTORY, LIGHTHOUSE_REPORT_FILENAME);
+  if (fs.existsSync(lighthousePath)) {
+    try {
+      lighthouseReport = sanitizeLighthouseReport(JSON.parse(fs.readFileSync(lighthousePath, 'utf8')));
+    } catch {
+      lighthouseReport = null;
+    }
+  }
+  return { bundleReport, baseBundleReport, lighthouseReport };
+}
 
 /**
  * Reads and parses the metadata file bundled inside the downloaded build
@@ -179,6 +216,12 @@ export async function publishPreview({
   const basePagesRepo = baseDirectory ? path.join(pagesRepo, baseDirectory) : pagesRepo;
   const baseMetricsPath = pagesRepo ? resolveBaseMetricsPath({ pagesRepo, baseRef, defaultBranch: 'main' }) : null;
 
+  const audits = collectPreviewAudits({
+    contentDir,
+    basePagesRepo: pagesRepo ? basePagesRepo : null,
+    statsDirectory
+  });
+
   let publishResult;
   try {
     if (enablePasscodeGate) {
@@ -295,7 +338,8 @@ export async function publishPreview({
         metrics,
         baseMetrics,
         hasBadges,
-        hasStatsGraph
+        hasStatsGraph,
+        ...audits
       });
       commentResult = await upsertPreviewComment({ token, repository, prNumber: metadata.prNumber, body });
     } catch (error) {

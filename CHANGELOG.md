@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Bundle Size & Lighthouse Audits**: New opt-in `audit_bundle_size`, `bundle_size_max_mb`, `audit_lighthouse` and `lighthouse_min_score` inputs on the reusable workflow, composite action, `preview-build` action and `.storybook-pages.yml`. The bundle audit (`src/audit-static.js`, no dependencies) reports total and estimated gzip size, the JavaScript/CSS/font payload and the 10 largest assets. The Lighthouse audit (`src/audit-lighthouse.js`) runs a pinned `lighthouse@13.5.0` against the build served on loopback. Both write a scorecard to `$GITHUB_STEP_SUMMARY`, save JSON under `audit/`, and can fail the build when a budget or minimum score is missed. PR preview comments show the bundle size, recomputed by the trusted publisher and compared with the base branch, and the validated Lighthouse scores.
+
 ## [1.10.0] - 2026-10-01
 
 ### Changed

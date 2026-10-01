@@ -83,6 +83,7 @@ See [PR previews](docs/pr-previews.md).
 | -------------------------------------------------------- | -------------------------------------------- |
 | Turnkey deploy, composite action, directory mode, inputs | [Usage](docs/usage.md)                       |
 | Badges, component coverage, growth chart                 | [Badges and stats](docs/badges-and-stats.md) |
+| Bundle size and Lighthouse audits                        | [Audits](docs/audits.md)                     |
 | PR preview build/publish/cleanup/janitor                 | [PR previews](docs/pr-previews.md)           |
 | Permissions and security model                           | [Security](docs/security.md)                 |
 | Bitovi migration                                         | [Migration](docs/migration.md)               |
