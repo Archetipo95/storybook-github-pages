@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update `actions/cache` from v4.2.3 to v6.1.0 in the reusable deploy workflow (requires Actions Runner 2.327.1+ on self-hosted runners).
-- Update the reusable workflows' internal `publisher` and `preview-janitor` pins to v1.9.6.
+- Update the reusable deploy workflow's internal `publisher` pin to v1.9.14, so published stats history applies coverage include/ignore filters.
+- Update the PR preview janitor workflow's internal `preview-janitor` pin to v1.9.6.
 - Update dev dependencies: eslint 10.11.0, prettier 3.9.9.
 
 ### Fixed
