@@ -192,8 +192,10 @@ runs:
     - name: Install dependencies
       if: ${{ env.SB_INSTALL_COMMAND != '' }}
       shell: bash
+      env:
+        SB_INSTALL_COMMAND: ${{ env.SB_INSTALL_COMMAND }}
       run: |
-        CMD="${{ env.SB_INSTALL_COMMAND }}"
+        CMD="$SB_INSTALL_COMMAND"
         echo "Running custom install command: $CMD"
         eval "$CMD"
 

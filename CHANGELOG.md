@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- CodeQL code scanning for JavaScript and GitHub Actions workflows.
+- `Release Tags` workflow that creates the `vX.Y.Z` tag automatically when a version bump lands on `main` (after tests pass and the lockfile and changelog agree) and keeps the major tag on the newest release.
+- Test that fails when a `run:` script interpolates `${{ }}` values directly instead of passing them through `env:`.
+
+### Fixed
+
+- Pass the custom install command and deploy-workflow smoke-test/`.nojekyll` paths to shell steps through `env:` instead of interpolating them into the script source.
+- Reject relative directories that normalize to `..` (for example `feature/../..`) in target, preview-root, and base-ref resolution.
+- Preview janitor no longer fails the sweep when it cannot update a preview comment's expiration note.
+
 ## [1.10.0] - 2026-10-01
 
 ### Changed
