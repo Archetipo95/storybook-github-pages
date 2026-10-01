@@ -153,14 +153,14 @@ runs:
         WORKSPACE_ROOT: ${{ github.workspace }}
         SMOKE_TEST_STORIES: ${{ inputs.smoke_test_stories }}
         SMOKE_TEST_TIMEOUT_MS: ${{ inputs.smoke_test_timeout_ms }}
-      run: node "${{ github.action_path }}/../src/smoke-test.js" "$SOURCE_PATH" "$WORKSPACE_ROOT" "$SMOKE_TEST_STORIES" "$SMOKE_TEST_TIMEOUT_MS"
+      run: node "$GITHUB_ACTION_PATH/../src/smoke-test.js" "$SOURCE_PATH" "$WORKSPACE_ROOT" "$SMOKE_TEST_STORIES" "$SMOKE_TEST_TIMEOUT_MS"
 
     - name: Validate static Storybook output
       shell: bash
       env:
         SOURCE_PATH: ${{ inputs.source_path }}
         WORKSPACE_ROOT: ${{ github.workspace }}
-      run: node "${{ github.action_path }}/../src/validate-artifact.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
+      run: node "$GITHUB_ACTION_PATH/../src/validate-artifact.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
 
     - name: Generate Storybook badges
       if: ${{ inputs.generate_badges != 'false' }}
@@ -173,7 +173,7 @@ runs:
         SB_COVERAGE_IGNORE_PATHS: ${{ inputs.coverage_ignore_paths || '' }}
         WORKSPACE_ROOT: ${{ github.workspace }}
         GITHUB_SHA: ${{ inputs.head_sha || github.sha }}
-      run: node "${{ github.action_path }}/../src/generate-badges.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
+      run: node "$GITHUB_ACTION_PATH/../src/generate-badges.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
 
     - name: Generate Storybook growth graph
       if: ${{ inputs.generate_stats_graph != 'false' }}
@@ -185,7 +185,7 @@ runs:
         SB_COVERAGE_IGNORE_PATHS: ${{ inputs.coverage_ignore_paths || '' }}
         WORKSPACE_ROOT: ${{ github.workspace }}
         GITHUB_SHA: ${{ inputs.head_sha }}
-      run: node "${{ github.action_path }}/../src/generate-stats.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
+      run: node "$GITHUB_ACTION_PATH/../src/generate-stats.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
 
     - name: Ensure .nojekyll exists
       shell: bash
@@ -213,7 +213,7 @@ runs:
         EVENT_NAME: ${{ inputs.event_name }}
         BUNDLE_DIR: ${{ steps.config.outputs.bundle_dir }}
       run: |
-        node "${{ github.action_path }}/../src/preview-metadata.js" "$BUNDLE_DIR"
+        node "$GITHUB_ACTION_PATH/../src/preview-metadata.js" "$BUNDLE_DIR"
         echo "bundle_dir=$BUNDLE_DIR" >> "$GITHUB_OUTPUT"
 
     - name: Upload preview bundle artifact

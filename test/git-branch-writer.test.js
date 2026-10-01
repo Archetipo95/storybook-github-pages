@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { requestPagesRebuild } from '../src/git-branch-writer.js';
+import { assertSafeBranchName, requestPagesRebuild, withSerializedBranchWrite } from '../src/git-branch-writer.js';
 
 const COMMIT_SHA = 'a'.repeat(40);
 
@@ -102,4 +102,32 @@ test('requestPagesRebuild surfaces a failed build for the pushed commit', async 
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('assertSafeBranchName accepts normal Pages branch names', () => {
+  for (const branch of ['gh-pages', 'pages', 'release/1.x', 'docs_site']) {
+    assert.equal(assertSafeBranchName(branch), branch);
+  }
+});
+
+test('assertSafeBranchName rejects names git would parse as options or ranges', () => {
+  for (const branch of ['--upload-pack=touch pwned', '-b', 'main..evil', 'a/', '', 'a b', 'a;b', undefined]) {
+    assert.throws(() => assertSafeBranchName(branch), /Unsafe Pages branch name/, String(branch));
+  }
+});
+
+test('withSerializedBranchWrite refuses an unsafe branch before running git', async () => {
+  let mutated = false;
+  await assert.rejects(
+    withSerializedBranchWrite({
+      repo: '/nonexistent',
+      branch: '--exec=id',
+      mutate: async () => {
+        mutated = true;
+        return true;
+      }
+    }),
+    /Unsafe Pages branch name/
+  );
+  assert.equal(mutated, false);
 });

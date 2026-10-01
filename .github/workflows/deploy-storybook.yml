@@ -221,7 +221,7 @@ jobs:
         if: ${{ steps.config.outputs.package_manager == 'npm' || steps.config.outputs.package_manager == 'yarn' || steps.config.outputs.package_manager == 'pnpm' }}
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '20'
+          node-version: '24'
           cache: ${{ inputs.cache && steps.config.outputs.package_manager || '' }}
 
       - name: Set up Bun
@@ -298,7 +298,12 @@ jobs:
 
       - name: Run Storybook smoke test
         if: ${{ steps.config.outputs.smoke_test == 'true' }}
-        run: node src/smoke-test.js "${{ steps.config.outputs.path }}" "${{ github.workspace }}" "${{ steps.config.outputs.smoke_test_stories }}" "${{ steps.config.outputs.smoke_test_timeout_ms }}"
+        env:
+          TARGET_PATH: ${{ steps.config.outputs.path }}
+          WORKSPACE_ROOT: ${{ github.workspace }}
+          SMOKE_TEST_STORIES: ${{ steps.config.outputs.smoke_test_stories }}
+          SMOKE_TEST_TIMEOUT_MS: ${{ steps.config.outputs.smoke_test_timeout_ms }}
+        run: node src/smoke-test.js "$TARGET_PATH" "$WORKSPACE_ROOT" "$SMOKE_TEST_STORIES" "$SMOKE_TEST_TIMEOUT_MS"
 
       - name: Validate static artifact
         run: |
@@ -321,9 +326,11 @@ jobs:
         run: node src/inject-auth-gate.js "$TARGET_PATH"
 
       - name: Ensure .nojekyll exists
+        env:
+          TARGET_PATH: ${{ steps.config.outputs.path }}
         run: |
-          if [ -d "${{ steps.config.outputs.path }}" ]; then
-            touch "${{ steps.config.outputs.path }}/.nojekyll"
+          if [ -d "$TARGET_PATH" ]; then
+            touch "$TARGET_PATH/.nojekyll"
           fi
 
       - name: Warn about ignored custom domain
