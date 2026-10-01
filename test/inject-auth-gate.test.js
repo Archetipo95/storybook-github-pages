@@ -25,6 +25,7 @@ test('injectAuthGate protects entry documents and is idempotent', async () => {
     assert.match(await fs.readFile(path.join(staticDir, 'robots.txt'), 'utf8'), /Disallow: \//);
     assert.match(index, /localStorage\.setItem\(key/);
     assert.doesNotMatch(index, /sessionStorage/);
+    assert.match(index, /storybook-passcode-authenticated:' \+ config\.hash\.slice\(0, 16\)/);
     assert.match(index, /autocomplete="username"/);
     assert.match(iframe, /storybook-passcode-gate-script/);
     assert.match(iframe, /addEventListener\('storage'/);

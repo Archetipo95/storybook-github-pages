@@ -37,7 +37,8 @@ body > *:not(#storybook-passcode-gate) { visibility: hidden !important; }
 <script id="storybook-passcode-gate-script">
 (() => {
   const config = ${config};
-  const key = 'storybook-passcode-authenticated';
+  // Scope the unlock to this passcode so other gated Storybooks on the same origin stay locked.
+  const key = 'storybook-passcode-authenticated:' + config.hash.slice(0, 16);
   const gate = document.getElementById('storybook-passcode-gate');
   const form = gate.querySelector('form');
   const input = form.querySelector('input[type="password"]');
