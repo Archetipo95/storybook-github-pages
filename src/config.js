@@ -259,14 +259,8 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
   return true;
 }
 
-// Keys that would write to Object.prototype instead of an own property.
-const UNSAFE_YAML_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
-
-function assertSafeYamlKey(key) {
-  if (UNSAFE_YAML_KEYS.has(key)) {
-    throw new Error(`Configuration key "${key}" is not allowed`);
-  }
-  return key;
+function rejectUnsafeYamlKey(key) {
+  throw new Error(`Configuration key "${key}" is not allowed`);
 }
 
 export function parseSimpleYaml(content) {
@@ -314,7 +308,9 @@ export function parseSimpleYaml(content) {
       currentSection = null;
       const colonIdx = trimmed.indexOf(':');
       if (colonIdx !== -1) {
-        const key = assertSafeYamlKey(trimmed.slice(0, colonIdx).trim());
+        const key = trimmed.slice(0, colonIdx).trim();
+        // Keys that would write to Object.prototype instead of an own property.
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') rejectUnsafeYamlKey(key);
         let val = trimmed.slice(colonIdx + 1).trim();
         if (val === '|' || val === '>' || /^([|>])([+-]?)$/.test(val)) {
           const { value, nextIndex } = parseBlockScalar(index, { allowNested: false });
@@ -332,7 +328,9 @@ export function parseSimpleYaml(content) {
     } else if (indent > 0 && currentSection) {
       const colonIdx = trimmed.indexOf(':');
       if (colonIdx !== -1) {
-        const key = assertSafeYamlKey(trimmed.slice(0, colonIdx).trim());
+        const key = trimmed.slice(0, colonIdx).trim();
+        // Keys that would write to Object.prototype instead of an own property.
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') rejectUnsafeYamlKey(key);
         let val = trimmed.slice(colonIdx + 1).trim();
         if (val === '|' || val === '>' || /^([|>])([+-]?)$/.test(val)) {
           const { value, nextIndex } = parseBlockScalar(index, { allowNested: true });
