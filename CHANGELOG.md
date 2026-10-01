@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-10-01
+
 ### Added
 
 - **Bundle Size Audit**: New opt-in `audit_bundle_size` and `bundle_size_max_mb` inputs on the reusable workflow, composite action, `preview-build` action and `.storybook-pages.yml`. The audit (`src/audit-static.js`, no dependencies) reports total and estimated gzip size, a per-type breakdown (JavaScript, CSS, fonts, images and more) and the 10 largest assets in `$GITHUB_STEP_SUMMARY`, saves `audit/bundle-size.json`, and fails the build when the budget is exceeded. PR preview comments show the bundle size, recomputed by the trusted publisher and compared with the base branch.
@@ -16,10 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CodeQL code scanning for JavaScript and GitHub Actions workflows.
 - `Release Tags` workflow that creates the `vX.Y.Z` tag automatically when a version bump lands on `main` (after tests pass and the lockfile and changelog agree) and keeps the major tag on the newest release.
 - Test that fails when a `run:` script interpolates `${{ }}` values directly instead of passing them through `env:`.
+- Tests that fail when a workflow passes an input its pinned internal action does not declare, and (at release time) when an internal pin runs older action or `src/` code than the release.
 
 ### Changed
 
 - **Node.js 24 is now the runtime.** The composite action and the reusable deploy workflow install Node.js 24 (was 20, which reached end of life in April 2026) before running your install and build commands. Storybook builds run by this action must support Node.js 24. `engines.node` is now `>=24.0.0`.
+- The reusable deploy, PR preview publish, cleanup, and janitor workflows now pin their internal actions to the v1.11.0 code. Previously they ran code from earlier releases, so the reusable workflows did not yet include the CNAME fix, the PR-comment bundle size, or the janitor and git-argument hardening.
+- `npm run prepare-release` moves internal action pins to the release base commit automatically.
 
 ### Fixed
 
