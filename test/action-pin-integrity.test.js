@@ -127,7 +127,7 @@ test('preview-publisher pin resolves alongside the src it depends on', () => {
     gitShowExists(sha, 'preview-publisher/action.yml'),
     `pinned commit ${sha} is missing preview-publisher/action.yml`
   );
-  // preview-publisher/action.yml invokes `${{ github.action_path }}/../src/preview-publish.js`,
+  // preview-publisher/action.yml invokes `$GITHUB_ACTION_PATH/../src/preview-publish.js`,
   // so the pinned commit must also contain the script it depends on.
   assert.ok(
     gitShowExists(sha, 'src/preview-publish.js'),

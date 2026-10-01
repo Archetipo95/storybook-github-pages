@@ -79,7 +79,7 @@ runs:
         SB_BASE_PATH: ${{ inputs.base_path || '' }}
         WORKSPACE_ROOT: ${{ github.workspace }}
         GITHUB_SHA: ${{ github.sha }}
-      run: node "${{ github.action_path }}/../src/generate-badges.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
+      run: node "$GITHUB_ACTION_PATH/../src/generate-badges.js" "$SOURCE_PATH" "$WORKSPACE_ROOT"
 
     - name: Generate Storybook growth graph
       if: ${{ inputs.generate_stats_graph != 'false' }}
@@ -94,7 +94,7 @@ runs:
         SB_BASE_PATH: ${{ inputs.base_path || '' }}
         WORKSPACE_ROOT: ${{ github.workspace }}
         GITHUB_SHA: ${{ github.sha }}
-      run: node "${{ github.action_path }}/../src/generate-stats.js" "$SOURCE_PATH" "$WORKSPACE_ROOT" "$PAGES_REPO"
+      run: node "$GITHUB_ACTION_PATH/../src/generate-stats.js" "$SOURCE_PATH" "$WORKSPACE_ROOT" "$PAGES_REPO"
 
     - name: Inject Storybook passcode gate
       if: ${{ inputs.enable_passcode_gate == 'true' }}
@@ -103,7 +103,7 @@ runs:
         SB_PATH: ${{ inputs.source_directory }}
         PASSCODE_HASH: ${{ inputs.passcode_hash }}
         PASSCODE_SESSION_HOURS: ${{ inputs.passcode_session_hours }}
-      run: node "${{ github.action_path }}/../src/inject-auth-gate.js" "$SB_PATH"
+      run: node "$GITHUB_ACTION_PATH/../src/inject-auth-gate.js" "$SB_PATH"
 
     - shell: bash
       env:
@@ -117,4 +117,4 @@ runs:
         TRIGGER_PAGES_REBUILD: ${{ inputs.trigger_pages_rebuild }}
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
-      run: node "${{ github.action_path }}/../src/publish-directory.js"
+      run: node "$GITHUB_ACTION_PATH/../src/publish-directory.js"

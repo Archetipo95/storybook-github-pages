@@ -23,7 +23,7 @@ function workflowFiles() {
 }
 
 // Runner-controlled values that cannot carry caller- or PR-controlled text.
-const SAFE_RUN_EXPRESSIONS = new Set(['github.action_path', 'github.workspace']);
+const SAFE_RUN_EXPRESSIONS = new Set(['github.workspace']);
 
 /**
  * Returns every `${{ ... }}` expression interpolated directly into a `run:`
