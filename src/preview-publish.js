@@ -14,16 +14,13 @@ import { buildCommentBody, upsertPreviewComment } from './preview-comment.js';
 import { createDeployment, updateDeploymentStatus } from './github-deployments.js';
 import { injectAuthGate } from './inject-auth-gate.js';
 import { generateStatsGraph } from './generate-stats.js';
-import { auditBundleSize, readBundleReport, AUDIT_DIRECTORY } from './audit-static.js';
-import { sanitizeLighthouseReport, LIGHTHOUSE_REPORT_FILENAME } from './audit-lighthouse.js';
+import { auditBundleSize, readBundleReport } from './audit-static.js';
 
 /**
- * Builds the audit section inputs for the PR comment. The untrusted build
- * only signals that auditing was enabled by shipping `audit/bundle-size.json`;
- * the sizes themselves are recomputed here from the digest-verified content
- * (before the publisher adds its own files) rather than trusted. Lighthouse
- * scores cannot be recomputed without running a browser, so they are taken
- * from the artifact but strictly validated to integers in [0, 100].
+ * Builds the bundle size inputs for the PR comment. The untrusted build only
+ * signals that auditing was enabled by shipping `audit/bundle-size.json`; the
+ * sizes themselves are recomputed here from the digest-verified content
+ * (before the publisher adds its own files) rather than trusted.
  */
 export function collectPreviewAudits({ contentDir, basePagesRepo = null, statsDirectory = 'stats' }) {
   let bundleReport = null;
@@ -40,16 +37,7 @@ export function collectPreviewAudits({ contentDir, basePagesRepo = null, statsDi
   }
   const baseBundleReport = bundleReport && basePagesRepo ? readBundleReport(basePagesRepo) : null;
 
-  let lighthouseReport = null;
-  const lighthousePath = path.join(contentDir, AUDIT_DIRECTORY, LIGHTHOUSE_REPORT_FILENAME);
-  if (fs.existsSync(lighthousePath)) {
-    try {
-      lighthouseReport = sanitizeLighthouseReport(JSON.parse(fs.readFileSync(lighthousePath, 'utf8')));
-    } catch {
-      lighthouseReport = null;
-    }
-  }
-  return { bundleReport, baseBundleReport, lighthouseReport };
+  return { bundleReport, baseBundleReport };
 }
 
 /**

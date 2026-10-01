@@ -228,7 +228,7 @@ test('upsertPreviewComment rejects invalid PR numbers before making any request'
   }
 });
 
-test('buildCommentBody appends bundle size and Lighthouse sections when audits are present', () => {
+test('buildCommentBody appends a bundle size section when an audit is present', () => {
   const bundleReport = {
     totalFiles: 2,
     totalBytes: 4096,
@@ -246,17 +246,14 @@ test('buildCommentBody appends bundle size and Lighthouse sections when audits a
     headSha: SHA,
     runId: 1,
     repository: 'octo/widgets',
-    bundleReport,
-    lighthouseReport: { scores: { performance: 91, accessibility: 64, 'best-practices': 100, seo: 30 } }
+    bundleReport
   });
   assert.match(body, /### 📦 Bundle Size/);
   assert.match(body, /`assets\/_evil__\.js`/);
   assert.doesNotMatch(body, /<evil>/);
-  assert.match(body, /### 🚦 Lighthouse/);
-  assert.match(body, /\| Accessibility \| 🟠 64 \|/);
 });
 
-test('buildCommentBody omits audit sections by default', () => {
+test('buildCommentBody omits the bundle size section by default', () => {
   const body = buildCommentBody({
     prNumber: 7,
     previewUrl: 'https://octo.github.io/widgets/pr-preview/pr-7/',
@@ -264,5 +261,5 @@ test('buildCommentBody omits audit sections by default', () => {
     runId: 1,
     repository: 'octo/widgets'
   });
-  assert.doesNotMatch(body, /Bundle Size|Lighthouse/);
+  assert.doesNotMatch(body, /Bundle Size/);
 });

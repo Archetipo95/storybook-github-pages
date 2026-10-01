@@ -655,10 +655,6 @@ test('collectPreviewAudits recomputes bundle sizes instead of trusting the artif
     path.join(contentDir, 'audit', 'bundle-size.json'),
     JSON.stringify({ totalBytes: 1, totalGzipBytes: 1, totalFiles: 1, budget: { maxMb: 2 } })
   );
-  fs.writeFileSync(
-    path.join(contentDir, 'audit', 'lighthouse.json'),
-    JSON.stringify({ scores: { performance: 88, seo: '<script>' } })
-  );
 
   const basePagesRepo = makeTempDir('preview-audit-base-');
   fs.mkdirSync(path.join(basePagesRepo, 'audit'));
@@ -676,8 +672,6 @@ test('collectPreviewAudits recomputes bundle sizes instead of trusting the artif
   );
   assert.equal(audits.bundleReport.budget.maxMb, 2);
   assert.equal(audits.baseBundleReport.totalBytes, 10);
-  assert.equal(audits.lighthouseReport.scores.performance, 88);
-  assert.equal(audits.lighthouseReport.scores.seo, null);
 });
 
 test('collectPreviewAudits returns nothing when the build did not audit', () => {
@@ -685,7 +679,6 @@ test('collectPreviewAudits returns nothing when the build did not audit', () => 
   fs.writeFileSync(path.join(contentDir, 'index.html'), '<html>preview</html>');
   assert.deepEqual(collectPreviewAudits({ contentDir }), {
     bundleReport: null,
-    baseBundleReport: null,
-    lighthouseReport: null
+    baseBundleReport: null
   });
 });

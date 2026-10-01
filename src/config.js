@@ -34,8 +34,6 @@ export const DEFAULT_CONFIG = {
   auto_base_url: true,
   audit_bundle_size: false,
   bundle_size_max_mb: '',
-  audit_lighthouse: false,
-  lighthouse_min_score: '',
   build: {
     install_command: null,
     build_command: null
@@ -242,21 +240,13 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
     }
   }
 
-  for (const field of ['audit_bundle_size', 'audit_lighthouse']) {
-    if (config[field] !== undefined && typeof config[field] !== 'boolean') {
-      throw new Error(`Config ${field} must be a boolean`);
-    }
+  if (config.audit_bundle_size !== undefined && typeof config.audit_bundle_size !== 'boolean') {
+    throw new Error('Config audit_bundle_size must be a boolean');
   }
   if (config.bundle_size_max_mb !== undefined && config.bundle_size_max_mb !== '') {
     const mb = Number(config.bundle_size_max_mb);
     if (!Number.isFinite(mb) || mb <= 0) {
       throw new Error('Config bundle_size_max_mb must be a positive number');
-    }
-  }
-  if (config.lighthouse_min_score !== undefined && config.lighthouse_min_score !== '') {
-    const score = Number(config.lighthouse_min_score);
-    if (!Number.isInteger(score) || score < 0 || score > 100) {
-      throw new Error('Config lighthouse_min_score must be an integer between 0 and 100');
     }
   }
 
@@ -516,18 +506,6 @@ export function resolveConfiguration({
         : fileConfig?.bundle_size_max_mb !== undefined && fileConfig.bundle_size_max_mb !== ''
           ? String(fileConfig.bundle_size_max_mb)
           : DEFAULT_CONFIG.bundle_size_max_mb,
-    audit_lighthouse:
-      inputs.audit_lighthouse !== undefined && inputs.audit_lighthouse !== ''
-        ? String(inputs.audit_lighthouse) === 'true'
-        : fileConfig?.audit_lighthouse !== undefined
-          ? Boolean(fileConfig.audit_lighthouse)
-          : DEFAULT_CONFIG.audit_lighthouse,
-    lighthouse_min_score:
-      inputs.lighthouse_min_score !== undefined && inputs.lighthouse_min_score !== ''
-        ? String(inputs.lighthouse_min_score)
-        : fileConfig?.lighthouse_min_score !== undefined && fileConfig.lighthouse_min_score !== ''
-          ? String(fileConfig.lighthouse_min_score)
-          : DEFAULT_CONFIG.lighthouse_min_score,
     build: {
       install_command:
         inputs.install_command ||

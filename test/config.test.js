@@ -464,34 +464,26 @@ test('validateConfig - validates audit settings', () => {
   assert.equal(
     validateConfig({
       audit_bundle_size: true,
-      bundle_size_max_mb: '12.5',
-      audit_lighthouse: true,
-      lighthouse_min_score: 80
+      bundle_size_max_mb: '12.5'
     }),
     true
   );
   assert.throws(() => validateConfig({ audit_bundle_size: 'yes' }), /audit_bundle_size must be a boolean/);
-  assert.throws(() => validateConfig({ audit_lighthouse: 'yes' }), /audit_lighthouse must be a boolean/);
   assert.throws(() => validateConfig({ bundle_size_max_mb: '-1' }), /bundle_size_max_mb must be a positive number/);
-  assert.throws(() => validateConfig({ lighthouse_min_score: 101 }), /lighthouse_min_score must be an integer/);
 });
 
 test('resolveConfiguration - audits are off by default and honor input and file overrides', () => {
   const missing = path.join(os.tmpdir(), 'missing-audit-config.yml');
   const defaults = resolveConfiguration({ inputs: {}, configFilePath: missing });
   assert.equal(defaults.audit_bundle_size, false);
-  assert.equal(defaults.audit_lighthouse, false);
   assert.equal(defaults.bundle_size_max_mb, '');
-  assert.equal(defaults.lighthouse_min_score, '');
 
   const fromInputs = resolveConfiguration({
-    inputs: { audit_bundle_size: true, bundle_size_max_mb: '20', audit_lighthouse: 'true', lighthouse_min_score: '75' },
+    inputs: { audit_bundle_size: true, bundle_size_max_mb: '20' },
     configFilePath: missing
   });
   assert.equal(fromInputs.audit_bundle_size, true);
   assert.equal(fromInputs.bundle_size_max_mb, '20');
-  assert.equal(fromInputs.audit_lighthouse, true);
-  assert.equal(fromInputs.lighthouse_min_score, '75');
 
   const configFilePath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'audit-config-')), '.storybook-pages.yml');
   fs.writeFileSync(configFilePath, 'audit_bundle_size: true\nbundle_size_max_mb: 8\n');

@@ -143,14 +143,6 @@ inputs:
     description: 'Optional total static output budget in megabytes; the job fails when the audit exceeds it'
     required: false
     default: ''
-  audit_lighthouse:
-    description: 'Whether to run an opt-in Lighthouse audit of the built Storybook and append its scores to the job summary'
-    required: false
-    default: 'false'
-  lighthouse_min_score:
-    description: 'Optional minimum Lighthouse score (0-100) every category must reach; the job fails otherwise'
-    required: false
-    default: ''
 
 outputs:
   page_url:
@@ -194,8 +186,7 @@ runs:
             `SB_ENABLE_PASSCODE_GATE=${c.enable_passcode_gate}`, `SB_PASSCODE_SESSION_HOURS=${c.passcode_session_hours}`,
             `SB_SMOKE_TEST=${c.smoke_test}`, `SB_SMOKE_TEST_STORIES=${c.smoke_test_stories}`, `SB_SMOKE_TEST_TIMEOUT_MS=${c.smoke_test_timeout_ms}`,
             `SB_SITE_URL=${c.site_url || ""}`, `SB_BASE_PATH=${c.base_path || ""}`, `SB_AUTO_BASE_URL=${c.auto_base_url}`,
-            `SB_AUDIT_BUNDLE_SIZE=${c.audit_bundle_size}`, `SB_BUNDLE_SIZE_MAX_MB=${c.bundle_size_max_mb}`,
-            `SB_AUDIT_LIGHTHOUSE=${c.audit_lighthouse}`, `SB_LIGHTHOUSE_MIN_SCORE=${c.lighthouse_min_score}`
+            `SB_AUDIT_BUNDLE_SIZE=${c.audit_bundle_size}`, `SB_BUNDLE_SIZE_MAX_MB=${c.bundle_size_max_mb}`
           ];
           const {appendFileSync} = await import("node:fs");
           appendFileSync(process.env.GITHUB_ENV, `${lines.join("\n")}\n`);
@@ -234,7 +225,7 @@ runs:
         echo "Running custom build command: $CMD"
         eval "$CMD"
 
-    # Audits run before badges/stats are written so the scorecard measures the
+    # The audit runs before badges/stats are written so it measures the
     # Storybook build output only.
     - name: Audit Storybook bundle size
       if: ${{ env.SB_AUDIT_BUNDLE_SIZE == 'true' }}
@@ -244,15 +235,6 @@ runs:
         SB_BUNDLE_SIZE_MAX_MB: ${{ env.SB_BUNDLE_SIZE_MAX_MB }}
         WORKSPACE_ROOT: ${{ github.workspace }}
       run: node "${{ github.action_path }}/src/audit-static.js" "$SB_PATH" "$WORKSPACE_ROOT"
-
-    - name: Run Lighthouse audit
-      if: ${{ env.SB_AUDIT_LIGHTHOUSE == 'true' }}
-      shell: bash
-      env:
-        SB_PATH: ${{ env.SB_PATH }}
-        SB_LIGHTHOUSE_MIN_SCORE: ${{ env.SB_LIGHTHOUSE_MIN_SCORE }}
-        WORKSPACE_ROOT: ${{ github.workspace }}
-      run: node "${{ github.action_path }}/src/audit-lighthouse.js" "$SB_PATH" "$WORKSPACE_ROOT"
 
     - name: Generate Storybook badges
       if: ${{ env.SB_GENERATE_BADGES == 'true' }}

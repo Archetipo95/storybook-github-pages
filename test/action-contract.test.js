@@ -21,9 +21,7 @@ test('repository-root action retains the documented feature-parity inputs', () =
     'smoke_test_stories:',
     'smoke_test_timeout_ms:',
     'audit_bundle_size:',
-    'bundle_size_max_mb:',
-    'audit_lighthouse:',
-    'lighthouse_min_score:'
+    'bundle_size_max_mb:'
   ]) {
     assert.match(action, new RegExp(`\\n  ${input}`));
   }

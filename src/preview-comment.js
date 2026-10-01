@@ -3,7 +3,6 @@
 // on every publish instead of accumulating a new comment per commit.
 
 import { formatBundleReport } from './audit-static.js';
-import { formatLighthouseReport } from './audit-lighthouse.js';
 
 const MARKER_PREFIX = '<!-- storybook-pages-preview:pr-';
 const MARKER_SUFFIX = ' -->';
@@ -62,8 +61,7 @@ export function buildCommentBody({
   hasBadges = false,
   hasStatsGraph = false,
   bundleReport = null,
-  baseBundleReport = null,
-  lighthouseReport = null
+  baseBundleReport = null
 }) {
   if (typeof previewUrl !== 'string' || previewUrl === '') {
     throw new Error('previewUrl is required to build a preview comment body');
@@ -175,13 +173,6 @@ export function buildCommentBody({
 
   if (bundleReport) {
     lines.push(formatBundleReport(bundleReport, { baseReport: baseBundleReport, topN: 5 }));
-  }
-
-  if (lighthouseReport) {
-    const section = formatLighthouseReport(lighthouseReport, {
-      note: '<sub>Scores reported by the pull request build job.</sub>'
-    });
-    if (section) lines.push(section);
   }
 
   // Growth / History Chart

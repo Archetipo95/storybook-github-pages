@@ -38,7 +38,7 @@ function storyIdsFromMetadata(staticDir) {
   return [];
 }
 
-export function resolveStaticDirectory(staticPath, workspaceRoot) {
+function resolveStaticDirectory(staticPath, workspaceRoot) {
   const root = fs.realpathSync(path.resolve(workspaceRoot));
   const target = path.resolve(root, staticPath);
   const relative = path.relative(root, target);
@@ -56,7 +56,7 @@ export function resolveStaticDirectory(staticPath, workspaceRoot) {
   return realTarget;
 }
 
-export function createStaticServer(staticDir) {
+function createStaticServer(staticDir) {
   const server = http.createServer((request, response) => {
     let requestPath;
     try {
