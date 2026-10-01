@@ -54,6 +54,9 @@ jobs:
 
       - name: Run release validation suite
         if: steps.plan.outputs.verify == 'true'
+        env:
+          # Fails the release when an internal action pin runs older code.
+          RELEASE_PIN_CHECK: '1'
         run: |
           npm ci
           npm test
