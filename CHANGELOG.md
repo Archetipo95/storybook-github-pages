@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Node.js 24 is now the runtime.** The composite action and the reusable deploy workflow install Node.js 24 (was 20, which reached end of life in April 2026) before running your install and build commands. Storybook builds run by this action must support Node.js 24. `engines.node` is now `>=24.0.0`.
+
 ### Fixed
 
 - Composite actions read their install path from `$GITHUB_ACTION_PATH` instead of interpolating `${{ github.action_path }}` into shell scripts.
