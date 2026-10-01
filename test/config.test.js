@@ -9,7 +9,8 @@ import {
   parseSimpleYaml,
   resolveConfiguration,
   resolveDeploymentTarget,
-  resolveBaseDirectoryForRef
+  resolveBaseDirectoryForRef,
+  validateRelativeDirectory
 } from '../src/config.js';
 import { augmentBuildCommand, computeBaseUrl, hasExplicitBaseUrl } from '../src/base-url.js';
 
@@ -458,4 +459,21 @@ test('resolveConfiguration - defaults generate_stats_graph and stats_directory, 
   assert.equal(fromInput.stats_directory, 'doc-stats');
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test('validateRelativeDirectory rejects paths that normalize to the parent directory', () => {
+  for (const value of ['..', 'a/..', 'a/../..', 'feature/../..', 'a\\..\\..', 'a/b/../../..', './..']) {
+    assert.throws(() => validateRelativeDirectory(value, 'field', { allowEmpty: true }), /unsafe/, value);
+  }
+  assert.equal(validateRelativeDirectory('feature/../release'), true, 'paths that stay inside remain valid');
+});
+
+test('resolveBaseDirectoryForRef never maps a base ref outside the Pages branch', () => {
+  for (const ref of ['feature/../..', 'refs/heads/a/../..', 'a/b/../../../x', '.github', 'refs/heads/.git']) {
+    assert.throws(() => resolveBaseDirectoryForRef(ref, { default_branch: 'main' }), /unsafe/, ref);
+  }
+  assert.throws(
+    () => resolveBaseDirectoryForRef('develop', { ref_to_directory: { develop: 'x/../..' } }),
+    /ref_to_directory/
+  );
 });

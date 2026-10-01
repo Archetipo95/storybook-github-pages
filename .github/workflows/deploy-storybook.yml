@@ -286,7 +286,12 @@ jobs:
 
       - name: Run Storybook smoke test
         if: ${{ steps.config.outputs.smoke_test == 'true' }}
-        run: node src/smoke-test.js "${{ steps.config.outputs.path }}" "${{ github.workspace }}" "${{ steps.config.outputs.smoke_test_stories }}" "${{ steps.config.outputs.smoke_test_timeout_ms }}"
+        env:
+          TARGET_PATH: ${{ steps.config.outputs.path }}
+          WORKSPACE_ROOT: ${{ github.workspace }}
+          SMOKE_TEST_STORIES: ${{ steps.config.outputs.smoke_test_stories }}
+          SMOKE_TEST_TIMEOUT_MS: ${{ steps.config.outputs.smoke_test_timeout_ms }}
+        run: node src/smoke-test.js "$TARGET_PATH" "$WORKSPACE_ROOT" "$SMOKE_TEST_STORIES" "$SMOKE_TEST_TIMEOUT_MS"
 
       - name: Validate static artifact
         run: |
@@ -309,9 +314,11 @@ jobs:
         run: node src/inject-auth-gate.js "$TARGET_PATH"
 
       - name: Ensure .nojekyll exists
+        env:
+          TARGET_PATH: ${{ steps.config.outputs.path }}
         run: |
-          if [ -d "${{ steps.config.outputs.path }}" ]; then
-            touch "${{ steps.config.outputs.path }}/.nojekyll"
+          if [ -d "$TARGET_PATH" ]; then
+            touch "$TARGET_PATH/.nojekyll"
           fi
 
       - name: Upload Pages artifact

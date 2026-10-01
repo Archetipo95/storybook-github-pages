@@ -56,6 +56,7 @@ export function validateRelativeDirectory(value, field = 'target_directory', { a
   const normalized = path.posix.normalize(value.replaceAll('\\', '/'));
   if (
     normalized === '.' ||
+    normalized === '..' ||
     normalized.startsWith('../') ||
     normalized.includes('/../') ||
     normalized.startsWith('/') ||
