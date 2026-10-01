@@ -40,15 +40,3 @@ export async function readCnameFile(directory) {
     throw error;
   }
 }
-
-if (process.argv[1]?.endsWith('cname.js')) {
-  const directory = process.argv[2];
-  writeCnameFile(directory, process.env.SB_CNAME || '')
-    .then(written => {
-      if (written) console.log(`Wrote ${CNAME_FILE} to ${directory}`);
-    })
-    .catch(error => {
-      console.error(error.message);
-      process.exit(1);
-    });
-}

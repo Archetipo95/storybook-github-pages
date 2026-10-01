@@ -152,11 +152,10 @@ test('invalid cname fails before the Pages branch is modified', async () => {
   }
 });
 
-test('actions and reusable workflow expose and wire cname inputs', async () => {
+test('artifact mode warns about cname while directory mode wires it to the publisher', async () => {
   const action = await fs.readFile(path.join(process.cwd(), 'action.yml'), 'utf8');
-  assert.match(action, /\n  cname:/);
-  assert.match(action, /\n  preserve_cname:/);
-  assert.match(action, /src\/cname\.js/);
+  assert.doesNotMatch(action, /src\/cname\.js/, 'artifact mode must not write a CNAME GitHub ignores');
+  assert.match(action, /::warning title=cname ignored in artifact mode::/);
 
   const publisher = await fs.readFile(path.join(process.cwd(), 'publisher/action.yml'), 'utf8');
   assert.match(publisher, /CNAME: \$\{\{ inputs\.cname \}\}/);
@@ -165,6 +164,7 @@ test('actions and reusable workflow expose and wire cname inputs', async () => {
   const workflow = await fs.readFile(path.join(process.cwd(), '.github/workflows/deploy-storybook.yml'), 'utf8');
   assert.match(workflow, /\n      cname:\n/);
   assert.match(workflow, /\n      preserve_cname:\n/);
-  assert.match(workflow, /node src\/cname\.js/);
+  assert.doesNotMatch(workflow, /node src\/cname\.js/, 'artifact mode must not write a CNAME GitHub ignores');
+  assert.match(workflow, /::warning title=cname ignored in artifact mode::/);
   assert.match(workflow, /cname: \$\{\{ needs\.build-and-upload\.outputs\.cname \}\}/);
 });

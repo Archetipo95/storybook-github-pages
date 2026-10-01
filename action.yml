@@ -75,14 +75,6 @@ inputs:
     description: 'Optional URL base path'
     required: false
     default: ''
-  cname:
-    description: 'Custom domain written to a CNAME file in the published site root (for example, storybook.example.com)'
-    required: false
-    default: ''
-  preserve_cname:
-    description: 'Whether to keep an existing CNAME on the Pages branch when the new build does not provide one (directory mode)'
-    required: false
-    default: 'true'
   managed_directories:
     description: 'Comma-separated managed directories preserved during root publication'
     required: false
@@ -289,13 +281,10 @@ runs:
           touch "$SB_PATH/.nojekyll"
         fi
 
-    - name: Write custom domain CNAME
-      if: ${{ env.SB_CNAME != '' }}
+    - name: Warn about ignored custom domain
+      if: ${{ env.SB_CNAME != '' && env.SB_MODE == 'artifact' }}
       shell: bash
-      env:
-        SB_PATH: ${{ env.SB_PATH }}
-        SB_CNAME: ${{ env.SB_CNAME }}
-      run: node "${{ github.action_path }}/src/cname.js" "$SB_PATH"
+      run: echo '::warning title=cname ignored in artifact mode::GitHub Pages ignores CNAME files for GitHub Actions (artifact) deployments. Configure the custom domain in repository Settings > Pages instead.'
 
     - name: Upload Pages artifact
       if: ${{ env.SB_PUBLISH == 'true' && env.SB_MODE == 'artifact' }}

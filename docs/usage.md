@@ -170,8 +170,8 @@ jobs:
 | `target_directory`            | `string`  | `''`                 | Relative directory to replace; empty means the production root                                                                            |
 | `site_url`                    | `string`  | `''`                 | Canonical site URL used for deployment metadata                                                                                           |
 | `base_path`                   | `string`  | `''`                 | URL base path; derived from `target_directory` when empty                                                                                 |
-| `cname`                       | `string`  | `''`                 | Custom domain (for example `storybook.example.com`) written as a single-line `CNAME` file at the published site root                      |
-| `preserve_cname`              | `boolean` | `true`               | Directory mode: keep the Pages branch's existing root `CNAME` when a root publish does not provide one                                    |
+| `cname`                       | `string`  | `''`                 | Reusable workflow, directory mode: custom domain written as a single-line `CNAME` at the Pages branch root; ignored in artifact mode      |
+| `preserve_cname`              | `boolean` | `true`               | Reusable workflow, directory mode: keep the existing root `CNAME` when a root publish does not provide one                                |
 | `trigger_pages_rebuild`       | `boolean` | `false`              | Whether to explicitly request a Pages rebuild after a directory publish; normally unnecessary for branch-based Pages                      |
 | `preview_root`                | `string`  | `pr-preview`         | Root directory (on the Pages branch) under which PR previews are published, as `<preview_root>/pr-<number>`                               |
 | `preview_retention_days`      | `number`  | `30`                 | Days an _open_ PR's preview may remain before the janitor prunes it; closed-PR previews are always eligible for removal regardless of age |
@@ -247,11 +247,13 @@ Use an empty `target_directory` for the production root and a name such as `stag
 
 ### Custom domains (`CNAME`)
 
-Set `cname: storybook.example.com` to publish a custom domain. The value must be a bare hostname: schemes (`https://`), ports, paths, and trailing slashes are rejected.
+How GitHub Pages picks up a custom domain depends on the publishing source:
 
-- **Artifact mode** writes `CNAME` into the build output before it is uploaded with `actions/upload-pages-artifact`.
-- **Directory mode** writes `CNAME` to the root of the Pages branch, for both root and subdirectory (for example `staging` or PR preview) publishes.
+- **Artifact mode** (`actions/deploy-pages`): GitHub ignores `CNAME` files in the deployed artifact. Configure the domain in repository **Settings → Pages → Custom domain**. Setting `cname` in artifact mode only emits a warning.
+- **Directory mode** (branch-backed): GitHub reads the domain from the `CNAME` file at the root of the Pages branch, so that file must survive every publish.
 
-In directory mode an existing root `CNAME` is kept when a root publish replaces the branch contents and neither `cname` nor the build output provides one, so GitHub Pages does not reset the custom domain or break certificate renewal. Subdirectory publishes never touch the root `CNAME`. Set `preserve_cname: false` to let a root publish remove it. Precedence is: `cname` input, then a `CNAME` shipped in the build output (for example from `.storybook/public`), then the preserved branch file.
+In directory mode, an existing root `CNAME` is kept when a root publish replaces the branch contents and neither `cname` nor the build output provides one, so the custom domain is not reset and certificate renewal keeps working. Subdirectory publishes (named environments, PR previews) never touch the root `CNAME`. Set `preserve_cname: false` to let a root publish remove it.
+
+Set `cname: storybook.example.com` to have the publisher write the file for you. The value must be a bare hostname: schemes (`https://`), ports, paths, and trailing slashes are rejected. Precedence on a root publish is: `cname` input, then a `CNAME` shipped in the build output (for example from `.storybook/public`), then the preserved branch file.
 
 ---

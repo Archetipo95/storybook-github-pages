@@ -84,12 +84,12 @@ on:
         type: string
         default: ''
       cname:
-        description: 'Custom domain written to a CNAME file in the published site root (for example, storybook.example.com)'
+        description: 'Directory mode: custom domain written to a CNAME file at the Pages branch root (for example, storybook.example.com). Ignored in artifact mode; configure the domain in repository Settings > Pages'
         required: false
         type: string
         default: ''
       preserve_cname:
-        description: 'Whether to keep an existing CNAME on the Pages branch when the new build does not provide one (directory mode)'
+        description: 'Directory mode: whether to keep the existing root CNAME when a root publish does not provide one'
         required: false
         type: boolean
         default: true
@@ -326,12 +326,9 @@ jobs:
             touch "${{ steps.config.outputs.path }}/.nojekyll"
           fi
 
-      - name: Write custom domain CNAME
-        if: ${{ steps.config.outputs.cname != '' && (steps.config.outputs.mode == 'artifact' || steps.config.outputs.target_directory == '') }}
-        env:
-          TARGET_PATH: ${{ steps.config.outputs.path }}
-          SB_CNAME: ${{ steps.config.outputs.cname }}
-        run: node src/cname.js "$TARGET_PATH"
+      - name: Warn about ignored custom domain
+        if: ${{ steps.config.outputs.cname != '' && steps.config.outputs.mode == 'artifact' }}
+        run: echo '::warning title=cname ignored in artifact mode::GitHub Pages ignores CNAME files for GitHub Actions (artifact) deployments. Configure the custom domain in repository Settings > Pages instead.'
 
       - name: Upload Pages artifact
         if: ${{ steps.config.outputs.mode == 'artifact' }}

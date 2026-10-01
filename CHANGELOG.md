@@ -11,7 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `cname` and `preserve_cname` inputs for custom-domain support. Artifact deployments write a validated `CNAME` into the uploaded build, and directory mode writes it to the Pages branch root. Root directory publishes now keep an existing `CNAME` by default so GitHub Pages does not reset the custom domain ([#45](https://github.com/Archetipo95/storybook-github-pages/issues/45)).
+### Fixed
+
+- Directory mode root publishes no longer delete the Pages branch's `CNAME` file, which could reset the custom domain and break certificate renewal. Set `preserve_cname: false` to restore the previous behaviour ([#45](https://github.com/Archetipo95/storybook-github-pages/issues/45)).
+
+### Added
+
+- `cname` input for directory mode that writes a validated `CNAME` at the Pages branch root. Artifact mode warns instead, because GitHub ignores `CNAME` files in Actions-deployed artifacts; configure the domain in repository Settings → Pages ([#45](https://github.com/Archetipo95/storybook-github-pages/issues/45)).
 
 ## [1.10.0] - 2026-10-01
 
