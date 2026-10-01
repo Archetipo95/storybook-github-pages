@@ -186,7 +186,8 @@ runs:
             `SB_ENABLE_PASSCODE_GATE=${c.enable_passcode_gate}`, `SB_PASSCODE_SESSION_HOURS=${c.passcode_session_hours}`,
             `SB_SMOKE_TEST=${c.smoke_test}`, `SB_SMOKE_TEST_STORIES=${c.smoke_test_stories}`, `SB_SMOKE_TEST_TIMEOUT_MS=${c.smoke_test_timeout_ms}`,
             `SB_SITE_URL=${c.site_url || ""}`, `SB_BASE_PATH=${c.base_path || ""}`, `SB_AUTO_BASE_URL=${c.auto_base_url}`,
-            `SB_AUDIT_BUNDLE_SIZE=${c.audit_bundle_size}`, `SB_BUNDLE_SIZE_MAX_MB=${c.bundle_size_max_mb}`
+            `SB_AUDIT_BUNDLE_SIZE=${c.audit_bundle_size}`, `SB_BUNDLE_SIZE_MAX_MB=${c.bundle_size_max_mb}`,
+            `SB_CNAME=${c.cname || ""}`
           ];
           const {appendFileSync} = await import("node:fs");
           appendFileSync(process.env.GITHUB_ENV, `${lines.join("\n")}\n`);
@@ -301,6 +302,11 @@ runs:
         if [ -d "$SB_PATH" ]; then
           touch "$SB_PATH/.nojekyll"
         fi
+
+    - name: Warn about ignored custom domain
+      if: ${{ env.SB_CNAME != '' && env.SB_MODE == 'artifact' }}
+      shell: bash
+      run: echo '::warning title=cname ignored in artifact mode::GitHub Pages ignores CNAME files for GitHub Actions (artifact) deployments. Configure the custom domain in repository Settings > Pages instead.'
 
     - name: Upload Pages artifact
       if: ${{ env.SB_PUBLISH == 'true' && env.SB_MODE == 'artifact' }}

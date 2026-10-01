@@ -9,28 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Bundle Size Audit**: New opt-in `audit_bundle_size` and `bundle_size_max_mb` inputs on the reusable workflow, composite action, `preview-build` action and `.storybook-pages.yml`. The audit (`src/audit-static.js`, no dependencies) reports total and estimated gzip size, a per-type breakdown (JavaScript, CSS, fonts, images and more) and the 10 largest assets in `$GITHUB_STEP_SUMMARY`, saves `audit/bundle-size.json`, and fails the build when the budget is exceeded. PR preview comments show the bundle size, recomputed by the trusted publisher and compared with the base branch.
+- `cname` input for directory mode that writes a validated `CNAME` at the Pages branch root. Artifact mode warns instead, because GitHub ignores `CNAME` files in Actions-deployed artifacts; configure the domain in repository Settings → Pages ([#45](https://github.com/Archetipo95/storybook-github-pages/issues/45)).
+- CodeQL code scanning for JavaScript and GitHub Actions workflows.
+- `Release Tags` workflow that creates the `vX.Y.Z` tag automatically when a version bump lands on `main` (after tests pass and the lockfile and changelog agree) and keeps the major tag on the newest release.
+- Test that fails when a `run:` script interpolates `${{ }}` values directly instead of passing them through `env:`.
+
 ### Changed
 
 - **Node.js 24 is now the runtime.** The composite action and the reusable deploy workflow install Node.js 24 (was 20, which reached end of life in April 2026) before running your install and build commands. Storybook builds run by this action must support Node.js 24. `engines.node` is now `>=24.0.0`.
 
 ### Fixed
 
+- Directory mode root publishes no longer delete the Pages branch's `CNAME` file, which could reset the custom domain and break certificate renewal. Set `preserve_cname: false` to restore the previous behaviour ([#45](https://github.com/Archetipo95/storybook-github-pages/issues/45)).
+- Pass the custom install command and deploy-workflow smoke-test/`.nojekyll` paths to shell steps through `env:` instead of interpolating them into the script source.
 - Composite actions read their install path from `$GITHUB_ACTION_PATH` instead of interpolating `${{ github.action_path }}` into shell scripts.
+- Reject relative directories that normalize to `..` (for example `feature/../..`) in target, preview-root, and base-ref resolution.
 - `.storybook-pages.yml` keys `__proto__`, `constructor`, and `prototype` are rejected instead of polluting `Object.prototype`.
 - Pages branch names starting with `-` are rejected, and the git branch writer refuses unsafe branch names before running `git`.
 - Base-ref slash trimming runs in linear time instead of using a regex that is slow on long runs of `/`.
-
-### Added
-
-- **Bundle Size Audit**: New opt-in `audit_bundle_size` and `bundle_size_max_mb` inputs on the reusable workflow, composite action, `preview-build` action and `.storybook-pages.yml`. The audit (`src/audit-static.js`, no dependencies) reports total and estimated gzip size, a per-type breakdown (JavaScript, CSS, fonts, images and more) and the 10 largest assets in `$GITHUB_STEP_SUMMARY`, saves `audit/bundle-size.json`, and fails the build when the budget is exceeded. PR preview comments show the bundle size, recomputed by the trusted publisher and compared with the base branch.
-- CodeQL code scanning for JavaScript and GitHub Actions workflows.
-- `Release Tags` workflow that creates the `vX.Y.Z` tag automatically when a version bump lands on `main` (after tests pass and the lockfile and changelog agree) and keeps the major tag on the newest release.
-- Test that fails when a `run:` script interpolates `${{ }}` values directly instead of passing them through `env:`.
-
-### Fixed
-
-- Pass the custom install command and deploy-workflow smoke-test/`.nojekyll` paths to shell steps through `env:` instead of interpolating them into the script source.
-- Reject relative directories that normalize to `..` (for example `feature/../..`) in target, preview-root, and base-ref resolution.
 - Preview janitor no longer fails the sweep when it cannot update a preview comment's expiration note.
 
 ## [1.10.0] - 2026-10-01
