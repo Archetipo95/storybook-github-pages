@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { normalizeCname } from './cname.js';
 
 export const DEFAULT_CONFIG = {
   version: 1,
@@ -13,6 +14,8 @@ export const DEFAULT_CONFIG = {
   create_deployment: false,
   site_url: '',
   base_path: '',
+  cname: '',
+  preserve_cname: true,
   artifact_name: 'github-pages',
   managed_directories: [],
   package_manager: 'npm',
@@ -125,6 +128,10 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
     if (config[field] !== undefined && typeof config[field] !== 'string') {
       throw new Error(`Config ${field} must be a string`);
     }
+  }
+  if (config.cname !== undefined) normalizeCname(config.cname);
+  if (config.preserve_cname !== undefined && typeof config.preserve_cname !== 'boolean') {
+    throw new Error('Config preserve_cname must be a boolean');
   }
   if (config.create_deployment !== undefined && typeof config.create_deployment !== 'boolean') {
     throw new Error('Config create_deployment must be a boolean');
@@ -390,6 +397,13 @@ export function resolveConfiguration({
           : DEFAULT_CONFIG.create_deployment,
     site_url: inputs.site_url || fileConfig?.site_url || DEFAULT_CONFIG.site_url,
     base_path: inputs.base_path || fileConfig?.base_path || DEFAULT_CONFIG.base_path,
+    cname: normalizeCname(inputs.cname || fileConfig?.cname || DEFAULT_CONFIG.cname),
+    preserve_cname:
+      inputs.preserve_cname !== undefined && inputs.preserve_cname !== ''
+        ? String(inputs.preserve_cname) === 'true'
+        : fileConfig?.preserve_cname !== undefined
+          ? Boolean(fileConfig.preserve_cname)
+          : DEFAULT_CONFIG.preserve_cname,
     artifact_name: inputs.artifact_name || fileConfig?.artifact_name || DEFAULT_CONFIG.artifact_name,
     managed_directories:
       inputs.managed_directories || fileConfig?.managed_directories || DEFAULT_CONFIG.managed_directories,

@@ -170,6 +170,8 @@ jobs:
 | `target_directory`            | `string`  | `''`                 | Relative directory to replace; empty means the production root                                                                            |
 | `site_url`                    | `string`  | `''`                 | Canonical site URL used for deployment metadata                                                                                           |
 | `base_path`                   | `string`  | `''`                 | URL base path; derived from `target_directory` when empty                                                                                 |
+| `cname`                       | `string`  | `''`                 | Custom domain (for example `storybook.example.com`) written as a single-line `CNAME` file at the published site root                      |
+| `preserve_cname`              | `boolean` | `true`               | Directory mode: keep the Pages branch's existing root `CNAME` when a root publish does not provide one                                    |
 | `trigger_pages_rebuild`       | `boolean` | `false`              | Whether to explicitly request a Pages rebuild after a directory publish; normally unnecessary for branch-based Pages                      |
 | `preview_root`                | `string`  | `pr-preview`         | Root directory (on the Pages branch) under which PR previews are published, as `<preview_root>/pr-<number>`                               |
 | `preview_retention_days`      | `number`  | `30`                 | Days an _open_ PR's preview may remain before the janitor prunes it; closed-PR previews are always eligible for removal regardless of age |
@@ -242,5 +244,14 @@ build:
 Set `mode: directory` to publish to a shared Pages branch. The build job remains untrusted (`contents: read`) and transfers its validated output to a separate publisher job with `contents: write`. Writes are serialized per repository and branch, conflicts receive bounded fetch/rebase retries, and the configured target is staged and replaced atomically. GitHub Pages normally rebuilds automatically after a branch push; set `trigger_pages_rebuild: 'true'` only when an explicit rebuild request is needed for a non-standard Pages configuration.
 
 Use an empty `target_directory` for the production root and a name such as `staging` for a named environment; both can coexist. Targets must be relative and cannot traverse or address `.git` or `.github`. Unrelated directories are preserved. GitHub Pages has one site/custom-domain configuration, so named environments are URL subpaths (for example `/staging`) and publication is eventually visible after the rebuild.
+
+### Custom domains (`CNAME`)
+
+Set `cname: storybook.example.com` to publish a custom domain. The value must be a bare hostname: schemes (`https://`), ports, paths, and trailing slashes are rejected.
+
+- **Artifact mode** writes `CNAME` into the build output before it is uploaded with `actions/upload-pages-artifact`.
+- **Directory mode** writes `CNAME` to the root of the Pages branch, for both root and subdirectory (for example `staging` or PR preview) publishes.
+
+In directory mode an existing root `CNAME` is kept when a root publish replaces the branch contents and neither `cname` nor the build output provides one, so GitHub Pages does not reset the custom domain or break certificate renewal. Subdirectory publishes never touch the root `CNAME`. Set `preserve_cname: false` to let a root publish remove it. Precedence is: `cname` input, then a `CNAME` shipped in the build output (for example from `.storybook/public`), then the preserved branch file.
 
 ---

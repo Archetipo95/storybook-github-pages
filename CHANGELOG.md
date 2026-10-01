@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `cname` and `preserve_cname` inputs for custom-domain support. Artifact deployments write a validated `CNAME` into the uploaded build, and directory mode writes it to the Pages branch root. Root directory publishes now keep an existing `CNAME` by default so GitHub Pages does not reset the custom domain ([#45](https://github.com/Archetipo95/storybook-github-pages/issues/45)).
+
 ## [1.10.0] - 2026-10-01
 
 ### Changed

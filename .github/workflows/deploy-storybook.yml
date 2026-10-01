@@ -83,6 +83,16 @@ on:
         required: false
         type: string
         default: ''
+      cname:
+        description: 'Custom domain written to a CNAME file in the published site root (for example, storybook.example.com)'
+        required: false
+        type: string
+        default: ''
+      preserve_cname:
+        description: 'Whether to keep an existing CNAME on the Pages branch when the new build does not provide one (directory mode)'
+        required: false
+        type: boolean
+        default: true
       auto_base_url:
         description: 'Whether to compute and inject the Storybook base URL for the deployment target'
         required: false
@@ -172,6 +182,8 @@ jobs:
       site_url: ${{ steps.config.outputs.site_url }}
       base_path: ${{ steps.config.outputs.base_path }}
       auto_base_url: ${{ steps.config.outputs.auto_base_url }}
+      cname: ${{ steps.config.outputs.cname }}
+      preserve_cname: ${{ steps.config.outputs.preserve_cname }}
       managed_directories: ${{ steps.config.outputs.managed_directories }}
       artifact_name: ${{ steps.config.outputs.artifact_name }}
       generate_badges: ${{ steps.config.outputs.generate_badges }}
@@ -314,6 +326,13 @@ jobs:
             touch "${{ steps.config.outputs.path }}/.nojekyll"
           fi
 
+      - name: Write custom domain CNAME
+        if: ${{ steps.config.outputs.cname != '' && (steps.config.outputs.mode == 'artifact' || steps.config.outputs.target_directory == '') }}
+        env:
+          TARGET_PATH: ${{ steps.config.outputs.path }}
+          SB_CNAME: ${{ steps.config.outputs.cname }}
+        run: node src/cname.js "$TARGET_PATH"
+
       - name: Upload Pages artifact
         if: ${{ steps.config.outputs.mode == 'artifact' }}
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
@@ -444,3 +463,5 @@ jobs:
           managed_directories: ${{ needs.build-and-upload.outputs.managed_directories }}
           site_url: ${{ needs.build-and-upload.outputs.site_url }}
           base_path: ${{ needs.build-and-upload.outputs.base_path }}
+          cname: ${{ needs.build-and-upload.outputs.cname }}
+          preserve_cname: ${{ needs.build-and-upload.outputs.preserve_cname }}
