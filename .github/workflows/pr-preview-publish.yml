@@ -68,6 +68,11 @@ on:
         required: false
         type: string
         default: ''
+      badges_directory:
+        description: 'Badges directory used by the build; excluded from the recomputed bundle size'
+        required: false
+        type: string
+        default: ''
       managed_directories:
         description: 'Comma-separated managed directories preserved during root publication'
         required: false
@@ -309,6 +314,7 @@ jobs:
           INPUT_BASE_PATH: ${{ inputs.base_path }}
           INPUT_GENERATE_STATS_GRAPH: ${{ inputs.generate_stats_graph }}
           INPUT_STATS_DIRECTORY: ${{ inputs.stats_directory }}
+          INPUT_BADGES_DIRECTORY: ${{ inputs.badges_directory }}
           INPUT_MANAGED_DIRECTORIES: ${{ inputs.managed_directories }}
           REPOSITORY: ${{ github.repository }}
         run: |
@@ -323,6 +329,7 @@ jobs:
                   base_path: process.env.INPUT_BASE_PATH,
                   generate_stats_graph: process.env.INPUT_GENERATE_STATS_GRAPH,
                   stats_directory: process.env.INPUT_STATS_DIRECTORY,
+                  badges_directory: process.env.INPUT_BADGES_DIRECTORY,
                   managed_directories: process.env.INPUT_MANAGED_DIRECTORIES
                 }});
                 console.log(`preview_root=${c.preview_root}`);
@@ -331,6 +338,7 @@ jobs:
                 console.log(`base_path=${c.base_path}`);
                 console.log(`generate_stats_graph=${c.generate_stats_graph}`);
                 console.log(`stats_directory=${c.stats_directory}`);
+                console.log(`badges_directory=${c.badges_directory}`);
                 console.log(`managed_directories=${Array.isArray(c.managed_directories) ? c.managed_directories.join(",") : c.managed_directories || ""}`);
               } else {
                 let file_preview_root = undefined;
@@ -339,6 +347,7 @@ jobs:
                 let file_base_path = undefined;
                 let file_generate_stats_graph = undefined;
                 let file_stats_directory = undefined;
+                let file_badges_directory = undefined;
                 let file_managed_directories = undefined;
                 if (existsSync(".storybook-pages.yml")) {
                   const {readFileSync} = await import("node:fs");
@@ -362,6 +371,9 @@ jobs:
                     }
                     if (file_stats_directory === undefined && trimmed.startsWith("stats_directory:")) {
                       file_stats_directory = trimmed.slice("stats_directory:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
+                    }
+                    if (file_badges_directory === undefined && trimmed.startsWith("badges_directory:")) {
+                      file_badges_directory = trimmed.slice("badges_directory:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
                     }
                     if (file_managed_directories === undefined && trimmed.startsWith("managed_directories:")) {
                       file_managed_directories = trimmed.slice("managed_directories:".length).trim().replace(/^["'\''"]|["'\''"]$/g, "");
@@ -409,6 +421,10 @@ jobs:
                 const stats_directory = (rawStatsDirectory !== undefined && rawStatsDirectory !== "")
                   ? rawStatsDirectory
                   : (file_stats_directory !== undefined ? file_stats_directory : "stats");
+                const rawBadgesDirectory = process.env.INPUT_BADGES_DIRECTORY;
+                const badges_directory = (rawBadgesDirectory !== undefined && rawBadgesDirectory !== "")
+                  ? rawBadgesDirectory
+                  : (file_badges_directory !== undefined ? file_badges_directory : "badges");
                 const rawManagedDirs = process.env.INPUT_MANAGED_DIRECTORIES;
                 const managed_directories = (rawManagedDirs !== undefined && rawManagedDirs !== "")
                   ? rawManagedDirs
@@ -419,6 +435,7 @@ jobs:
                 console.log(`base_path=${base_path}`);
                 console.log(`generate_stats_graph=${generate_stats_graph}`);
                 console.log(`stats_directory=${stats_directory}`);
+                console.log(`badges_directory=${badges_directory}`);
                 console.log(`managed_directories=${managed_directories}`);
               }
             });
@@ -470,6 +487,7 @@ jobs:
           base_path: ${{ steps.config.outputs.base_path }}
           generate_stats_graph: ${{ steps.config.outputs.generate_stats_graph }}
           stats_directory: ${{ steps.config.outputs.stats_directory }}
+          badges_directory: ${{ steps.config.outputs.badges_directory }}
           managed_directories: ${{ steps.config.outputs.managed_directories }}
           create_deployment: ${{ inputs.create_deployment }}
           trigger_pages_rebuild: ${{ inputs.trigger_pages_rebuild }}
