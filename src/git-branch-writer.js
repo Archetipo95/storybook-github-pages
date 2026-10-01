@@ -132,9 +132,9 @@ export async function withSerializedBranchWrite({ repo, branch, mutate, commitMe
     let lastError;
     for (let attempt = 0; attempt < RETRIES; attempt += 1) {
       try {
-        // An explicit refspec keeps the branch from ever being parsed as a
+        // `--` ends option parsing so the branch can never be read as a
         // `git fetch` option such as `--upload-pack`.
-        await run('git', ['fetch', 'origin', `+refs/heads/${branch}:refs/remotes/origin/${branch}`], repo);
+        await run('git', ['fetch', '--', 'origin', branch], repo);
         await run('git', ['checkout', '-B', branch, `origin/${branch}`], repo);
         const changed = await mutate(repo);
         if (!changed) return { changed: false };
