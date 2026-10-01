@@ -120,6 +120,10 @@ export async function withSerializedBranchWrite({ repo, branch, mutate, commitMe
         const changed = await mutate(repo);
         if (!changed) return { changed: false };
         await run('git', ['add', '-A'], repo);
+        // A mutate may rewrite files with identical content (e.g. a portal
+        // refresh); git reports "nothing to commit" on stdout, which `run`
+        // does not surface, so check the index explicitly.
+        if (!(await run('git', ['status', '--porcelain'], repo))) return { changed: false };
         let committed = true;
         await run(
           'git',

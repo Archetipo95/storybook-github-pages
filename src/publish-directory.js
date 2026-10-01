@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { resolveDeploymentTarget, validateConfig, validateRelativeDirectory } from './config.js';
 import { requestPagesRebuild, withSerializedBranchWrite, WRITE_LOCK_NAME } from './git-branch-writer.js';
+import { fetchOpenPullRequests, portalOptionsFromEnv, writePortal } from './generate-portal.js';
 
 export async function replaceDirectory(repo, targetDirectory, sourceDirectory, managedDirectories = []) {
   validateRelativeDirectory(targetDirectory, 'target_directory', { allowEmpty: true });
@@ -62,7 +63,8 @@ export async function publishDirectory({
   basePath = '',
   triggerPagesRebuild = false,
   token,
-  repository
+  repository,
+  portal = null
 }) {
   validateConfig({
     mode: 'directory',
@@ -72,12 +74,16 @@ export async function publishDirectory({
     site_url: siteUrl,
     base_path: basePath
   });
+  const pullRequests = portal?.enabled ? await fetchOpenPullRequests({ token, repository }) : null;
   const writeResult = await withSerializedBranchWrite({
     repo,
     branch,
     commitMessage: `Deploy Storybook${targetDirectory ? ` to ${targetDirectory}` : ''}`,
     mutate: async repoPath => {
       await replaceDirectory(repoPath, targetDirectory, source, managedDirectories);
+      if (portal?.enabled) {
+        await writePortal(repoPath, { ...portal, siteUrl: portal.siteUrl || siteUrl, repository, pullRequests });
+      }
       return true;
     }
   });
@@ -123,7 +129,8 @@ if (process.argv[1]?.endsWith('publish-directory.js')) {
           .filter(Boolean)
       : [],
     token: process.env.GITHUB_TOKEN,
-    repository: process.env.GITHUB_REPOSITORY
+    repository: process.env.GITHUB_REPOSITORY,
+    portal: portalOptionsFromEnv()
   })
     .then(result => {
       console.log(JSON.stringify(result));

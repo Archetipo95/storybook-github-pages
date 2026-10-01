@@ -330,6 +330,26 @@ steps:
 The job running this composite action needs `deployments: write` and
 `pull-requests: read` to deactivate deployments and identify live PRs.
 
+### Environment portal and 404 page
+
+Set `generate_portal: 'true'` on the `publisher`, `preview-publisher`, `preview-cleanup`, or `preview-janitor` composite action (cleanup and janitor also read `generate_portal`/`portal_title` from `.storybook-pages.yml`) to keep a catalog of every published Storybook on the Pages branch. Each publish, cleanup, and janitor sweep rescans the branch inside the same serialized write and regenerates:
+
+- **`index.html`** at the branch root when the root is free (no `index.html`, or one the portal generated), otherwise **`portal/index.html`** so a root production Storybook is never replaced.
+- **`environments.json`** next to it: the same catalog as machine-readable JSON.
+- **`404.html`** at the branch root, unless the root already has a `404.html` the portal did not generate.
+
+Any directory up to two levels deep that contains `iframe.html` (present in every Storybook static build) is listed, so badge, stats, and asset directories never appear. Entries are classified by name: the root Storybook and `main`/`master`/`production`/`latest` as **Main**, `v<version>` as **Release**, `pr-<number>` as PR previews, and everything else (e.g. `staging`) as a named environment. Preview cards show the PR title, author, and a link to the pull request (fetched best-effort from the API; failures never block a publish), the last-updated date from the Pages branch history, and an **Expiring Soon** badge once a preview is within `warning_days_before_cleanup` of `preview_retention_days`.
+
+The 404 page redirects shortcut URLs such as `/<repo>/pr-12/…` to the one environment named `pr-12` (e.g. `/<repo>/pr-preview/pr-12/…`), links to the owning environment when a file inside a known environment is missing, and otherwise lists every environment with a filter. Absolute links are built from `site_url` (or `https://<owner>.github.io/<repo>` when unset), so pass `site_url` to every action that generates the portal when you use a custom domain.
+
+| Input             | Default                         | Description                                         |
+| ----------------- | ------------------------------- | --------------------------------------------------- |
+| `generate_portal` | `false`                         | Regenerate the portal, manifest, and 404 page       |
+| `portal_title`    | `<repo> Storybook Environments` | Heading and page title of the portal                |
+| `site_url`        | `''`                            | Canonical site URL used for absolute 404-page links |
+
+Generated output is deterministic, so a janitor sweep that finds nothing new commits nothing. The portal lists PR titles and environment names publicly, even when the passcode gate protects the Storybooks themselves.
+
 ### Adapting the templates to another repository
 
 This repository ships the four workflows above as a working reference implementation using its own bundled `test/fixtures/sample-storybook` fixture as a stand-in Storybook build (it has no Storybook of its own). To adopt them in a repository that does build a real Storybook:

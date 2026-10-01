@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Environment Portal & 404 Navigation** ([#46](https://github.com/Archetipo95/storybook-github-pages/issues/46)): New `generate_portal`/`portal_title` inputs on the `publisher`, `preview-publisher`, `preview-cleanup`, and `preview-janitor` actions regenerate a responsive catalog of every Storybook on the Pages branch (`index.html`, or `portal/index.html` when the root hosts a Storybook), an `environments.json` manifest, and a `404.html` that redirects `pr-<number>` shortcuts and suggests available environments. Hand-written `index.html`/`404.html` files are never overwritten.
+
+### Fixed
+
+- Pages branch writes whose mutation leaves the tree unchanged now return `changed: false` instead of failing, because git's "nothing to commit" message is printed on stdout and was never detected.
+
 ## [1.10.0] - 2026-10-01
 
 ### Changed

@@ -4,6 +4,7 @@ import { validateRelativeDirectory, resolveConfiguration } from './config.js';
 import { run, withSerializedBranchWrite, requestPagesRebuild } from './git-branch-writer.js';
 import { updatePreviewCommentStatus } from './preview-comment.js';
 import { deactivateDeploymentsForPullRequest } from './github-deployments.js';
+import { fetchOpenPullRequests, writePortal } from './generate-portal.js';
 
 const PREVIEW_DIR_PATTERN = /^pr-(\d+)$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -137,6 +138,7 @@ export async function runJanitor({
   previewRoot = 'pr-preview',
   retentionDays = 30,
   warningDaysBeforeCleanup = 3,
+  portal = null,
   token,
   repository
 }) {
@@ -165,19 +167,36 @@ export async function runJanitor({
     getLastModifiedMs: entry => lastModifiedByEntry.get(entry) ?? null
   });
 
-  if (remove.length === 0) {
+  if (remove.length === 0 && !portal?.enabled) {
     return { removed: [], warned: warn, keep, ignored, changed: false };
   }
 
+  // With the portal enabled the sweep always regenerates it, so status
+  // changes (e.g. a preview entering its warning window) reach the catalog.
+  // The output is deterministic, so an unchanged catalog commits nothing.
+  const pullRequests = portal?.enabled ? await fetchOpenPullRequests({ token, repository }) : null;
   const result = await withSerializedBranchWrite({
     repo,
     branch,
-    commitMessage: `Prune ${remove.length} stale Storybook preview director${remove.length === 1 ? 'y' : 'ies'}`,
+    commitMessage:
+      remove.length > 0
+        ? `Prune ${remove.length} stale Storybook preview director${remove.length === 1 ? 'y' : 'ies'}`
+        : 'Refresh Storybook environment portal',
     mutate: async repoPath => {
       let mutated = false;
       for (const { entry } of remove) {
         const full = normalizedRoot ? path.join(repoPath, normalizedRoot, entry) : path.join(repoPath, entry);
         await fs.rm(full, { recursive: true, force: true });
+        mutated = true;
+      }
+      if (portal?.enabled) {
+        await writePortal(repoPath, {
+          ...portal,
+          retentionDays,
+          warningDays: warningDaysBeforeCleanup,
+          repository,
+          pullRequests
+        });
         mutated = true;
       }
       return mutated;
@@ -193,7 +212,10 @@ if (process.argv[1] && process.argv[1].endsWith('preview-janitor.js')) {
       preview_root: process.env.PREVIEW_ROOT,
       pages_branch: process.env.PAGES_BRANCH,
       preview_retention_days: process.env.PREVIEW_RETENTION_DAYS,
-      warning_days_before_cleanup: process.env.WARNING_DAYS_BEFORE_CLEANUP
+      warning_days_before_cleanup: process.env.WARNING_DAYS_BEFORE_CLEANUP,
+      site_url: process.env.SITE_URL,
+      generate_portal: process.env.GENERATE_PORTAL,
+      portal_title: process.env.PORTAL_TITLE
     }
   });
 
@@ -203,6 +225,7 @@ if (process.argv[1] && process.argv[1].endsWith('preview-janitor.js')) {
     previewRoot: config.preview_root,
     retentionDays: config.preview_retention_days,
     warningDaysBeforeCleanup: config.warning_days_before_cleanup,
+    portal: { enabled: config.generate_portal, title: config.portal_title, siteUrl: config.site_url },
     token: process.env.GITHUB_TOKEN,
     repository: process.env.GITHUB_REPOSITORY
   })

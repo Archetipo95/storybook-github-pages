@@ -17,6 +17,18 @@ inputs:
     description: 'Pull request number to clean up'
     required: false
     default: ''
+  site_url:
+    description: 'Canonical Pages site URL used to build absolute links in the generated 404.html'
+    required: false
+    default: ''
+  generate_portal:
+    description: 'Whether to regenerate the environment landing portal (index.html or portal/index.html) and 404.html on the Pages branch (defaults to .storybook-pages.yml, then false)'
+    required: false
+    default: ''
+  portal_title:
+    description: 'Title of the environment landing portal (defaults to "<repo> Storybook Environments")'
+    required: false
+    default: ''
 runs:
   using: composite
   steps:
@@ -26,6 +38,9 @@ runs:
         PAGES_BRANCH: ${{ inputs.pages_branch }}
         PREVIEW_ROOT: ${{ inputs.preview_root }}
         PR_NUMBER: ${{ inputs.pr_number }}
+        SITE_URL: ${{ inputs.site_url }}
+        GENERATE_PORTAL: ${{ inputs.generate_portal }}
+        PORTAL_TITLE: ${{ inputs.portal_title }}
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
       run: node "${{ github.action_path }}/../src/preview-cleanup.js"

@@ -14,6 +14,7 @@ import { buildCommentBody, upsertPreviewComment } from './preview-comment.js';
 import { createDeployment, updateDeploymentStatus } from './github-deployments.js';
 import { injectAuthGate } from './inject-auth-gate.js';
 import { generateStatsGraph } from './generate-stats.js';
+import { portalOptionsFromEnv } from './generate-portal.js';
 
 /**
  * Reads and parses the metadata file bundled inside the downloaded build
@@ -100,6 +101,7 @@ export async function publishPreview({
   enablePasscodeGate = false,
   passcodeHash = '',
   passcodeSessionHours = 24,
+  portal = null,
   token,
   repository
 }) {
@@ -215,7 +217,8 @@ export async function publishPreview({
       basePath,
       triggerPagesRebuild,
       token,
-      repository
+      repository,
+      portal
     });
   } catch (error) {
     if (deploymentRecord && deploymentRecord.id && token && repository) {
@@ -350,6 +353,7 @@ if (process.argv[1] && process.argv[1].endsWith('preview-publish.js')) {
     enablePasscodeGate: process.env.ENABLE_PASSCODE_GATE === 'true',
     passcodeHash: process.env.PASSCODE_HASH || '',
     passcodeSessionHours: process.env.PASSCODE_SESSION_HOURS || 24,
+    portal: portalOptionsFromEnv(),
     token: process.env.GITHUB_TOKEN,
     repository: process.env.GITHUB_REPOSITORY
   })

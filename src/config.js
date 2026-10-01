@@ -26,6 +26,8 @@ export const DEFAULT_CONFIG = {
   coverage_ignore_paths: '',
   generate_stats_graph: true,
   stats_directory: 'stats',
+  generate_portal: false,
+  portal_title: '',
   enable_passcode_gate: false,
   passcode_session_hours: 24,
   smoke_test: false,
@@ -210,6 +212,12 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
 
   if (config.stats_directory !== undefined) {
     validateRelativeDirectory(config.stats_directory, 'stats_directory', { allowEmpty: false });
+  }
+  if (config.generate_portal !== undefined && typeof config.generate_portal !== 'boolean') {
+    throw new Error('Config generate_portal must be a boolean');
+  }
+  if (config.portal_title !== undefined && typeof config.portal_title !== 'string') {
+    throw new Error('Config portal_title must be a string');
   }
   if (config.enable_passcode_gate !== undefined && typeof config.enable_passcode_gate !== 'boolean') {
     throw new Error('Config enable_passcode_gate must be a boolean');
@@ -450,6 +458,18 @@ export function resolveConfiguration({
           ? Boolean(fileConfig.generate_stats_graph)
           : DEFAULT_CONFIG.generate_stats_graph,
     stats_directory: inputs.stats_directory || fileConfig?.stats_directory || DEFAULT_CONFIG.stats_directory,
+    generate_portal:
+      inputs.generate_portal !== undefined && inputs.generate_portal !== ''
+        ? String(inputs.generate_portal) === 'true'
+        : fileConfig?.generate_portal !== undefined
+          ? Boolean(fileConfig.generate_portal)
+          : DEFAULT_CONFIG.generate_portal,
+    portal_title:
+      inputs.portal_title !== undefined && inputs.portal_title !== ''
+        ? String(inputs.portal_title)
+        : fileConfig?.portal_title !== undefined && fileConfig.portal_title !== ''
+          ? String(fileConfig.portal_title)
+          : DEFAULT_CONFIG.portal_title,
     enable_passcode_gate:
       inputs.enable_passcode_gate !== undefined && inputs.enable_passcode_gate !== ''
         ? String(inputs.enable_passcode_gate) === 'true'

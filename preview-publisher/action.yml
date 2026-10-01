@@ -95,6 +95,14 @@ inputs:
     description: 'Hours before the browser session expires'
     required: false
     default: '24'
+  generate_portal:
+    description: 'Whether to regenerate the environment landing portal (index.html or portal/index.html) and 404.html on the Pages branch'
+    required: false
+    default: 'false'
+  portal_title:
+    description: 'Title of the environment landing portal (defaults to "<repo> Storybook Environments")'
+    required: false
+    default: ''
 outputs:
   page_url:
     description: 'The URL of the published GitHub Pages site'
@@ -132,6 +140,8 @@ runs:
         ENABLE_PASSCODE_GATE: ${{ inputs.enable_passcode_gate }}
         PASSCODE_HASH: ${{ inputs.passcode_hash }}
         PASSCODE_SESSION_HOURS: ${{ inputs.passcode_session_hours }}
+        GENERATE_PORTAL: ${{ inputs.generate_portal }}
+        PORTAL_TITLE: ${{ inputs.portal_title }}
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
       run: node "${{ github.action_path }}/../src/preview-publish.js"

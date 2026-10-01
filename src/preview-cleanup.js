@@ -5,6 +5,7 @@ import { resolveConfiguration } from './config.js';
 import { withSerializedBranchWrite, requestPagesRebuild } from './git-branch-writer.js';
 import { updatePreviewCommentStatus } from './preview-comment.js';
 import { deactivateDeploymentsForPullRequest } from './github-deployments.js';
+import { fetchOpenPullRequests, writePortal } from './generate-portal.js';
 
 async function pathExists(target) {
   try {
@@ -22,11 +23,20 @@ async function pathExists(target) {
  * file content. A missing directory is treated as a successful no-op so
  * cleanup remains idempotent across retries and duplicate close events.
  */
-export async function removePreviewDirectory({ repo, branch = 'gh-pages', previewRoot = 'pr-preview', prNumber }) {
+export async function removePreviewDirectory({
+  repo,
+  branch = 'gh-pages',
+  previewRoot = 'pr-preview',
+  prNumber,
+  portal = null,
+  token,
+  repository
+}) {
   const target = resolvePreviewTarget({ previewRoot, prNumber });
   if (!(await pathExists(repo))) {
     return { target, changed: false, skipped: true, reason: 'Pages repository directory does not exist' };
   }
+  const pullRequests = portal?.enabled ? await fetchOpenPullRequests({ token, repository }) : null;
   const result = await withSerializedBranchWrite({
     repo,
     branch,
@@ -35,6 +45,7 @@ export async function removePreviewDirectory({ repo, branch = 'gh-pages', previe
       const full = path.join(repoPath, target);
       if (!(await pathExists(full))) return false;
       await fs.rm(full, { recursive: true, force: true });
+      if (portal?.enabled) await writePortal(repoPath, { ...portal, repository, pullRequests });
       return true;
     }
   });
@@ -77,7 +88,10 @@ if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
   const config = resolveConfiguration({
     inputs: {
       preview_root: process.env.PREVIEW_ROOT,
-      pages_branch: process.env.PAGES_BRANCH
+      pages_branch: process.env.PAGES_BRANCH,
+      site_url: process.env.SITE_URL,
+      generate_portal: process.env.GENERATE_PORTAL,
+      portal_title: process.env.PORTAL_TITLE
     }
   });
 
@@ -85,7 +99,10 @@ if (process.argv[1] && process.argv[1].endsWith('preview-cleanup.js')) {
     repo: process.env.PAGES_REPO || process.cwd(),
     branch: config.pages_branch || process.env.PAGES_BRANCH || 'gh-pages',
     previewRoot: config.preview_root,
-    prNumber: process.env.PR_NUMBER
+    prNumber: process.env.PR_NUMBER,
+    portal: { enabled: config.generate_portal, title: config.portal_title, siteUrl: config.site_url },
+    token: process.env.GITHUB_TOKEN,
+    repository: process.env.GITHUB_REPOSITORY
   })
     .then(async result => {
       console.log(JSON.stringify(result));
