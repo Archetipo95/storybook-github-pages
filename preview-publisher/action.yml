@@ -139,4 +139,4 @@ runs:
         PASSCODE_SESSION_HOURS: ${{ inputs.passcode_session_hours }}
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
-      run: node "${{ github.action_path }}/../src/preview-publish.js"
+      run: node "$GITHUB_ACTION_PATH/../src/preview-publish.js"
