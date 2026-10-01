@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseReleaseTag, verifyReleaseTag, planRelease } from '../scripts/release-tag.js';
+import { parseReleaseTag, verifyReleaseTag, planRelease, releaseNotes } from '../scripts/release-tag.js';
 
 test('parseReleaseTag accepts stable tags and derives the major tag', () => {
   assert.deepEqual(parseReleaseTag('v1.10.0'), {
@@ -45,7 +45,8 @@ test('planRelease creates the tag when a merged version bump on main has none', 
     createTag: true,
     verify: true,
     majorTag: 'v1',
-    majorTarget: 'v1.10.1'
+    majorTarget: 'v1.10.1',
+    latest: true
   });
 });
 
@@ -55,7 +56,8 @@ test('planRelease only re-syncs the major tag when the version is already tagged
     createTag: false,
     verify: false,
     majorTag: 'v1',
-    majorTarget: 'v1.10.0'
+    majorTarget: 'v1.10.0',
+    latest: true
   });
 });
 
@@ -99,4 +101,52 @@ test('planRelease ignores other major lines and non-release tags', () => {
 
 test('planRelease refuses to release a non-stable package version', () => {
   assert.throws(() => planRelease({ ref: 'refs/heads/main', packageVersion: '1.11.0-rc.1' }), /stable semver tag/);
+});
+
+test('planRelease marks only the newest release overall as latest', () => {
+  assert.equal(
+    planRelease({ ref: 'refs/tags/v1.4.3', packageVersion: '1.4.3', existingTags: ['v1.10.0'] }).latest,
+    false
+  );
+  assert.equal(
+    planRelease({ ref: 'refs/tags/v1.99.0', packageVersion: '1.99.0', existingTags: ['v2.0.0'] }).latest,
+    false
+  );
+  assert.equal(
+    planRelease({ ref: 'refs/heads/main', packageVersion: '2.1.0', existingTags: ['v2.0.0', 'v1.99.0'] }).latest,
+    true
+  );
+});
+
+const CHANGELOG = `# Changelog
+
+---
+
+## [Unreleased]
+
+## [1.2.0] - 2026-10-01
+
+### Added
+
+- New thing.
+
+### Fixed
+
+- Old bug.
+
+## [1.1.0] - 2026-09-01
+
+### Changed
+
+- Earlier change.
+`;
+
+test('releaseNotes returns only that version section with promoted headings', () => {
+  assert.equal(releaseNotes(CHANGELOG, '1.2.0'), '## Added\n\n- New thing.\n\n## Fixed\n\n- Old bug.\n');
+  assert.equal(releaseNotes(CHANGELOG, '1.1.0'), '## Changed\n\n- Earlier change.\n');
+});
+
+test('releaseNotes fails for a missing or empty section', () => {
+  assert.throws(() => releaseNotes(CHANGELOG, '9.9.9'), /no "## \[9\.9\.9\]" section/);
+  assert.throws(() => releaseNotes('## [Unreleased]\n\n## [1.0.0] - x\n\n## [0.9.0] - y\n', '1.0.0'), /is empty/);
 });
