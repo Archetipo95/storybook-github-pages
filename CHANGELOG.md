@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Passcode Gate Unlock Across Frames and Tabs**: Unlocking the manager now also reveals the same-origin story preview iframe (via the `storage` event, with a same-origin `postMessage` fallback), so the canvas no longer stays gated until a reload. The unlock expiry is stored in `localStorage`, so `passcode_session_hours` applies across tabs and browser restarts. The gate form also includes a hidden username field so password managers can save the passcode.
+
 ## [1.9.14] - 2026-09-25
 
 ### Fixed
