@@ -111,6 +111,7 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
       typeof config.pages_branch !== 'string' ||
       !/^[A-Za-z0-9._/-]+$/.test(config.pages_branch) ||
       config.pages_branch.startsWith('/') ||
+      config.pages_branch.startsWith('-') ||
       config.pages_branch.includes('..')
     ) {
       throw new Error(`Invalid pages_branch: "${config.pages_branch}"`);
@@ -258,6 +259,16 @@ export function validateConfig(config, { allowedPackageManagers = ALLOWED_PACKAG
   return true;
 }
 
+// Keys that would write to Object.prototype instead of an own property.
+const UNSAFE_YAML_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function assertSafeYamlKey(key) {
+  if (UNSAFE_YAML_KEYS.has(key)) {
+    throw new Error(`Configuration key "${key}" is not allowed`);
+  }
+  return key;
+}
+
 export function parseSimpleYaml(content) {
   const result = {};
   let currentSection = null;
@@ -303,7 +314,7 @@ export function parseSimpleYaml(content) {
       currentSection = null;
       const colonIdx = trimmed.indexOf(':');
       if (colonIdx !== -1) {
-        const key = trimmed.slice(0, colonIdx).trim();
+        const key = assertSafeYamlKey(trimmed.slice(0, colonIdx).trim());
         let val = trimmed.slice(colonIdx + 1).trim();
         if (val === '|' || val === '>' || /^([|>])([+-]?)$/.test(val)) {
           const { value, nextIndex } = parseBlockScalar(index, { allowNested: false });
@@ -321,7 +332,7 @@ export function parseSimpleYaml(content) {
     } else if (indent > 0 && currentSection) {
       const colonIdx = trimmed.indexOf(':');
       if (colonIdx !== -1) {
-        const key = trimmed.slice(0, colonIdx).trim();
+        const key = assertSafeYamlKey(trimmed.slice(0, colonIdx).trim());
         let val = trimmed.slice(colonIdx + 1).trim();
         if (val === '|' || val === '>' || /^([|>])([+-]?)$/.test(val)) {
           const { value, nextIndex } = parseBlockScalar(index, { allowNested: true });
@@ -501,6 +512,16 @@ export function resolveConfiguration({
   return merged;
 }
 
+// Linear-time equivalent of `.replace(/^\/+|\/+$/g, '')`, which is
+// polynomial on long runs of slashes.
+function trimSlashes(value) {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value[start] === '/') start += 1;
+  while (end > start && value[end - 1] === '/') end -= 1;
+  return value.slice(start, end);
+}
+
 export function resolveBaseDirectoryForRef(
   baseRef,
   { target_directory = '', environment = '', default_branch = '', ref_to_directory = {} } = {}
@@ -516,10 +537,8 @@ export function resolveBaseDirectoryForRef(
   }
 
   const normalizedBaseRef = String(baseRef).trim();
-  const cleanBaseRef = normalizedBaseRef
-    .replace(/^refs\/heads\//, '')
-    .replace(/\\/g, '/')
-    .replace(/^\/+|\/+$/g, '');
+  const slashBaseRef = normalizedBaseRef.replace(/^refs\/heads\//, '').replace(/\\/g, '/');
+  const cleanBaseRef = trimSlashes(slashBaseRef);
 
   const refKey = normalizedBaseRef.replace(/\\/g, '/');
   const mapped =

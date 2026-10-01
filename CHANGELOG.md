@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Composite actions read their install path from `$GITHUB_ACTION_PATH` instead of interpolating `${{ github.action_path }}` into shell scripts.
+- `.storybook-pages.yml` keys `__proto__`, `constructor`, and `prototype` are rejected instead of polluting `Object.prototype`.
+- Pages branch names starting with `-` are rejected, and the git branch writer refuses unsafe branch names before running `git`.
+- Base-ref slash trimming runs in linear time instead of using a regex that is slow on long runs of `/`.
+
 ### Added
 
 - CodeQL code scanning for JavaScript and GitHub Actions workflows.
