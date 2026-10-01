@@ -2,7 +2,8 @@ name: Release Tags
 
 # Releases are tagged automatically: when a commit on `main` carries a
 # package.json version that has no `vX.Y.Z` tag yet, this workflow verifies
-# it (tests, CHANGELOG, lockfile) and creates the tag. Every run also keeps
+# it (tests, CHANGELOG, lockfile), creates the tag, and publishes a GitHub
+# release whose notes are that version's CHANGELOG.md section. Every run also keeps
 # the floating major tag (`v1`) on the newest release of its line, so a
 # missed or drifted major tag is corrected by the next push to `main`.
 #
@@ -27,7 +28,7 @@ jobs:
     name: Create release tag and update major tag
     runs-on: ubuntu-24.04
     permissions:
-      # Required only to push the release and major tags.
+      # Required to push the release and major tags and publish the release.
       contents: write
     steps:
       - name: Checkout pushed commit
@@ -77,6 +78,21 @@ jobs:
           git tag "$RELEASE_TAG" "$GITHUB_SHA"
           git push origin "refs/tags/$RELEASE_TAG"
           echo "Created $RELEASE_TAG at $GITHUB_SHA."
+
+      - name: Publish GitHub release
+        if: steps.plan.outputs.verify == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.plan.outputs.release_tag }}
+          LATEST: ${{ steps.plan.outputs.latest }}
+        run: |
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists."
+            exit 0
+          fi
+          node scripts/release-tag.js --notes "${RELEASE_TAG#v}" > "$RUNNER_TEMP/release-notes.md"
+          gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file "$RUNNER_TEMP/release-notes.md" --verify-tag --latest="$LATEST"
+          echo "Published release $RELEASE_TAG (latest: $LATEST)."
 
       - name: Move major tag to the newest release
         env:
