@@ -31,6 +31,7 @@ The publish, cleanup and janitor workflows and the reusable deploy workflow all 
 - When 100 runs are already waiting, GitHub cancels any further run.
 - `queue: max` cannot be combined with `cancel-in-progress: true`; GitHub rejects the workflow.
 - Your own workflows that join the group, such as the [directory pipeline](usage.md#option-3-trusted-directory-mode-pipeline-branch-backed), must also set `queue: max`. Do not add the group to a workflow that only calls these reusable workflows: the called jobs already join it.
+- Custom jobs that call the composite actions directly (`preview-publisher`, `preview-cleanup`, `preview-janitor`, or `publisher` for directory mode) must join the same `storybook-pages-${{ github.repository }}` group with `cancel-in-progress: false` and `queue: max`. Otherwise they rely only on the push retries, and a janitor running at the same time can delete a fresh preview: when its push is rejected, it re-applies the removals it planned from the branch and open PRs it read earlier.
 
 ### The preview comment
 
