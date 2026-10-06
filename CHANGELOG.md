@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The reusable deploy workflow now queues deploys instead of replacing a pending deploy with the newest one. Deploys run one at a time, first in, first out by when each run started waiting (GitHub notes the order is not strictly guaranteed). If your own workflows use the `storybook-pages-${{ github.repository }}` concurrency group, add `queue: max` there too ([Concurrency](docs/pr-previews.md#concurrency)).
+- The reusable deploy workflow now queues deploys instead of replacing a pending deploy with the newest one. Deploys run one at a time, first in, first out by when each run started waiting (GitHub notes the order is not strictly guaranteed). If your own workflows use the `storybook-pages-<owner>/<repo>` concurrency group, add `queue: max` there too ([Concurrency](docs/pr-previews.md#concurrency)).
 
 ### Fixed
 
