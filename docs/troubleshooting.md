@@ -78,4 +78,13 @@
   - If using a custom deployment workflow, ensure `.nojekyll` exists at the root of the `gh-pages` branch.
   - Ensure your `.storybook/main.ts` configures `base: './'` in `viteFinal` as described in the [Modern Bundlers guide](bundlers.md).
 
+### 10. PR Preview Publish or Cleanup Cancelled (`Canceling since a higher priority waiting request ... exists`)
+
+- **Symptom**: A `pr-preview-publish.yml` or `pr-preview-cleanup.yml` run is cancelled with `Canceling since a higher priority waiting request for storybook-pages-<owner>/<repo> exists`. The preview URL returns 404 and no preview comment is posted, or a closed PR's preview stays until the janitor removes it. It happens most when several PRs build at once.
+- **Cause**: v1.11.0 and earlier used GitHub's default concurrency queue, which keeps only one pending run in the shared `storybook-pages-<owner>/<repo>` group and cancels it whenever another Pages writer queues.
+- **Solution**:
+  - Update the `pr-preview-publish.yml`, `pr-preview-cleanup.yml`, `pr-preview-janitor.yml` and `deploy-storybook.yml` refs to a release that sets `queue: max` on the group (see [Concurrency](pr-previews.md#concurrency)).
+  - Add `queue: max` to any workflow of your own that declares the `storybook-pages-${{ github.repository }}` group.
+  - Re-run the cancelled publish run to restore the missing preview.
+
 ---

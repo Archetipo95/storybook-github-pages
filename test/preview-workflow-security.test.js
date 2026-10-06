@@ -193,21 +193,29 @@ test('pr-preview-janitor workflow supports manual dispatch and schedule, never c
   );
 });
 
-test('all trusted write workflows share the same Pages-branch concurrency group to serialize writers', () => {
-  const publish = read('.github/workflows/pr-preview-publish.yml');
-  const cleanup = read('.github/workflows/pr-preview-cleanup.yml');
-  const janitor = read('.github/workflows/pr-preview-janitor.yml');
-  const deploy = read('.github/workflows/deploy-storybook.yml');
+function pagesConcurrencyBlocks(content) {
+  return [...content.matchAll(/^( *)concurrency:\n((?:\1 {2}.*\n)+)/gm)]
+    .map(match => match[2])
+    .filter(block => block.includes('group: storybook-pages-${{ github.repository }}'));
+}
 
-  const group = 'storybook-pages-${{ github.repository }}';
-  for (const [name, content] of [
-    ['publish', publish],
-    ['cleanup', cleanup],
-    ['janitor', janitor]
+test('trusted Pages writers share one concurrency group that queues instead of replacing pending runs', () => {
+  for (const file of [
+    '.github/workflows/pr-preview-publish.yml',
+    '.github/workflows/pr-preview-cleanup.yml',
+    '.github/workflows/pr-preview-janitor.yml',
+    '.github/workflows/deploy-storybook.yml',
+    'docs/usage.md'
   ]) {
-    assert.ok(content.includes(`group: ${group}`), `${name} workflow must share the Pages concurrency group`);
+    const blocks = pagesConcurrencyBlocks(read(file));
+    assert.equal(blocks.length, 1, `${file} must join the shared Pages concurrency group exactly once`);
+    assert.match(blocks[0], /^\s*cancel-in-progress: false$/m, `${file} must never cancel an in-progress Pages write`);
+    assert.match(
+      blocks[0],
+      /^\s*queue: max$/m,
+      `${file} must set queue: max: with GitHub's default single queue, every run that joins the group cancels the pending one, which silently drops PR preview publishes and cleanups`
+    );
   }
-  assert.ok(deploy.includes('group: storybook-pages-${{ github.repository }}'));
 });
 
 test('preview target resolution and metadata modules are wired into the workflows and composite actions', () => {

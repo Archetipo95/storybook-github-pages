@@ -21,7 +21,16 @@ A pull request is treated as a fork whenever its head repository differs from th
 
 ### Stale-run protection
 
-Because multiple build runs can complete out of order (retries, re-runs, or a fast follow-up push), the publisher always compares the artifact's `headSha` against the pull request's **current** head SHA fetched live from the API at publish time, not against a cached value. A run whose commit is no longer the PR's head SHA is skipped with an explicit `skip-stale` status; it can never overwrite a newer preview.
+Because multiple build runs can complete out of order (retries, re-runs, or a fast follow-up push), the publisher always compares the artifact's `headSha` against the pull request's **current** head SHA, fetched live from the API by the `gate` job right before the publish job joins the Pages write queue, not against a cached value. A run whose commit is no longer the PR's head SHA at that point is skipped with an explicit `skip-stale` status. If a newer commit lands while an older publish is already waiting in the queue, the older one still publishes, and the newer run queued behind it replaces the preview when its turn comes.
+
+### Concurrency
+
+The publish, cleanup and janitor workflows and the reusable deploy workflow all write the Pages branch, so they share one concurrency group, `storybook-pages-<owner>/<repo>`, with `cancel-in-progress: false` and `queue: max`. One writer runs at a time. Up to 100 more wait and run in the order they started waiting (GitHub does not guarantee the order).
+
+- Without `queue: max`, GitHub keeps only one pending run per group and cancels it as soon as another writer queues (`Canceling since a higher priority waiting request for storybook-pages-<owner>/<repo> exists`). In v1.11.0 and earlier this dropped most previews and cleanups when several PRs built at once.
+- When 100 runs are already waiting, GitHub cancels any further run.
+- `queue: max` cannot be combined with `cancel-in-progress: true`; GitHub rejects the workflow.
+- Your own workflows that join the group, such as the [directory pipeline](usage.md#option-3-trusted-directory-mode-pipeline-branch-backed), must also set `queue: max`. Do not add the group to a workflow that only calls these reusable workflows: the called jobs already join it.
 
 ### The preview comment
 
