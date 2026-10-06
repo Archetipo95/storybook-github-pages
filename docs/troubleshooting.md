@@ -56,9 +56,9 @@
 
 ### 8. Reusable Workflow Permissions & Concurrency Constraints
 
-- **Symptom**: Workflow fails to trigger, encounters `403 Resource not accessible by integration`, or fails with workflow syntax errors when calling reusable workflows (`workflow_call`).
+- **Symptom**: Workflow fails to trigger, encounters `403 Resource not accessible by integration`, fails workflow validation, or a Pages write never starts when calling reusable workflows (`workflow_call`).
 - **Causes & Solutions**:
-  - **Top-Level Concurrency**: GitHub Actions rejects top-level `concurrency:` on reusable workflows (`workflow_call`). Concurrency is managed at the job level inside our reusable workflows. Caller workflows should not declare workflow-level concurrency on caller files that invoke `workflow_call`.
+  - **Concurrency**: The reusable workflows already join the shared `storybook-pages-<owner>/<repo>` group with `cancel-in-progress: false` and `queue: max`: `deploy-storybook.yml` at workflow level, and `pr-preview-publish.yml`, `pr-preview-cleanup.yml` and `pr-preview-janitor.yml` on the job that writes the Pages branch. A called workflow gets the caller's `github` context, so the group already names your repository. Do not declare the same group on the workflow or job that calls them: the caller would hold the group that the called jobs wait for. If you set `queue: max` on a group of your own, keep `cancel-in-progress: false`; GitHub rejects the combination with `cancel-in-progress: true`. See [Concurrency](pr-previews.md#concurrency).
   - **Required Caller Permissions**: When invoking `pr-preview-publish.yml` via `workflow_call`, ensure your caller workflow grants the required permissions:
     ```yaml
     permissions:
