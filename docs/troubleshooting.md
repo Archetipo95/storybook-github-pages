@@ -24,7 +24,7 @@
 ### 4. Stale Run Skipped (`skip-stale`)
 
 - **Symptom**: `pr-preview-publish.yml` outputs `status: skipped` with a stale run notice.
-- **Explanation**: The publisher live-checks the pull request's current head SHA against the build artifact's head SHA. If a newer commit was pushed while an older run was building, the older run skips publishing to avoid overwriting newer code.
+- **Explanation**: The publish workflow's `gate` job fetches the pull request's current head SHA, and the publish job compares it with the build artifact's head SHA. If a newer commit was pushed while an older run was building, the older run skips publishing to avoid overwriting newer code.
 
 ### 5. Artifact Validation Failures
 
