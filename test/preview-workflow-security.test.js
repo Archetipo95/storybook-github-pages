@@ -195,25 +195,36 @@ test('pr-preview-janitor workflow supports manual dispatch and schedule, never c
 
 function pagesConcurrencyBlocks(content) {
   return [...content.matchAll(/^( *)concurrency:\n((?:\1 {2}.*\n)+)/gm)]
-    .map(match => match[2])
-    .filter(block => block.includes('group: storybook-pages-${{ github.repository }}'));
+    .map(([, indent, body]) => ({ indent, body }))
+    .filter(({ body }) => body.includes('group: storybook-pages-${{ github.repository }}'));
 }
 
 test('trusted Pages writers share one concurrency group that queues instead of replacing pending runs', () => {
-  for (const file of [
-    '.github/workflows/pr-preview-publish.yml',
-    '.github/workflows/pr-preview-cleanup.yml',
-    '.github/workflows/pr-preview-janitor.yml',
-    '.github/workflows/deploy-storybook.yml',
-    'docs/usage.md'
+  for (const { file, job } of [
+    { file: '.github/workflows/pr-preview-publish.yml', job: 'publish' },
+    { file: '.github/workflows/pr-preview-cleanup.yml', job: 'cleanup' },
+    { file: '.github/workflows/pr-preview-janitor.yml', job: 'janitor' },
+    { file: '.github/workflows/deploy-storybook.yml' },
+    { file: 'docs/usage.md' }
   ]) {
-    const blocks = pagesConcurrencyBlocks(read(file));
-    assert.equal(blocks.length, 1, `${file} must join the shared Pages concurrency group exactly once`);
-    assert.match(blocks[0], /^\s*cancel-in-progress: false$/m, `${file} must never cancel an in-progress Pages write`);
+    const content = read(file);
+    const writer = job ? `${file} job "${job}"` : `${file} (workflow level)`;
+    assert.equal(
+      pagesConcurrencyBlocks(content).length,
+      1,
+      `${file} must join the shared Pages concurrency group exactly once`
+    );
+    const [block] = pagesConcurrencyBlocks(job ? extractJobBlock(content, job) : content);
+    assert.equal(block?.indent, job ? '    ' : '', `${writer} must join the shared Pages concurrency group`);
     assert.match(
-      blocks[0],
+      block.body,
+      /^\s*cancel-in-progress: false$/m,
+      `${writer} must never cancel an in-progress Pages write`
+    );
+    assert.match(
+      block.body,
       /^\s*queue: max$/m,
-      `${file} must set queue: max: with GitHub's default single queue, every run that joins the group cancels the pending one, which silently drops PR preview publishes and cleanups`
+      `${writer} must set queue: max: with GitHub's default single queue, every run that joins the group cancels the pending one, which silently drops PR preview publishes and cleanups`
     );
   }
 });
