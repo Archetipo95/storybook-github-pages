@@ -247,8 +247,13 @@ test('docs recover a cancelled preview publish without reusing the gate job head
   assert.match(recovery, /Re-run all jobs/, 'recovery must re-run the gate job so it re-reads the PR head');
   assert.match(
     recovery,
-    /never use .*Re-run failed jobs.*Re-run job.*gh run rerun --failed/i,
-    'recovery must warn against re-runs that reuse the gate job head SHA and can publish a stale commit'
+    /never use \*\*Re-run failed jobs\*\* \(`gh run rerun <run-id> --failed`\) on a publish run/i,
+    'recovery must warn that re-running only the failed publish job reuses the gate job head SHA'
+  );
+  assert.match(
+    recovery,
+    /never re-run the `publish` job on its own \(\*\*Re-run job\*\* on `publish`, or `gh run rerun --job <publish-job-id>`\)/i,
+    'recovery must warn against re-running publish alone; re-running the gate job also re-runs publish with a fresh head SHA'
   );
 
   assert.match(

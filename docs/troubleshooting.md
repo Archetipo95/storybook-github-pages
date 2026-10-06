@@ -86,7 +86,7 @@
   - Update the `pr-preview-publish.yml`, `pr-preview-cleanup.yml`, `pr-preview-janitor.yml` and `deploy-storybook.yml` refs to a release that sets `queue: max` on the group (see [Concurrency](pr-previews.md#concurrency)).
   - Add `queue: max` to any workflow of your own that declares the `storybook-pages-${{ github.repository }}` group.
   - To restore an open PR's missing preview, re-run the PR's latest `PR Preview Build` run, or open the cancelled publish run and choose **Re-run all jobs** (`gh run rerun <run-id>`) so the `gate` job re-reads the PR head. If the PR has moved on, that publish skips as `skip-stale`.
-  - Never use **Re-run failed jobs**, **Re-run job** or `gh run rerun --failed` (or `--job`) on a publish run. They reuse the head SHA the `gate` job fetched before the cancellation, so they can publish a stale commit over a newer preview.
+  - Never use **Re-run failed jobs** (`gh run rerun <run-id> --failed`) on a publish run, and never re-run the `publish` job on its own (**Re-run job** on `publish`, or `gh run rerun --job <publish-job-id>`). Both reuse the head SHA the `gate` job fetched before the cancellation, so they can publish a stale commit over a newer preview.
   - For a cancelled cleanup, run the janitor manually (`workflow_dispatch`) instead of re-running the cleanup. The janitor removes previews only for PRs that are no longer open, while a re-run cleanup also deletes the preview of a reopened PR.
 
 ---
