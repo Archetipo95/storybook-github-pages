@@ -25,7 +25,7 @@ Because multiple build runs can complete out of order (retries, re-runs, or a fa
 
 ### Concurrency
 
-The publish, cleanup and janitor workflows and the reusable deploy workflow all write the Pages branch, so they share one concurrency group, `storybook-pages-<owner>/<repo>`, with `cancel-in-progress: false` and `queue: max`. One writer runs at a time. Up to 100 more wait and run first in, first out by when each run started waiting (GitHub notes the order is not strictly guaranteed).
+The publish, cleanup and janitor workflows and the reusable deploy workflow all write the Pages branch, so they share one concurrency group, `storybook-pages-<owner>/<repo>`, with `cancel-in-progress: false` and `queue: max`. One writer runs at a time. Up to 100 more wait and run first in, first out by when each run started waiting (not by when it was triggered; GitHub notes that ordering is not guaranteed).
 
 - Without `queue: max`, GitHub keeps only one pending run per group and cancels it as soon as another writer queues (`Canceling since a higher priority waiting request for storybook-pages-<owner>/<repo> exists`). In v1.11.0 and earlier this dropped most previews and cleanups when several PRs built at once.
 - When 100 runs are already waiting, GitHub cancels any further run.
