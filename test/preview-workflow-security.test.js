@@ -218,6 +218,35 @@ test('trusted Pages writers share one concurrency group that queues instead of r
   }
 });
 
+function markdownSection(content, heading) {
+  const start = content.indexOf(`### ${heading}`);
+  assert.notEqual(start, -1, `section "${heading}" not found`);
+  const end = content.indexOf('\n### ', start + 1);
+  return content.slice(start, end === -1 ? undefined : end);
+}
+
+test('docs recover a cancelled preview publish without reusing the gate job head SHA snapshot', () => {
+  assert.match(
+    extractJobBlock(read('.github/workflows/pr-preview-publish.yml'), 'publish'),
+    /current_head_sha: \$\{\{ needs\.gate\.outputs\.current_head_sha \}\}/,
+    'the publish job compares against the head SHA the gate job fetched, so re-running publish alone reuses that snapshot'
+  );
+
+  const recovery = markdownSection(read('docs/troubleshooting.md'), '10. PR Preview Publish or Cleanup Cancelled');
+  assert.match(recovery, /Re-run all jobs/, 'recovery must re-run the gate job so it re-reads the PR head');
+  assert.match(
+    recovery,
+    /never use .*Re-run failed jobs.*Re-run job.*gh run rerun --failed/i,
+    'recovery must warn against re-runs that reuse the gate job head SHA and can publish a stale commit'
+  );
+
+  assert.match(
+    markdownSection(read('docs/pr-previews.md'), 'Stale-run protection'),
+    /re-running only the publish job .*reuses the `gate` job's earlier head SHA snapshot/i,
+    'stale-run docs must say that a publish-only re-run reuses the gate head SHA'
+  );
+});
+
 test('preview target resolution and metadata modules are wired into the workflows and composite actions', () => {
   const build = read('.github/workflows/pr-preview-build.yml');
   const publish = read('.github/workflows/pr-preview-publish.yml');

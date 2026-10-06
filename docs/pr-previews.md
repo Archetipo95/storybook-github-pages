@@ -21,7 +21,7 @@ A pull request is treated as a fork whenever its head repository differs from th
 
 ### Stale-run protection
 
-Because multiple build runs can complete out of order (retries, re-runs, or a fast follow-up push), the publisher always compares the artifact's `headSha` against the pull request's **current** head SHA, fetched live from the API by the `gate` job right before the publish job joins the Pages write queue, not against a cached value. A run whose commit is no longer the PR's head SHA at that point is skipped with an explicit `skip-stale` status. If a newer commit lands while an older publish is already waiting in the queue, the older one still publishes, and the newer run queued behind it replaces the preview when its turn comes.
+Because multiple build runs can complete out of order (retries, re-runs, or a fast follow-up push), the publisher always compares the artifact's `headSha` against the pull request's **current** head SHA, fetched live from the API by the `gate` job right before the publish job joins the Pages write queue, not against a cached value. A run whose commit is no longer the PR's head SHA at that point is skipped with an explicit `skip-stale` status. If a newer commit lands while an older publish is already waiting in the queue, the older one still publishes, and the newer run queued behind it replaces the preview when its turn comes. Re-running only the publish job (**Re-run failed jobs** or **Re-run job**) reuses the `gate` job's earlier head SHA snapshot, so re-run all jobs or the build instead.
 
 ### Concurrency
 
