@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The reusable deploy workflow now queues deploys instead of replacing a pending deploy with the newest one. Deploys run one at a time, first in, first out by when each run started waiting (not by when it was triggered; GitHub notes that ordering is not guaranteed). If your own workflows use the `storybook-pages-<owner>/<repo>` concurrency group, add `queue: max` there too. Custom jobs that call the composite actions directly should join the group the same way ([Concurrency](docs/pr-previews.md#concurrency)).
+
+### Fixed
+
+- PR preview publishes, closed-PR cleanups and janitor runs are no longer cancelled when several Pages writers queue at once. The shared `storybook-pages-<owner>/<repo>` concurrency group kept only one pending run, so bursts of PR builds dropped most previews with `Canceling since a higher priority waiting request ... exists`, leaving a 404 and no preview comment. The group now sets `queue: max`: up to 100 runs wait and run one at a time, first in, first out by when each run started waiting (not by when it was triggered; GitHub notes that ordering is not guaranteed).
+
 ## [1.11.0] - 2026-10-01
 
 ### Added
