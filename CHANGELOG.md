@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+
+- `storybook-github-pages` is superseded by [storybook-github-swiss-knife](https://github.com/Archetipo95/storybook-github-swiss-knife), which includes the changes below in `v0.1.0`. This repository is archived; see its [migration guide](https://github.com/Archetipo95/storybook-github-swiss-knife/blob/main/docs/migration.md).
+
 ### Changed
 
 - The reusable deploy workflow now queues deploys instead of replacing a pending deploy with the newest one. Deploys run one at a time, first in, first out by when each run started waiting (not by when it was triggered; GitHub notes that ordering is not guaranteed). If your own workflows use the `storybook-pages-<owner>/<repo>` concurrency group, add `queue: max` there too. Custom jobs that call the composite actions directly should join the group the same way ([Concurrency](docs/pr-previews.md#concurrency)).
